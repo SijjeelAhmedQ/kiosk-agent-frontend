@@ -116,3 +116,4 @@ apps cannot share a config, so if a colour moves there, move it here too.
 - **Stop** cancels the run, but anything already paid for stands. The panel says
   so rather than implying a clean rollback.
 "# kiosk-agent-frontend" 
+"# kiosk-agent-frontend" 
