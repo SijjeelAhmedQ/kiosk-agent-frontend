@@ -1,0 +1,19 @@
+/* antd ships its own reset; this is only what antd does not cover. */
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* The agent's report is prose the operator reads — give it a comfortable
+   measure rather than letting it run the full width of a 1400px column. */
+.ant-card-body .ant-typography {
+  max-width: 72ch;
+}
