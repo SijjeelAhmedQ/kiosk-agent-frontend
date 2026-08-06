@@ -1,23 +1,12 @@
-import { useEffect, useState } from 'react';
-import {
-  Button,
-  Card,
-  Form,
-  Input,
-  InputNumber,
-  Segmented,
-  Select,
-  Space,
-  Switch,
-  Tag,
-  Tooltip,
-  Typography,
-} from 'antd';
+import { useEffect, useState, type KeyboardEvent } from 'react';
+import { Button, Input, InputNumber, Select, Switch, Tooltip, Typography } from 'antd';
+import type { DefaultOptionType } from 'antd/es/select';
+import { Panel } from '@/components/Panel';
 import { couponApi } from '@/services/couponApi';
-import type { AgentMode, CouponOption, StartAgentRunInput } from '@/types';
-import { C } from '@/theme';
+import type { AgentMode, CouponOption, CouponStatus, StartAgentRunInput } from '@/types';
+import { V } from '@/theme';
 
-const { Text, Paragraph } = Typography;
+const { Text } = Typography;
 
 /** Starting points, so nobody faces an empty box wondering what to type. */
 const EXAMPLES = [
@@ -25,6 +14,22 @@ const EXAMPLES = [
   'Get me a Big Mac meal and a coffee',
   'Order the cheapest burger on the menu',
   'Order fries and a drink for someone who is very hungry',
+];
+
+/** The two ways the agent can shop, as the operator picks between them. */
+const MODES: { value: AgentMode; icon: string; name: string; desc: string }[] = [
+  {
+    value: 'api',
+    icon: '⚡',
+    name: 'Through the API',
+    desc: 'Calls the restaurant’s API directly. Fast and deterministic.',
+  },
+  {
+    value: 'browser',
+    icon: '🖥️',
+    name: 'Through the website',
+    desc: 'Drives the real kiosk in Chromium — tapping, typing and paying like a customer.',
+  },
 ];
 
 interface Props {
@@ -41,14 +46,92 @@ interface Props {
   blockedReason: string | null;
 }
 
-/** How a coupon reads in the picker: what it is worth and what it is for. */
+/**
+ * Why a coupon cannot be spent, in the words the picker shows — or null when
+ * there is nothing wrong with it.
+ *
+ * The list holds spent and dead coupons as well as live ones: greying one out
+ * with the reason beside it answers "why won't this code work?", where leaving
+ * it off the list only raises the question.
+ */
+function problemWith({ status }: CouponOption): string | null {
+  switch (status) {
+    case 'fully_redeemed':
+      return 'already used';
+    case 'expired':
+      return 'expired';
+    case 'cancelled':
+      return 'cancelled';
+    default:
+      return null;
+  }
+}
+
+/** Spendable first, then the dead ones in the order they are worth reading. */
+const ORDER: Record<CouponStatus, number> = {
+  unused: 0,
+  partially_redeemed: 1,
+  fully_redeemed: 2,
+  expired: 3,
+  cancelled: 4,
+};
+
+/**
+ * Where a coupon stands, in one word.
+ *
+ * Every row carries it, live ones included: a list where only the broken
+ * coupons are labelled leaves the reader inferring what the unlabelled ones
+ * are, and "unused" is the thing they came to find.
+ */
+const STATUS_LABEL: Record<CouponStatus, string> = {
+  unused: 'unused',
+  partially_redeemed: 'partly used',
+  fully_redeemed: 'used',
+  expired: 'expired',
+  cancelled: 'cancelled',
+};
+
+/** Green for spendable, amber for what is left of one, red for spent. */
+const STATUS_TONE: Record<CouponStatus, string> = {
+  unused: 'fk-badge-leaf',
+  partially_redeemed: '',
+  fully_redeemed: 'fk-badge-flame',
+  expired: 'fk-badge-flame',
+  cancelled: 'fk-badge-flame',
+};
+
+/**
+ * The three bands the picker groups by, best first.
+ *
+ * Sorting alone already put them in this order, but an unheaded list of a dozen
+ * codes does not show that it is sorted — the headings say where the good ones
+ * stop, so nobody scrolls past them looking for something better.
+ */
+const TIERS: { key: string; heading: string; statuses: CouponStatus[] }[] = [
+  { key: 'unused', heading: 'Unused — full value', statuses: ['unused'] },
+  { key: 'part', heading: 'Partly used — some value left', statuses: ['partially_redeemed'] },
+  {
+    key: 'spent',
+    heading: 'Used, expired or cancelled — cannot be spent',
+    statuses: ['fully_redeemed', 'expired', 'cancelled'],
+  },
+];
+
+/** What a coupon is worth, in the words the picker shows. */
+function worthOf(coupon: CouponOption): string {
+  return coupon.couponType === 'value'
+    ? `Rs ${(coupon.remainingBalance ?? coupon.originalAmount ?? 0).toLocaleString()}`
+    : (coupon.productName ?? 'free item');
+}
+
+/** The line under the code: what it is worth, and where it stands. */
+function noteOn(coupon: CouponOption): string {
+  return `${worthOf(coupon)} · ${STATUS_LABEL[coupon.status]}`;
+}
+
+/** The searchable one-liner. Kept a plain string so filtering still works. */
 function describe(coupon: CouponOption): string {
-  const worth =
-    coupon.couponType === 'value'
-      ? `Rs ${(coupon.remainingBalance ?? coupon.originalAmount ?? 0).toLocaleString()}`
-      : (coupon.productName ?? 'free item');
-  const partial = coupon.status === 'partially_redeemed' ? ' · part-used' : '';
-  return `${coupon.couponCode} — ${worth}${partial}`;
+  return `${coupon.couponCode} — ${noteOn(coupon)}`;
 }
 
 export function ErrandForm({ onRun, onCancel, busy, blockedReason }: Props) {
@@ -60,8 +143,13 @@ export function ErrandForm({ onRun, onCancel, busy, blockedReason }: Props) {
   const [coupons, setCoupons] = useState<CouponOption[]>([]);
 
   useEffect(() => {
-    void couponApi.spendable().then(setCoupons);
+    void couponApi.list().then(setCoupons);
   }, []);
+
+  // What is wrong with the code currently in the box, if the list knows it. A
+  // dead one cannot be picked from the dropdown, but it can still be typed.
+  const chosen = coupons.find((coupon) => coupon.couponCode === couponCode);
+  const chosenProblem = chosen ? problemWith(chosen) : null;
 
   // Every reason the agent cannot go, in the order worth reporting: a dead
   // service first, then an errand that could never succeed. One string, so the
@@ -70,9 +158,11 @@ export function ErrandForm({ onRun, onCancel, busy, blockedReason }: Props) {
     blockedReason ??
     (!instruction.trim()
       ? 'Say what the agent should order.'
-      : !couponCode && cashLimit <= 0
-        ? 'Give it a coupon, a cash limit, or both — it cannot buy anything with neither.'
-        : null);
+      : chosenProblem
+        ? `That coupon is ${chosenProblem} — pick another, or clear it and pay cash.`
+        : !couponCode && cashLimit <= 0
+          ? 'Give it a coupon, a cash limit, or both — it cannot buy anything with neither.'
+          : null);
 
   const canRun = reason === null;
 
@@ -88,147 +178,279 @@ export function ErrandForm({ onRun, onCancel, busy, blockedReason }: Props) {
     });
   };
 
+  // Ctrl/⌘+Enter from the errand box sends it. Whoever runs a dozen of these in
+  // a row should not have to reach for the mouse each time.
+  const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === 'Enter' && (event.ctrlKey || event.metaKey) && !busy) submit();
+  };
+
+  // Unused on top, part-used under them, spent ones last — still listed, but
+  // not selectable. A band with nothing in it is dropped rather than shown
+  // empty; a heading over no rows only makes the list longer to read.
+  const options: DefaultOptionType[] = TIERS.map((tier) => {
+    const inTier = coupons
+      .filter((coupon) => tier.statuses.includes(coupon.status))
+      .sort((a, b) => ORDER[a.status] - ORDER[b.status]);
+    return {
+      key: tier.key,
+      label: `${tier.heading} · ${inTier.length}`,
+      options: inTier.map((coupon) => ({
+        value: coupon.couponCode,
+        label: describe(coupon),
+        disabled: problemWith(coupon) !== null,
+        coupon,
+      })),
+    };
+  }).filter((group) => group.options.length > 0);
+
+  const countOf = (...statuses: CouponStatus[]) =>
+    coupons.filter((coupon) => statuses.includes(coupon.status)).length;
+  const unusedCount = countOf('unused');
+  const partCount = countOf('partially_redeemed');
+  const deadCount = countOf('fully_redeemed', 'expired', 'cancelled');
+
   return (
-    <Card title="The errand" variant="outlined">
-      <Form layout="vertical" disabled={busy}>
-        <Form.Item
-          label="What should the agent order?"
-          extra="Plain language. The agent looks the menu up itself."
-        >
-          <Input.TextArea
-            value={instruction}
-            onChange={(event) => setInstruction(event.target.value)}
-            rows={3}
-            maxLength={2000}
-            showCount
-            placeholder="Order two cheeseburgers"
-          />
-        </Form.Item>
+    <Panel
+      icon="✍️"
+      title="The errand"
+      note="What to order, and what it may spend"
+      live={busy}
+    >
+      <div className="fk-eyebrow">The order</div>
 
-        <Form.Item label={<Text type="secondary">Try one</Text>} style={{ marginTop: -8 }}>
-          <Space size={[6, 6]} wrap>
-            {EXAMPLES.map((example) => (
-              <Tag.CheckableTag
-                key={example}
-                checked={instruction === example}
-                onChange={() => !busy && setInstruction(example)}
-                style={{ borderRadius: 999, padding: '3px 12px', border: `1px solid ${C.mist}` }}
+      <Input.TextArea
+        value={instruction}
+        onChange={(event) => setInstruction(event.target.value)}
+        onKeyDown={onKeyDown}
+        disabled={busy}
+        rows={3}
+        maxLength={2000}
+        placeholder="Order two cheeseburgers"
+        style={{ resize: 'none' }}
+      />
+
+      {/* antd's own `showCount` is absolutely positioned and lands on top of the
+          hint once the hint wraps to two lines. Counting here puts both on one
+          row that cannot collide. */}
+      <div className="fk-hint-row">
+        <p className="fk-hint">Plain language. The agent looks the menu up itself.</p>
+        <span className={`fk-count${instruction.length > 1800 ? ' fk-count-near' : ''}`}>
+          {instruction.length} / 2000
+        </span>
+      </div>
+
+      <div style={{ marginTop: 12 }} className="fk-chips">
+        {EXAMPLES.map((example) => (
+          <button
+            key={example}
+            type="button"
+            className="fk-chip"
+            aria-pressed={instruction === example}
+            disabled={busy}
+            onClick={() => setInstruction(example)}
+          >
+            {example}
+          </button>
+        ))}
+      </div>
+
+      <div className="fk-eyebrow">The money</div>
+
+      <label
+        style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}
+        htmlFor="fk-coupon"
+      >
+        Coupon
+      </label>
+      <Select
+        id="fk-coupon"
+        allowClear
+        showSearch
+        disabled={busy}
+        value={couponCode}
+        onChange={setCouponCode}
+        placeholder="No coupon — pay cash only"
+        optionFilterProp="label"
+        style={{ width: '100%' }}
+        options={options}
+        // A code that is not in the list is still usable — the agent finds
+        // out from the restaurant, not from this dropdown.
+        onSearch={(value) => value.length > 3 && setCouponCode(value.toUpperCase())}
+        optionRender={(option) => {
+          const coupon = (option.data as { coupon?: CouponOption }).coupon;
+          if (!coupon) return option.label;
+          const problem = problemWith(coupon);
+          return (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                // antd fades a disabled option, but not far enough to read as
+                // "this one is out" at a glance next to the live ones.
+                opacity: problem ? 0.55 : 1,
+              }}
+            >
+              <span
+                style={{ fontSize: 15, filter: problem ? 'grayscale(1)' : undefined }}
+                aria-hidden
               >
-                {example}
-              </Tag.CheckableTag>
-            ))}
-          </Space>
-        </Form.Item>
+                {coupon.couponType === 'value' ? '💰' : '🎁'}
+              </span>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div
+                  style={{
+                    fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    textDecoration: problem ? 'line-through' : undefined,
+                  }}
+                >
+                  {coupon.couponCode}
+                </div>
+                <div style={{ fontSize: 11.5, color: V.textFaint }}>{worthOf(coupon)}</div>
+              </div>
+              {/* On every row, not just the broken ones — the state of a coupon
+                  is what the operator is scanning this list for. */}
+              <span
+                className={`fk-badge ${STATUS_TONE[coupon.status]}`}
+                style={{ flexShrink: 0 }}
+              >
+                {STATUS_LABEL[coupon.status]}
+              </span>
+            </div>
+          );
+        }}
+      />
+      <p className="fk-hint">
+        {coupons.length === 0
+          ? 'No coupons found — you can still type a code.'
+          : unusedCount + partCount === 0
+            ? `All ${coupons.length} coupons are used, expired or cancelled — you can still type a code.`
+            : `${unusedCount} unused, ${partCount} partly used, ${deadCount} spent or cancelled` +
+              ' (greyed out). Pick one, or type a code.'}
+      </p>
 
-        <Form.Item
-          label="Coupon"
-          extra={
-            coupons.length
-              ? 'The token the agent carries. Pick one, or type a code.'
-              : 'No spendable coupons found — you can still type a code.'
-          }
+      <label
+        style={{ display: 'block', fontSize: 13, fontWeight: 600, margin: '18px 0 6px' }}
+        htmlFor="fk-cash"
+      >
+        Cash limit
+      </label>
+      <InputNumber
+        id="fk-cash"
+        disabled={busy}
+        value={cashLimit}
+        onChange={(value) => setCashLimit(value ?? 0)}
+        min={0}
+        max={1000000}
+        step={500}
+        style={{ width: '100%' }}
+        prefix={<span style={{ color: V.textFaint, fontWeight: 600 }}>Rs</span>}
+        formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+        parser={(value) => Number((value ?? '').replace(/,/g, '')) as 0}
+      />
+      <p className="fk-hint">
+        What the agent may spend beyond the coupon. It is refused at payment if the bill is
+        higher.
+      </p>
+
+      <div className="fk-eyebrow">The method</div>
+
+      <div className="fk-choices" role="radiogroup" aria-label="How should it order?">
+        {MODES.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            role="radio"
+            className="fk-choice"
+            aria-checked={mode === option.value}
+            disabled={busy}
+            onClick={() => setMode(option.value)}
+          >
+            {mode === option.value && (
+              <span className="fk-choice-tick" aria-hidden>
+                ✓
+              </span>
+            )}
+            <span className="fk-choice-top">
+              <span className="fk-choice-icon" aria-hidden>
+                {option.icon}
+              </span>
+              <span className="fk-choice-name">{option.name}</span>
+            </span>
+            <span className="fk-choice-desc">{option.desc}</span>
+          </button>
+        ))}
+      </div>
+
+      {mode === 'browser' && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            marginTop: 12,
+            padding: '11px 14px',
+            borderRadius: 12,
+            background: V.surfaceSunken,
+            border: `1px solid ${V.border}`,
+          }}
         >
-          <Select
-            allowClear
-            showSearch
-            value={couponCode}
-            onChange={setCouponCode}
-            placeholder="No coupon — pay cash only"
-            optionFilterProp="label"
-            options={coupons.map((coupon) => ({
-              value: coupon.couponCode,
-              label: describe(coupon),
-            }))}
-            // A code that is not in the list is still usable — the agent finds
-            // out from the restaurant, not from this dropdown.
-            onSearch={(value) => value.length > 3 && setCouponCode(value.toUpperCase())}
+          <Switch
+            checked={!headless}
+            disabled={busy}
+            onChange={(on) => setHeadless(!on)}
+            aria-label="Watch it happen"
           />
-        </Form.Item>
+          <Text style={{ fontSize: 12.5, color: V.textFaint }}>
+            {headless
+              ? 'Running invisibly'
+              : 'Chromium opens on this machine so you can watch'}
+          </Text>
+        </div>
+      )}
 
-        <Form.Item
-          label="Cash limit"
-          extra="What the agent may spend beyond the coupon. It is refused at payment if the bill is higher."
-        >
-          <InputNumber
-            value={cashLimit}
-            onChange={(value) => setCashLimit(value ?? 0)}
-            min={0}
-            max={1000000}
-            step={500}
-            style={{ width: '100%' }}
-            prefix="Rs"
-            formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-            parser={(value) => Number((value ?? '').replace(/,/g, '')) as 0}
-          />
-        </Form.Item>
-
-        <Form.Item label="How should it order?">
-          <Segmented
-            block
-            value={mode}
-            onChange={(value) => setMode(value as AgentMode)}
-            options={[
-              { label: 'Through the API', value: 'api' },
-              { label: 'Through the website', value: 'browser' },
-            ]}
-          />
-          <Paragraph type="secondary" style={{ marginTop: 8, marginBottom: 0, fontSize: 13 }}>
-            {mode === 'api'
-              ? 'Calls the restaurant’s API directly. Fast and deterministic.'
-              : 'Drives the real kiosk website in Chromium — tapping, typing and paying like a customer.'}
-          </Paragraph>
-        </Form.Item>
-
-        {mode === 'browser' && (
-          <Form.Item label="Watch it happen">
-            <Space size={12}>
-              <Switch checked={!headless} onChange={(on) => setHeadless(!on)} />
-              <Text type="secondary">
-                {headless
-                  ? 'Running invisibly'
-                  : 'Chromium opens on this machine so you can watch'}
-              </Text>
-            </Space>
-          </Form.Item>
-        )}
-
-      </Form>
-
-      {/* Outside the Form on purpose: `disabled={busy}` cascades to every
-          control inside it, which would grey out Stop exactly when it is
-          needed. */}
-      <Space direction="vertical" size={8} style={{ marginTop: 8, width: '100%' }}>
-        <Space size={12}>
+      <div style={{ marginTop: 22, display: 'flex', flexDirection: 'column', gap: 9 }}>
+        <div className="fk-actions">
           {/* The Tooltip needs a wrapper: antd puts `pointer-events: none` on a
               disabled button, so hovering the button itself fires nothing. */}
           <Tooltip title={reason ?? ''}>
-            <span style={{ display: 'inline-block' }}>
+            <span style={{ display: 'block' }}>
               <Button
                 type="primary"
                 size="large"
+                className="fk-cta"
                 onClick={submit}
                 disabled={!canRun}
                 loading={busy}
+                block
               >
-                {busy ? 'On its way…' : 'Send the agent'}
+                {busy ? 'On its way…' : 'Send the agent →'}
               </Button>
             </span>
           </Tooltip>
+
           {busy && (
             <Button size="large" danger onClick={onCancel}>
               Stop
             </Button>
           )}
-        </Space>
+        </div>
 
         {/* Spelled out under the button as well as in the tooltip — a reason you
             have to hover to discover is a reason most people never read. */}
-        {reason && !busy && (
-          <Text type="secondary" style={{ fontSize: 13 }}>
-            {reason}
-          </Text>
+        {reason && !busy ? (
+          <Text style={{ fontSize: 12.5, color: V.flame }}>{reason}</Text>
+        ) : (
+          !busy && (
+            <Text style={{ fontSize: 12, color: V.textFaint }}>
+              Press <span className="fk-kbd">Ctrl</span> <span className="fk-kbd">↵</span> in
+              the order box to send.
+            </Text>
+          )
         )}
-      </Space>
-    </Card>
+      </div>
+    </Panel>
   );
 }

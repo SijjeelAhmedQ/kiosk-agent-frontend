@@ -1,8 +1,6 @@
-import { Alert, Card, Col, Progress, Row, Statistic, Typography } from 'antd';
+import { Alert, App as AntApp, Button, Tooltip } from 'antd';
+import { Panel } from '@/components/Panel';
 import type { AgentRunStatus, AgentWalletSummary } from '@/types';
-import { C } from '@/theme';
-
-const { Paragraph, Text } = Typography;
 
 interface Props {
   status: AgentRunStatus | 'idle';
@@ -14,6 +12,26 @@ interface Props {
 
 const money = (value: number) => `Rs ${value.toLocaleString()}`;
 
+/** One figure from the wallet, with a spine saying what kind of money it is. */
+function Tile({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number;
+  tone?: 'leaf' | 'amber';
+}) {
+  return (
+    <div className={`fk-tile${tone ? ` fk-tile-${tone}` : ''}`}>
+      <div className="fk-tile-label">{label}</div>
+      <div className={`fk-tile-value${tone === 'leaf' ? ' fk-tile-value-leaf' : ''}`}>
+        {money(value)}
+      </div>
+    </div>
+  );
+}
+
 /**
  * The agent's own words, and what the errand cost.
  *
@@ -22,25 +40,57 @@ const money = (value: number) => `Rs ${value.toLocaleString()}`;
  * otherwise a blank panel, and the report is the thing worth reading twice.
  */
 export function RunReport({ status, narration, finalText, wallet, error }: Props) {
+  const { message } = AntApp.useApp();
+
   const text = finalText || narration;
   const settled = status === 'done' || status === 'failed' || status === 'cancelled';
 
   if (status === 'idle' && !text) return null;
 
-  const title =
+  const [icon, title, verdict, verdictClass] =
     status === 'done'
-      ? 'How it went'
+      ? ['🎉', 'How it went', 'Done', 'fk-verdict-done']
       : status === 'failed'
-        ? 'What went wrong'
+        ? ['🚨', 'What went wrong', 'Failed', 'fk-verdict-failed']
         : status === 'cancelled'
-          ? 'Stopped'
-          : 'What the agent is saying';
+          ? ['🛑', 'Stopped', 'Stopped', 'fk-verdict-failed']
+          : ['💬', 'What the agent is saying', 'Live', 'fk-verdict-live'];
+
+  const copy = () => {
+    void navigator.clipboard.writeText(text).then(
+      () => message.success('Report copied'),
+      () => message.error('Could not copy the report'),
+    );
+  };
+
+  // Over the limit is possible in principle — the bar should say so rather than
+  // quietly clamping at a tidy 100%.
+  const spentPct = wallet && wallet.cashLimit > 0
+    ? Math.round((wallet.cashSpent / wallet.cashLimit) * 100)
+    : 0;
 
   return (
-    <Card title={title} variant="outlined">
-      {error && (
-        <Alert type="error" showIcon message={error} style={{ marginBottom: 16 }} />
-      )}
+    <Panel
+      icon={icon}
+      title={title}
+      live={!settled}
+      extra={
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span className={`fk-verdict ${verdictClass}`}>
+            {!settled && <span className="fk-dot fk-dot-busy fk-dot-live" aria-hidden />}
+            {verdict}
+          </span>
+          {settled && text && (
+            <Tooltip title="Copy the report">
+              <Button size="small" onClick={copy}>
+                Copy
+              </Button>
+            </Tooltip>
+          )}
+        </div>
+      }
+    >
+      {error && <Alert type="error" showIcon message={error} style={{ marginBottom: 14 }} />}
 
       {status === 'cancelled' && (
         <Alert
@@ -48,61 +98,58 @@ export function RunReport({ status, narration, finalText, wallet, error }: Props
           showIcon
           message="Stopped part-way"
           description="Anything already paid for still stands — check the kiosk's order list before re-running."
-          style={{ marginBottom: 16 }}
+          style={{ marginBottom: 14 }}
         />
       )}
 
       {text ? (
-        <Paragraph style={{ whiteSpace: 'pre-wrap', marginBottom: wallet ? 20 : 0 }}>
+        <p className="fk-prose" style={{ marginBottom: wallet ? 20 : 0 }}>
           {text}
-          {!settled && <Text type="secondary"> ▍</Text>}
-        </Paragraph>
+          {!settled && <span className="fk-caret" aria-hidden />}
+        </p>
       ) : (
         // Only while it is actually running — a failed run that never spoke
         // would otherwise sit under its own error saying "Working…".
-        !settled && <Text type="secondary">Working…</Text>
+        !settled && (
+          <p className="fk-prose">
+            Working
+            <span className="fk-caret" aria-hidden />
+          </p>
+        )
       )}
 
       {wallet && (
         <>
-          <Row gutter={16}>
-            <Col span={8}>
-              <Statistic
-                title="Coupon covered"
-                value={wallet.couponRedeemed}
-                formatter={(value) => money(Number(value))}
-                valueStyle={{ color: C.leaf, fontSize: 20 }}
-              />
-            </Col>
-            <Col span={8}>
-              <Statistic
-                title="Cash spent"
-                value={wallet.cashSpent}
-                formatter={(value) => money(Number(value))}
-                valueStyle={{ fontSize: 20 }}
-              />
-            </Col>
-            <Col span={8}>
-              <Statistic
-                title="Left in the wallet"
-                value={wallet.cashRemaining}
-                formatter={(value) => money(Number(value))}
-                valueStyle={{ color: C.ash, fontSize: 20 }}
-              />
-            </Col>
-          </Row>
+          <div className="fk-tiles">
+            <Tile label="Coupon covered" value={wallet.couponRedeemed} tone="leaf" />
+            <Tile label="Cash spent" value={wallet.cashSpent} tone="amber" />
+            <Tile label="Left in the wallet" value={wallet.cashRemaining} />
+          </div>
 
           {wallet.cashLimit > 0 && (
-            <Progress
-              percent={Math.round((wallet.cashSpent / wallet.cashLimit) * 100)}
-              strokeColor={C.amber}
-              trailColor={C.mist}
-              format={(percent) => `${percent}% of the limit`}
-              style={{ marginTop: 12 }}
-            />
+            <div className="fk-meter">
+              <div className="fk-meter-head">
+                <span>{spentPct}% of the cash limit</span>
+                <span>
+                  {money(wallet.cashSpent)} of {money(wallet.cashLimit)}
+                </span>
+              </div>
+              <div
+                className="fk-meter-track"
+                role="progressbar"
+                aria-valuenow={spentPct}
+                aria-valuemin={0}
+                aria-valuemax={100}
+              >
+                <div
+                  className={`fk-meter-fill${spentPct > 100 ? ' fk-meter-fill-over' : ''}`}
+                  style={{ width: `${Math.min(spentPct, 100)}%` }}
+                />
+              </div>
+            </div>
           )}
         </>
       )}
-    </Card>
+    </Panel>
   );
 }

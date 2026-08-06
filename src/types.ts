@@ -21,7 +21,7 @@ export interface AgentHealth {
   hasApiKey: boolean;
   /** What is missing, in words, when `hasApiKey` is false. */
   credentialProblem: string | null;
-  /** anthropic | gemini | openai | ollama */
+  /** anthropic | gemini | openai | groq | ollama */
   provider: string;
   model: string;
   kioskWeb: string;
@@ -72,11 +72,22 @@ export interface AgentToolCall {
   summary: string | null;
 }
 
+/**
+ * Where a coupon stands. The kiosk computes this at read time — `expired` is
+ * never stored — and the five are mutually exclusive.
+ */
+export type CouponStatus =
+  | 'unused'
+  | 'partially_redeemed'
+  | 'fully_redeemed'
+  | 'expired'
+  | 'cancelled';
+
 /** The slice of the kiosk's coupon record this app shows in its picker. */
 export interface CouponOption {
   couponCode: string;
   couponType: 'product' | 'value';
-  status: string;
+  status: CouponStatus;
   remainingBalance: number | null;
   originalAmount: number | null;
   productName: string | null;

@@ -1,7 +1,7 @@
-import { Alert, Space, Tag, Typography } from 'antd';
+import type { ReactNode } from 'react';
+import { Alert, Typography } from 'antd';
 import type { AgentHealth } from '@/types';
 import { AGENT_OFFLINE } from '@/services/agentApi';
-import { C } from '@/theme';
 
 const { Text } = Typography;
 
@@ -10,16 +10,34 @@ interface Props {
   checking: boolean;
 }
 
+/** One service, one pill: what it is and whether it is up. */
+function Pill({ ok, children }: { ok: boolean; children: ReactNode }) {
+  return (
+    <span className="fk-pill">
+      <span className={`fk-dot ${ok ? 'fk-dot-ok' : 'fk-dot-bad'}`} aria-hidden />
+      {children}
+    </span>
+  );
+}
+
 /**
  * What is and is not ready.
  *
  * Three separate things have to be up before an errand can run, and when one is
  * missing the operator needs to know *which* — "it didn't work" is what this
- * exists to prevent. Silent when everything is fine.
+ * exists to prevent. Quiet when everything is fine: the pills stay, the
+ * explanations only appear when there is something to explain.
  */
 export function ServiceStatus({ health, checking }: Props) {
   if (checking && !health) {
-    return <Text type="secondary">Checking the agent service…</Text>;
+    return (
+      <div className="fk-status">
+        <span className="fk-pill">
+          <span className="fk-dot fk-dot-busy fk-dot-live" aria-hidden />
+          Checking the agent service…
+        </span>
+      </div>
+    );
   }
 
   if (!health) {
@@ -28,7 +46,11 @@ export function ServiceStatus({ health, checking }: Props) {
         type="error"
         showIcon
         message="The agent service is not running"
-        description={<Text code style={{ fontSize: 12 }}>{AGENT_OFFLINE}</Text>}
+        description={
+          <Text code style={{ fontSize: 11.5 }}>
+            {AGENT_OFFLINE}
+          </Text>
+        }
       />
     );
   }
@@ -44,30 +66,31 @@ export function ServiceStatus({ health, checking }: Props) {
   }
 
   return (
-    <Space direction="vertical" size={12} style={{ width: '100%' }}>
-      <Space size={8} wrap>
-        <Tag color={C.leaf} style={{ color: C.paper, border: 'none' }}>
-          Agent online
-        </Tag>
-        <Tag color={health.restaurantApi ? C.leaf : C.flame} style={{ color: C.paper, border: 'none' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div className="fk-status">
+        <Pill ok>Agent online</Pill>
+        <Pill ok={health.restaurantApi}>
           {health.restaurantApi ? 'Restaurant open' : 'Restaurant down'}
-        </Tag>
-        <Tag color={health.hasApiKey ? C.leaf : C.flame} style={{ color: C.paper, border: 'none' }}>
+        </Pill>
+        <Pill ok={health.hasApiKey}>
           {health.hasApiKey ? 'Credentials ready' : 'No credentials'}
-        </Tag>
-        <Tag style={{ background: C.cream, border: 'none', color: C.ash }}>
+        </Pill>
+
+        <span className="fk-pill fk-pill-mono">
           {health.provider} · {health.model}
-        </Tag>
+        </span>
+
         {health.busy && (
-          <Tag style={{ background: C.amberSoft, border: 'none', color: C.amberDark }}>
+          <span className="fk-pill">
+            <span className="fk-dot fk-dot-busy fk-dot-live" aria-hidden />
             An errand is already running
-          </Tag>
+          </span>
         )}
-      </Space>
+      </div>
 
       {problems.map((problem) => (
         <Alert key={problem} type="warning" showIcon message={problem} />
       ))}
-    </Space>
+    </div>
   );
 }

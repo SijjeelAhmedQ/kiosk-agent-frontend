@@ -3,13 +3,38 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Ordering Agent · Friends Kitchen</title>
+    <title> Ordering Agent · Friends Kitchen</title>
+    <!-- The header mark, redrawn as a favicon: the same amber tile and robot,
+         inlined so the tab icon needs no extra request. -->
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='16' fill='%23FFC72C'/><text x='32' y='47' font-size='40' text-anchor='middle'>🤖</text></svg>"
+    />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
+    <script>
+      // The saved scheme, applied before the first paint. React sets the full
+      // palette a moment later; this only has to stop a dark-mode session from
+      // flashing white on the way there.
+      (function () {
+        try {
+          var saved = localStorage.getItem('fk-agent-scheme');
+          var dark =
+            saved === 'dark' ||
+            (saved === null && matchMedia('(prefers-color-scheme: dark)').matches);
+          var root = document.documentElement;
+          root.setAttribute('data-theme', dark ? 'dark' : 'light');
+          root.style.setProperty('--fk-bg', dark ? '#09090C' : '#F4F4F8');
+          root.style.setProperty('--fk-text', dark ? '#F3F3F6' : '#111116');
+        } catch (e) {
+          /* private mode, no storage — the default light palette is fine */
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

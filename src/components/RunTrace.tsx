@@ -1,36 +1,48 @@
-import { Card, Empty, Spin, Tag, Timeline, Typography } from 'antd';
-import type { AgentToolCall } from '@/types';
+import { useEffect, useState } from 'react';
+import { Panel } from '@/components/Panel';
+import type { AgentRunStatus, AgentToolCall } from '@/types';
 import { toolLabel } from '@/toolLabels';
-import { C } from '@/theme';
-
-const { Text } = Typography;
 
 interface Props {
   toolCalls: AgentToolCall[];
   busy: boolean;
+  status: AgentRunStatus | 'idle';
   browserOpen: boolean;
 }
 
-/** A coloured dot per step: running, succeeded, or refused. */
-function dot(call: AgentToolCall) {
-  if (call.ok === null) return <Spin size="small" />;
-  const colour = call.ok ? C.leaf : C.flame;
+/** mm:ss — long enough for any errand, short enough to read at a glance. */
+function clock(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${`${s}`.padStart(2, '0')}`;
+}
+
+/**
+ * How long this run has been going, ticking while it does.
+ *
+ * Display only — nothing about the run depends on it. It exists because a
+ * browser-mode errand can take a minute, and a page with no clock on it makes
+ * thirty seconds feel like failure.
+ */
+function useElapsed(busy: boolean): number {
+  const [seconds, setSeconds] = useState(0);
+
+  useEffect(() => {
+    if (!busy) return;
+    setSeconds(0);
+    const timer = window.setInterval(() => setSeconds((n) => n + 1), 1000);
+    return () => window.clearInterval(timer);
+  }, [busy]);
+
+  return seconds;
+}
+
+/** A dot per step: running, succeeded, or refused. */
+function Dot({ ok }: { ok: boolean | null }) {
+  if (ok === null) return <span className="fk-step-dot fk-step-dot-run">•</span>;
   return (
-    <span
-      style={{
-        display: 'inline-flex',
-        height: 18,
-        width: 18,
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderRadius: 999,
-        background: colour,
-        color: C.paper,
-        fontSize: 11,
-        fontWeight: 700,
-      }}
-    >
-      {call.ok ? '✓' : '!'}
+    <span className={`fk-step-dot ${ok ? 'fk-step-dot-ok' : 'fk-step-dot-bad'}`}>
+      {ok ? '✓' : '!'}
     </span>
   );
 }
@@ -42,60 +54,81 @@ function dot(call: AgentToolCall) {
  * payment shows up here in red and the agent is expected to carry on. So
  * failures are rendered as part of the story rather than as an error state.
  */
-export function RunTrace({ toolCalls, busy, browserOpen }: Props) {
+export function RunTrace({ toolCalls, busy, status, browserOpen }: Props) {
+  const elapsed = useElapsed(busy);
+  const done = toolCalls.filter((call) => call.ok !== null).length;
+
+  const note =
+    toolCalls.length === 0
+      ? 'Every step, as it happens'
+      : `${done} of ${toolCalls.length} step${toolCalls.length === 1 ? '' : 's'} finished`;
+
   return (
-    <Card
+    <Panel
+      icon="🧭"
       title="What the agent did"
-      variant="outlined"
+      note={note}
+      live={busy}
       extra={
-        browserOpen ? (
-          <Tag style={{ background: C.amberSoft, border: 'none', color: C.amberDark }}>
-            Browser open
-          </Tag>
-        ) : null
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {browserOpen && (
+            <span className="fk-badge">
+              <span aria-hidden>🖥️</span> Browser open
+            </span>
+          )}
+          {(busy || elapsed > 0) && status !== 'idle' && (
+            <span className="fk-pill fk-pill-mono">{clock(elapsed)}</span>
+          )}
+        </div>
       }
     >
       {toolCalls.length === 0 ? (
-        <Empty
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description={
-            busy ? 'Thinking about where to start…' : 'Nothing yet — send it on an errand.'
-          }
-        />
+        <div className="fk-empty">
+          <span className="fk-empty-art" aria-hidden>
+            {busy ? '🤔' : '🛒'}
+          </span>
+          <p className="fk-empty-title">
+            {busy ? 'Thinking about where to start…' : 'Nothing yet'}
+          </p>
+          <p className="fk-empty-note">
+            {busy
+              ? 'The first step will appear here the moment the agent takes it.'
+              : 'Write an errand and send the agent — its steps land here as it takes them.'}
+          </p>
+        </div>
       ) : (
-        <Timeline
-          items={toolCalls.map((call) => {
+        <ol className="fk-trace">
+          {toolCalls.map((call) => {
             const meta = toolLabel(call.name);
-            return {
-              dot: dot(call),
-              children: (
-                <div>
-                  <Text strong>
-                    {meta.icon} {meta.label}
-                  </Text>
-                  {meta.spends && (
-                    <Tag
-                      style={{
-                        marginLeft: 8,
-                        background: C.amberSoft,
-                        border: 'none',
-                        color: C.amberDark,
-                      }}
-                    >
-                      spends money
-                    </Tag>
-                  )}
-                  <div>
-                    <Text type="secondary" style={{ fontSize: 12.5 }}>
-                      {call.summary ?? 'working…'}
-                    </Text>
+            const failed = call.ok === false;
+
+            return (
+              <li key={call.toolUseId} className="fk-step">
+                <Dot ok={call.ok} />
+
+                <div className="fk-step-body">
+                  <div className="fk-step-title">
+                    <span aria-hidden>{meta.icon}</span>
+                    <span>{meta.label}</span>
+                    {meta.spends && <span className="fk-badge">spends money</span>}
+                  </div>
+
+                  <div className={`fk-step-summary${failed ? ' fk-step-summary-bad' : ''}`}>
+                    {call.summary ?? (
+                      <span className="fk-working">
+                        working
+                        <i />
+                        <i />
+                        <i />
+                      </span>
+                    )}
                   </div>
                 </div>
-              ),
-            };
+              </li>
+            );
           })}
-        />
+        </ol>
       )}
-    </Card>
+    </Panel>
   );
 }

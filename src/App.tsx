@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Button, Col, Layout, Row, Space, Typography } from 'antd';
+import { Button, Tooltip } from 'antd';
 import { ErrandForm } from '@/components/ErrandForm';
 import { RunReport } from '@/components/RunReport';
 import { RunTrace } from '@/components/RunTrace';
@@ -7,12 +7,34 @@ import { ServiceStatus } from '@/components/ServiceStatus';
 import { useAgentRun } from '@/hooks/useAgentRun';
 import { agentApi } from '@/services/agentApi';
 import type { AgentHealth, StartAgentRunInput } from '@/types';
-import { C } from '@/theme';
+import type { ColorScheme } from '@/theme';
 
-const { Header, Content } = Layout;
-const { Title, Text } = Typography;
+interface Props {
+  scheme: ColorScheme;
+  onToggleScheme: () => void;
+}
 
-export default function App() {
+/** The run's state as one pill in the header — the thing you glance at. */
+function RunPill({ status, busy }: { status: string; busy: boolean }) {
+  if (status === 'idle') return null;
+
+  const [dot, label] = busy
+    ? ['fk-dot-busy fk-dot-live', status === 'queued' ? 'Waiting its turn' : 'On an errand']
+    : status === 'done'
+      ? ['fk-dot-ok', 'Errand done']
+      : status === 'cancelled'
+        ? ['fk-dot', 'Stopped']
+        : ['fk-dot-bad', 'Errand failed'];
+
+  return (
+    <span className="fk-pill">
+      <span className={`fk-dot ${dot}`} aria-hidden />
+      {label}
+    </span>
+  );
+}
+
+export default function App({ scheme, onToggleScheme }: Props) {
   const run = useAgentRun();
   const [health, setHealth] = useState<AgentHealth | null>(null);
   const [checking, setChecking] = useState(true);
@@ -46,86 +68,79 @@ export default function App() {
         ? 'Friends Kitchen is not answering on port 8000 — start the kiosk backend.'
         : null;
 
+  const dark = scheme === 'dark';
+
   return (
-    <Layout style={{ minHeight: '100vh', background: C.cream }}>
-      <Header
-        style={{
-          background: C.ink,
-          height: 'auto',
-          padding: '18px 32px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 16,
-          flexWrap: 'wrap',
-        }}
-      >
-        <Space size={14}>
-          <span
-            aria-hidden
-            style={{
-              display: 'inline-flex',
-              height: 44,
-              width: 44,
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: 14,
-              background: C.amber,
-              fontSize: 22,
-            }}
-          >
-            🤖
-          </span>
-          <div>
-            <Title level={4} style={{ color: C.paper, margin: 0, lineHeight: 1.2 }}>
-              Ordering agent
-            </Title>
-            <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 13 }}>
-              Send it to Friends Kitchen with a coupon and a limit
-            </Text>
+    <div className="fk-shell">
+      <div className="fk-aura" aria-hidden />
+
+      <header className="fk-header">
+        <div className="fk-header-inner">
+          <div className="fk-brand">
+            <span className="fk-mark" aria-hidden>
+              🤖
+            </span>
+            <div style={{ minWidth: 0 }}>
+              <h1 className="fk-brand-name">Ordering agent</h1>
+              <div className="fk-brand-sub">
+                Send it to Friends Kitchen with a coupon and a limit
+              </div>
+            </div>
           </div>
-        </Space>
 
-        {run.status !== 'idle' && !run.busy && (
-          <Button onClick={run.reset} style={{ background: 'rgba(255,255,255,0.12)', color: C.paper, border: 'none' }}>
-            New errand
-          </Button>
-        )}
-      </Header>
+          <div className="fk-header-actions">
+            <RunPill status={run.status} busy={run.busy} />
 
-      <Content style={{ padding: 32, maxWidth: 1400, width: '100%', margin: '0 auto' }}>
-        <div style={{ marginBottom: 20 }}>
+            {run.status !== 'idle' && !run.busy && (
+              <Button onClick={run.reset}>New errand</Button>
+            )}
+
+            <Tooltip title={dark ? 'Switch to light' : 'Switch to dark'}>
+              <button
+                type="button"
+                className="fk-icon-btn"
+                onClick={onToggleScheme}
+                aria-label={dark ? 'Switch to light theme' : 'Switch to dark theme'}
+              >
+                {dark ? '☀️' : '🌙'}
+              </button>
+            </Tooltip>
+          </div>
+        </div>
+      </header>
+
+      <main className="fk-content">
+        <div className="fk-rise" style={{ marginBottom: 18 }}>
           <ServiceStatus health={health} checking={checking} />
         </div>
 
-        <Row gutter={[20, 20]} align="top">
-          <Col xs={24} lg={10}>
+        <div className="fk-columns">
+          <div className="fk-col-sticky fk-rise fk-rise-1">
             <ErrandForm
               onRun={start}
               onCancel={() => void run.cancel()}
               busy={run.busy}
               blockedReason={blockedReason}
             />
-          </Col>
+          </div>
 
-          <Col xs={24} lg={14}>
-            <Space direction="vertical" size={20} style={{ width: '100%' }}>
-              <RunTrace
-                toolCalls={run.toolCalls}
-                busy={run.busy}
-                browserOpen={run.browserOpen}
-              />
-              <RunReport
-                status={run.status}
-                narration={run.narration}
-                finalText={run.finalText}
-                wallet={run.wallet}
-                error={run.error}
-              />
-            </Space>
-          </Col>
-        </Row>
-      </Content>
-    </Layout>
+          <div className="fk-col-stack fk-rise fk-rise-2">
+            <RunTrace
+              toolCalls={run.toolCalls}
+              busy={run.busy}
+              status={run.status}
+              browserOpen={run.browserOpen}
+            />
+            <RunReport
+              status={run.status}
+              narration={run.narration}
+              finalText={run.finalText}
+              wallet={run.wallet}
+              error={run.error}
+            />
+          </div>
+        </div>
+      </main>
+    </div>
   );
 }

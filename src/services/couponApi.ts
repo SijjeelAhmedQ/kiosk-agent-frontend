@@ -18,13 +18,17 @@ interface CouponListResponse {
 
 export const couponApi = {
   /**
-   * Coupons with value left on them.
+   * Every coupon, spendable or not.
+   *
+   * The spent, expired and cancelled ones come back too — the picker lists
+   * them greyed out with the reason, so a code that will not work says so here
+   * rather than halfway through an errand.
    *
    * Returns an empty list rather than throwing: an unreachable service is
    * already reported by the health check, and the picker falls back to letting
    * the operator type a code.
    */
-  spendable: async (): Promise<CouponOption[]> => {
+  list: async (): Promise<CouponOption[]> => {
     try {
       const response = await fetch(`${AGENT_BASE}/api/agent/coupons`);
       if (!response.ok) return [];
