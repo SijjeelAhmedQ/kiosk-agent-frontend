@@ -72,23 +72,31 @@ export default function App({ scheme, onToggleScheme }: Props) {
 
   return (
     <div className="fk-shell">
-      <div className="fk-aura" aria-hidden />
-
       <header className="fk-header">
         <div className="fk-header-inner">
+          {/* The kiosk's own header, mark and all — this app is Friends
+              Kitchen's agent, so it wears Friends Kitchen's name first and
+              says what it is underneath. */}
           <div className="fk-brand">
             <span className="fk-mark" aria-hidden>
-              🤖
+              🔥
             </span>
             <div style={{ minWidth: 0 }}>
-              <h1 className="fk-brand-name">Ordering agent</h1>
+              <h1 className="fk-brand-name">Friends Kitchen</h1>
               <div className="fk-brand-sub">
-                Send it to Friends Kitchen with a coupon and a limit
+                Ordering agent — send it out with a coupon and a limit
               </div>
             </div>
           </div>
 
           <div className="fk-header-actions">
+            {/* The capsule the kiosk header carries on the right, saying which
+                of the family's screens you are on. */}
+            <span className="fk-tag">
+              <span aria-hidden>🤖</span>
+              AI agent
+            </span>
+
             <RunPill status={run.status} busy={run.busy} />
 
             {run.status !== 'idle' && !run.busy && (

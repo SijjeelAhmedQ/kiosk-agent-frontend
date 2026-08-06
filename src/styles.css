@@ -1,8 +1,11 @@
 /* ---------------------------------------------------------------------------
    antd ships its own reset; this is the layer on top of it — the page shell,
    the panels, and the handful of custom controls antd has no equivalent for.
-   Every colour here comes from a --fk-* variable set by main.tsx, so both
-   schemes are one stylesheet rather than two.
+
+   The look is the kiosk's, deliberately: paper cards on cream, no borders, a
+   hairline ring and a soft shadow, Plus Jakarta Sans on every heading and
+   button, pills everywhere. Every colour comes from a --fk-* variable set by
+   main.tsx, so both schemes are one stylesheet rather than two.
 --------------------------------------------------------------------------- */
 
 html,
@@ -20,124 +23,73 @@ html[data-theme='dark'] {
 }
 
 body {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: var(--fk-font-sans, Inter, system-ui, sans-serif);
   background: var(--fk-bg);
   color: var(--fk-text);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-  font-feature-settings: 'cv02', 'cv03', 'cv04', 'ss01';
   transition: background-color 0.35s ease, color 0.35s ease;
 }
 
 ::selection {
-  background: var(--fk-amber);
-  color: #0d0d0f;
+  background: rgba(218, 41, 28, 0.15);
+  color: var(--fk-ink);
 }
 
-/* Scrollbars, in the palette rather than the platform's default grey. */
+/* Slim, neutral scrollbars — chrome should disappear, same as the kiosk's. */
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--fk-border-strong) transparent;
+  scrollbar-color: var(--fk-border) transparent;
 }
 *::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
 }
 *::-webkit-scrollbar-track {
   background: transparent;
 }
 *::-webkit-scrollbar-thumb {
-  background: var(--fk-border-strong);
-  border: 3px solid transparent;
-  background-clip: content-box;
+  background: var(--fk-border);
   border-radius: 999px;
 }
 *::-webkit-scrollbar-thumb:hover {
-  background: var(--fk-text-faint);
-  background-clip: content-box;
+  background: var(--fk-border-strong);
 }
 
 /* A visible focus ring on keyboard navigation only — this is a tool people
    drive from the keyboard while watching a run. */
 :focus-visible {
-  outline: 2px solid var(--fk-amber);
+  outline: 3px solid var(--fk-amber-edge);
   outline-offset: 2px;
-  border-radius: 8px;
+  border-radius: 12px;
 }
 
 /* ── The page shell ─────────────────────────────────────────────────────── */
 
+/* Flat cream, like every kiosk screen. The depth on this page comes from the
+   cards sitting on it, never from the background itself. */
 .fk-shell {
   position: relative;
   min-height: 100vh;
   isolation: isolate;
 }
 
-/* Two slow ambient washes behind everything. Fixed, so the page scrolls over
-   a background that stays put. */
-.fk-aura {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  overflow: hidden;
-  pointer-events: none;
-}
-.fk-aura::before,
-.fk-aura::after {
-  content: '';
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(90px);
-  will-change: transform;
-}
-.fk-aura::before {
-  width: 46vw;
-  height: 46vw;
-  min-width: 380px;
-  min-height: 380px;
-  top: -16vw;
-  left: -10vw;
-  background: var(--fk-aura1);
-  animation: fk-drift-a 26s ease-in-out infinite alternate;
-}
-.fk-aura::after {
-  width: 40vw;
-  height: 40vw;
-  min-width: 320px;
-  min-height: 320px;
-  top: 30vh;
-  right: -12vw;
-  background: var(--fk-aura2);
-  animation: fk-drift-b 32s ease-in-out infinite alternate;
-}
-
-@keyframes fk-drift-a {
-  to {
-    transform: translate3d(6vw, 8vh, 0) scale(1.12);
-  }
-}
-@keyframes fk-drift-b {
-  to {
-    transform: translate3d(-7vw, -10vh, 0) scale(1.08);
-  }
-}
-
 /* ── Header ─────────────────────────────────────────────────────────────── */
 
+/* The kiosk's own header: solid paper, one mist hairline, 80px tall. */
 .fk-header {
   position: sticky;
   top: 0;
   z-index: 20;
-  background: var(--fk-glass);
-  backdrop-filter: blur(18px) saturate(180%);
-  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  background: var(--fk-surface);
   border-bottom: 1px solid var(--fk-border);
 }
 
 .fk-header-inner {
-  max-width: 1440px;
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 14px 28px;
+  min-height: 80px;
+  padding: 12px 32px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -148,53 +100,38 @@ body {
 .fk-brand {
   display: flex;
   align-items: center;
-  gap: 13px;
+  gap: 14px;
   min-width: 0;
 }
 
-/* The mark: amber tile, soft glow, and a slow shine sweeping across it. */
+/* The kiosk's mark, unchanged: the flame on a red rounded tile. Copying it
+   rather than inventing an agent logo is the whole point — this app should
+   read as Friends Kitchen's own agent, not as a separate product. */
 .fk-mark {
-  position: relative;
   display: inline-flex;
-  height: 46px;
-  width: 46px;
+  height: 44px;
+  width: 44px;
   flex: none;
   align-items: center;
   justify-content: center;
-  border-radius: 15px;
-  font-size: 23px;
-  background: linear-gradient(145deg, #ffd75e 0%, var(--fk-amber) 55%, #f0a800 100%);
-  box-shadow: 0 6px 18px rgba(255, 199, 44, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.6);
-  overflow: hidden;
-}
-.fk-mark::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, 0.75) 50%, transparent 65%);
-  transform: translateX(-120%);
-  animation: fk-shine 5.5s ease-in-out infinite;
-}
-@keyframes fk-shine {
-  0%,
-  60% {
-    transform: translateX(-120%);
-  }
-  85%,
-  100% {
-    transform: translateX(120%);
-  }
+  border-radius: 16px;
+  font-size: 22px;
+  line-height: 1;
+  background: var(--fk-flame);
+  box-shadow: 0 4px 14px rgba(218, 41, 28, 0.28);
 }
 
 .fk-brand-name {
-  font-size: 17px;
-  font-weight: 750;
+  font-family: var(--fk-font-display);
+  font-size: 20px;
+  font-weight: 800;
   letter-spacing: -0.02em;
-  color: var(--fk-text);
-  line-height: 1.25;
+  color: var(--fk-ink);
+  line-height: 1.2;
   margin: 0;
 }
 .fk-brand-sub {
+  margin-top: 2px;
   font-size: 12.5px;
   color: var(--fk-text-faint);
   line-height: 1.3;
@@ -209,12 +146,27 @@ body {
   gap: 10px;
 }
 
+/* The cream capsule the kiosk header carries on the right. */
+.fk-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  border-radius: 999px;
+  background: var(--fk-surface-sunken);
+  font-family: var(--fk-font-display);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--fk-text);
+  white-space: nowrap;
+}
+
 /* ── Content ────────────────────────────────────────────────────────────── */
 
 .fk-content {
-  max-width: 1440px;
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 24px 28px 64px;
+  padding: 28px 32px 64px;
 }
 
 .fk-columns {
@@ -228,7 +180,7 @@ body {
    the form is what you come back to, so it should not scroll away. */
 .fk-col-sticky {
   position: sticky;
-  top: 92px;
+  top: 104px;
 }
 
 .fk-col-stack {
@@ -253,7 +205,7 @@ body {
     padding-right: 16px;
   }
   .fk-content {
-    padding-top: 16px;
+    padding-top: 18px;
   }
   /* Keep the header one row on a phone: the brand shrinks, the controls do
      not — an actions row that wraps under the logo looks like a mistake. */
@@ -266,34 +218,27 @@ body {
   }
 }
 @media (max-width: 520px) {
-  .fk-brand-sub {
+  .fk-brand-sub,
+  .fk-tag {
     display: none;
   }
 }
 
 /* ── Panel ──────────────────────────────────────────────────────────────── */
 
+/* The kiosk's card, to the pixel: rounded-xl3, paper, shadow-soft, and a
+   ring so faint it only stops the card dissolving into the cream. No border —
+   a 1px grey outline is the thing that makes a card look like a 2010s panel. */
 .fk-panel {
   position: relative;
   background: var(--fk-surface);
-  border: 1px solid var(--fk-border);
-  border-radius: 20px;
-  box-shadow: var(--fk-shadow-md);
+  border-radius: 32px;
+  box-shadow: var(--fk-shadow-sm), 0 0 0 1px var(--fk-ring);
   overflow: hidden;
-  transition: box-shadow 0.3s ease, border-color 0.3s ease, background-color 0.35s ease;
+  transition: box-shadow 0.3s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.35s ease;
 }
-
-/* A one-pixel highlight along the top edge — the thing that makes a flat card
-   read as a physical surface. */
-.fk-panel::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 16px;
-  right: 16px;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--fk-border-strong), transparent);
-  opacity: 0.8;
+.fk-panel:hover {
+  box-shadow: var(--fk-shadow-md), 0 0 0 1px var(--fk-ring);
 }
 
 .fk-panel-head {
@@ -301,45 +246,48 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 18px 22px 14px;
+  padding: 22px 24px 16px;
 }
 
 .fk-panel-title {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 14px;
   min-width: 0;
 }
 
+/* The admin PageHeader's glyph tile: rounded-2xl, cream, no edge. */
 .fk-panel-icon {
   display: inline-flex;
-  height: 32px;
-  width: 32px;
+  height: 44px;
+  width: 44px;
   flex: none;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
+  border-radius: 16px;
   background: var(--fk-surface-sunken);
-  border: 1px solid var(--fk-border);
-  font-size: 15px;
+  font-size: 20px;
+  line-height: 1;
 }
 
 .fk-panel-heading {
   margin: 0;
-  font-size: 15.5px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  color: var(--fk-text);
-  line-height: 1.3;
+  font-family: var(--fk-font-display);
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--fk-ink);
+  line-height: 1.25;
 }
 .fk-panel-note {
-  font-size: 12px;
+  margin-top: 3px;
+  font-size: 13px;
   color: var(--fk-text-faint);
-  line-height: 1.35;
+  line-height: 1.45;
 }
 
 .fk-panel-body {
-  padding: 4px 22px 22px;
+  padding: 6px 24px 24px;
 }
 
 /* An indeterminate bar across the panel's top edge while a run is live. */
@@ -348,9 +296,10 @@ body {
   top: 0;
   left: 0;
   right: 0;
-  height: 2px;
+  height: 3px;
   overflow: hidden;
   background: var(--fk-surface-sunken);
+  z-index: 1;
 }
 .fk-panel-live::after {
   content: '';
@@ -371,32 +320,36 @@ body {
 
 /* ── Field labels & sections ────────────────────────────────────────────── */
 
+/* The admin PageHeader's eyebrow: display face, caps, wide tracking, ash. */
 .fk-eyebrow {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 10.5px;
+  font-family: var(--fk-font-display);
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--fk-text-faint);
-  margin: 22px 0 12px;
-}
-.fk-eyebrow::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--fk-border);
+  margin: 26px 0 12px;
 }
 .fk-eyebrow:first-child {
   margin-top: 0;
+}
+
+/* The Field label — sentence case, not caps: these read as words. */
+.fk-label {
+  display: block;
+  font-family: var(--fk-font-display);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--fk-text-faint);
+  margin-bottom: 8px;
 }
 
 .fk-hint {
   font-size: 12.5px;
   line-height: 1.5;
   color: var(--fk-text-faint);
-  margin: 7px 0 0;
+  margin: 8px 0 0;
 }
 
 /* Hint on the left, character count on the right — one row, so neither can
@@ -408,9 +361,9 @@ body {
   gap: 12px;
 }
 .fk-count {
-  margin-top: 7px;
+  margin-top: 8px;
   flex: none;
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-family: var(--fk-font-mono);
   font-size: 11px;
   color: var(--fk-text-faint);
   font-variant-numeric: tabular-nums;
@@ -422,43 +375,44 @@ body {
 
 /* ── Chips (the example errands) ────────────────────────────────────────── */
 
+/* The kiosk's FilterChips, at desk scale: mist pill, ink when picked. */
 .fk-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 7px;
+  gap: 8px;
 }
 
 .fk-chip {
   appearance: none;
-  font: inherit;
+  font-family: var(--fk-font-display);
   font-size: 12.5px;
-  font-weight: 500;
+  font-weight: 700;
   line-height: 1.4;
-  padding: 6px 13px;
+  padding: 8px 16px;
   border-radius: 999px;
-  border: 1px solid var(--fk-border);
+  border: none;
   background: var(--fk-surface-sunken);
-  color: var(--fk-text-soft);
+  color: var(--fk-text);
   cursor: pointer;
-  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.18s ease,
-    background-color 0.18s ease, color 0.18s ease;
+  transition: transform 0.15s cubic-bezier(0.34, 1.4, 0.64, 1), background-color 0.2s ease,
+    color 0.2s ease;
 }
 .fk-chip:hover:not(:disabled) {
-  transform: translateY(-1px);
-  border-color: var(--fk-amber);
-  color: var(--fk-text);
+  background: var(--fk-border);
 }
 .fk-chip:active:not(:disabled) {
-  transform: translateY(0);
+  transform: scale(0.97);
 }
 .fk-chip[aria-pressed='true'] {
-  background: var(--fk-amber-surface);
-  border-color: var(--fk-amber);
-  color: var(--fk-amber-ink);
-  font-weight: 600;
+  background: var(--fk-ink);
+  color: var(--fk-surface);
+}
+html[data-theme='dark'] .fk-chip[aria-pressed='true'] {
+  background: var(--fk-amber);
+  color: #0d0d0f;
 }
 .fk-chip:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
@@ -467,7 +421,7 @@ body {
 .fk-choices {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 12px;
 }
 /* Two cards side by side need the room to stay readable — below this they
    stack rather than squeezing three words per line. */
@@ -482,75 +436,83 @@ body {
   appearance: none;
   font: inherit;
   text-align: left;
-  padding: 13px 14px;
-  border-radius: 14px;
-  border: 1.5px solid var(--fk-border);
+  padding: 16px;
+  border-radius: 24px;
+  border: none;
   background: var(--fk-surface-sunken);
   color: var(--fk-text);
   cursor: pointer;
-  overflow: hidden;
-  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.2s ease,
-    background-color 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.2s ease,
+    box-shadow 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .fk-choice:hover:not(:disabled) {
-  transform: translateY(-2px);
-  border-color: var(--fk-border-strong);
-  box-shadow: var(--fk-shadow-sm);
+  transform: translateY(-4px);
+  box-shadow: var(--fk-shadow-md);
+}
+.fk-choice:active:not(:disabled) {
+  transform: scale(0.97);
 }
 .fk-choice[aria-checked='true'] {
-  border-color: var(--fk-amber);
   background: var(--fk-amber-surface);
-  box-shadow: 0 0 0 3px var(--fk-amber-edge);
+  box-shadow: 0 0 0 2px var(--fk-amber);
 }
 .fk-choice:disabled {
-  opacity: 0.55;
+  opacity: 0.45;
   cursor: not-allowed;
 }
 
 .fk-choice-top {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 .fk-choice-icon {
-  font-size: 16px;
+  font-size: 18px;
   line-height: 1;
 }
 .fk-choice-name {
-  font-size: 13.5px;
-  font-weight: 650;
+  font-family: var(--fk-font-display);
+  font-size: 14px;
+  font-weight: 800;
   letter-spacing: -0.01em;
+  color: var(--fk-ink);
 }
 .fk-choice-desc {
   display: block;
-  margin-top: 5px;
-  font-size: 11.5px;
-  line-height: 1.45;
+  margin-top: 7px;
+  font-size: 12px;
+  line-height: 1.5;
   color: var(--fk-text-faint);
 }
 
 /* The selected card carries a tick in the corner. */
 .fk-choice-tick {
   position: absolute;
-  top: 10px;
-  right: 10px;
-  height: 17px;
-  width: 17px;
+  top: 12px;
+  right: 12px;
+  height: 22px;
+  width: 22px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: 999px;
   background: var(--fk-amber);
   color: #0d0d0f;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 800;
-  animation: fk-pop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: var(--fk-shadow-brand);
+  animation: fk-pop 0.38s cubic-bezier(0.34, 1.4, 0.64, 1);
 }
 @keyframes fk-pop {
-  from {
-    transform: scale(0);
+  0% {
+    transform: scale(0.82);
+    opacity: 0;
   }
-  to {
+  65% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+  100% {
     transform: scale(1);
   }
 }
@@ -591,55 +553,54 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  padding: 1px 6px;
-  border-radius: 6px;
-  border: 1px solid var(--fk-border-strong);
+  padding: 2px 7px;
+  border-radius: 8px;
   background: var(--fk-surface-sunken);
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-family: var(--fk-font-mono);
   font-size: 10.5px;
+  font-weight: 600;
   color: var(--fk-text-faint);
   line-height: 1.6;
 }
 
 /* ── Status strip ───────────────────────────────────────────────────────── */
 
+/* A paper card like every other surface, not a frosted bar. */
 .fk-status {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  border-radius: 16px;
-  border: 1px solid var(--fk-border);
-  background: var(--fk-glass);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  box-shadow: var(--fk-shadow-sm);
+  gap: 10px;
+  padding: 14px 20px;
+  border-radius: 24px;
+  background: var(--fk-surface);
+  box-shadow: var(--fk-shadow-sm), 0 0 0 1px var(--fk-ring);
 }
 
 .fk-pill {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 5px 12px 5px 10px;
+  gap: 8px;
+  padding: 7px 14px;
   border-radius: 999px;
-  border: 1px solid var(--fk-border);
-  background: var(--fk-surface);
+  background: var(--fk-surface-sunken);
+  font-family: var(--fk-font-display);
   font-size: 12px;
-  font-weight: 550;
-  color: var(--fk-text-soft);
+  font-weight: 700;
+  color: var(--fk-text);
   white-space: nowrap;
 }
 .fk-pill-mono {
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-family: var(--fk-font-mono);
   font-size: 11px;
+  font-weight: 500;
   letter-spacing: -0.01em;
   color: var(--fk-text-faint);
 }
 
 .fk-dot {
-  height: 7px;
-  width: 7px;
+  height: 8px;
+  width: 8px;
   flex: none;
   border-radius: 999px;
   background: var(--fk-text-faint);
@@ -669,16 +630,15 @@ body {
   border-radius: 999px;
   border: 1.5px solid currentColor;
   color: var(--fk-amber);
-  animation: fk-ping 1.6s cubic-bezier(0, 0, 0.2, 1) infinite;
+  animation: fk-ping 2.2s cubic-bezier(0, 0, 0.2, 1) infinite;
 }
 @keyframes fk-ping {
   0% {
-    transform: scale(0.7);
-    opacity: 0.9;
+    transform: scale(0.85);
+    opacity: 0.4;
   }
-  80%,
   100% {
-    transform: scale(2);
+    transform: scale(1.45);
     opacity: 0;
   }
 }
@@ -688,16 +648,16 @@ body {
 .fk-trace {
   position: relative;
   margin: 0;
-  padding: 4px 0 0;
+  padding: 6px 0 0;
   list-style: none;
 }
 
 .fk-step {
   position: relative;
   display: grid;
-  grid-template-columns: 26px minmax(0, 1fr);
-  gap: 12px;
-  padding-bottom: 18px;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 14px;
+  padding-bottom: 20px;
   animation: fk-step-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 .fk-step:last-child {
@@ -708,17 +668,18 @@ body {
 .fk-step:not(:last-child)::before {
   content: '';
   position: absolute;
-  left: 12.5px;
-  top: 26px;
+  left: 14.5px;
+  top: 30px;
   bottom: 0;
-  width: 1.5px;
+  width: 2px;
+  border-radius: 999px;
   background: linear-gradient(180deg, var(--fk-border) 0%, var(--fk-border) 70%, transparent 100%);
 }
 
 @keyframes fk-step-in {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(20px);
   }
   to {
     opacity: 1;
@@ -727,48 +688,47 @@ body {
 }
 
 .fk-step-dot {
-  height: 26px;
-  width: 26px;
+  height: 30px;
+  width: 30px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: 999px;
+  font-family: var(--fk-font-display);
   font-size: 12px;
   font-weight: 800;
-  border: 1.5px solid var(--fk-border);
-  background: var(--fk-surface);
+  background: var(--fk-surface-sunken);
   color: var(--fk-text-faint);
   z-index: 1;
 }
 .fk-step-dot-ok {
-  border-color: transparent;
   background: var(--fk-leaf-surface);
   color: var(--fk-leaf);
 }
 .fk-step-dot-bad {
-  border-color: transparent;
   background: var(--fk-flame-surface);
   color: var(--fk-flame);
 }
 .fk-step-dot-run {
-  border-color: var(--fk-amber);
-  background: var(--fk-amber-surface);
-  color: var(--fk-amber-ink);
-  animation: fk-glow 1.8s ease-in-out infinite;
+  background: var(--fk-amber);
+  color: #0d0d0f;
+  animation: fk-ember 2.4s ease-in-out infinite;
 }
-@keyframes fk-glow {
+@keyframes fk-ember {
   0%,
   100% {
-    box-shadow: 0 0 0 0 var(--fk-amber-edge);
+    transform: scale(1);
+    opacity: 0.9;
   }
   50% {
-    box-shadow: 0 0 0 5px transparent;
+    transform: scale(1.06);
+    opacity: 1;
   }
 }
 
 .fk-step-body {
   min-width: 0;
-  padding-top: 2px;
+  padding-top: 4px;
 }
 
 .fk-step-title {
@@ -776,16 +736,17 @@ body {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  font-size: 13.5px;
-  font-weight: 620;
+  font-family: var(--fk-font-display);
+  font-size: 14px;
+  font-weight: 700;
   letter-spacing: -0.01em;
-  color: var(--fk-text);
+  color: var(--fk-ink);
   line-height: 1.4;
 }
 
 .fk-step-summary {
-  margin-top: 4px;
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  margin-top: 5px;
+  font-family: var(--fk-font-mono);
   font-size: 11.5px;
   line-height: 1.55;
   color: var(--fk-text-faint);
@@ -796,19 +757,18 @@ body {
   color: var(--fk-flame);
 }
 
+/* The kiosk's status pill: display face, sentence case, soft tone, no edge. */
 .fk-badge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 2px 9px;
+  gap: 5px;
+  padding: 4px 12px;
   border-radius: 999px;
-  font-size: 10.5px;
+  font-family: var(--fk-font-display);
+  font-size: 11.5px;
   font-weight: 700;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
   background: var(--fk-amber-surface);
   color: var(--fk-amber-ink);
-  border: 1px solid var(--fk-amber-edge);
   white-space: nowrap;
 }
 
@@ -817,12 +777,10 @@ body {
 .fk-badge-leaf {
   background: var(--fk-leaf-surface);
   color: var(--fk-leaf-ink);
-  border-color: var(--fk-leaf-surface);
 }
 .fk-badge-flame {
   background: var(--fk-flame-surface);
   color: var(--fk-flame-ink);
-  border-color: var(--fk-flame-surface);
 }
 
 /* "working…" while a step has no result yet. */
@@ -839,7 +797,7 @@ body {
   width: 3px;
   border-radius: 999px;
   background: var(--fk-text-faint);
-  animation: fk-bounce 1.2s ease-in-out infinite;
+  animation: fk-blink-dot 1.4s ease-in-out infinite;
 }
 .fk-working i:nth-child(2) {
   animation-delay: 0.15s;
@@ -847,61 +805,51 @@ body {
 .fk-working i:nth-child(3) {
   animation-delay: 0.3s;
 }
-@keyframes fk-bounce {
+@keyframes fk-blink-dot {
   0%,
-  60%,
   100% {
-    opacity: 0.25;
-    transform: translateY(0);
-  }
-  30% {
     opacity: 1;
-    transform: translateY(-3px);
+  }
+  50% {
+    opacity: 0.25;
   }
 }
 
 /* ── Empty state ────────────────────────────────────────────────────────── */
 
+/* The kiosk's EmptyPanel: a cream tile, a display-face title, a line of ash. */
 .fk-empty {
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  padding: 40px 20px 44px;
+  padding: 56px 32px 60px;
 }
 .fk-empty-art {
-  height: 76px;
-  width: 76px;
+  height: 80px;
+  width: 80px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 24px;
-  font-size: 32px;
+  border-radius: 28px;
+  font-size: 40px;
+  line-height: 1;
   background: var(--fk-surface-sunken);
-  border: 1.5px dashed var(--fk-border-strong);
-  animation: fk-hover 4s ease-in-out infinite;
-}
-@keyframes fk-hover {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-6px);
-  }
 }
 .fk-empty-title {
-  margin: 16px 0 0;
-  font-size: 14px;
-  font-weight: 650;
-  color: var(--fk-text);
+  margin: 18px 0 0;
+  font-family: var(--fk-font-display);
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--fk-ink);
 }
 .fk-empty-note {
-  margin: 5px 0 0;
-  font-size: 12.5px;
-  line-height: 1.5;
+  margin: 8px 0 0;
+  font-size: 13.5px;
+  line-height: 1.6;
   color: var(--fk-text-faint);
-  max-width: 34ch;
+  max-width: 36ch;
 }
 
 /* ── Report ─────────────────────────────────────────────────────────────── */
@@ -911,9 +859,9 @@ body {
 .fk-prose {
   max-width: 68ch;
   margin: 0;
-  font-size: 14px;
+  font-size: 14.5px;
   line-height: 1.72;
-  color: var(--fk-text-soft);
+  color: var(--fk-text);
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -937,7 +885,7 @@ body {
 .fk-tiles {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  gap: 12px;
 }
 @media (max-width: 520px) {
   .fk-tiles {
@@ -945,11 +893,11 @@ body {
   }
 }
 
+/* The admin's Stat, without the icon: a cream tile inside a paper card. */
 .fk-tile {
   position: relative;
-  padding: 14px 16px;
-  border-radius: 14px;
-  border: 1px solid var(--fk-border);
+  padding: 16px 18px;
+  border-radius: 24px;
   background: var(--fk-surface-sunken);
   overflow: hidden;
 }
@@ -958,9 +906,9 @@ body {
   content: '';
   position: absolute;
   left: 0;
-  top: 12px;
-  bottom: 12px;
-  width: 3px;
+  top: 14px;
+  bottom: 14px;
+  width: 4px;
   border-radius: 999px;
   background: var(--fk-border-strong);
 }
@@ -972,19 +920,17 @@ body {
 }
 
 .fk-tile-label {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: 12px;
   color: var(--fk-text-faint);
 }
 .fk-tile-value {
-  margin-top: 5px;
-  font-size: 21px;
-  font-weight: 720;
+  margin-top: 8px;
+  font-family: var(--fk-font-display);
+  font-size: 22px;
+  font-weight: 800;
   letter-spacing: -0.025em;
   line-height: 1.15;
-  color: var(--fk-text);
+  color: var(--fk-ink);
   font-variant-numeric: tabular-nums;
 }
 .fk-tile-value-leaf {
@@ -992,32 +938,31 @@ body {
 }
 
 .fk-meter {
-  margin-top: 14px;
+  margin-top: 16px;
 }
 .fk-meter-head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 10px;
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--fk-text-faint);
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 .fk-meter-track {
-  height: 8px;
+  height: 10px;
   border-radius: 999px;
   background: var(--fk-surface-sunken);
-  border: 1px solid var(--fk-border);
   overflow: hidden;
 }
 .fk-meter-fill {
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, var(--fk-amber), #ffb300);
+  background: var(--fk-amber);
   transition: width 0.7s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .fk-meter-fill-over {
-  background: linear-gradient(90deg, var(--fk-flame), #ff7a5c);
+  background: var(--fk-flame);
 }
 
 /* ── Verdict ribbon ─────────────────────────────────────────────────────── */
@@ -1026,71 +971,82 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  padding: 5px 13px;
+  padding: 6px 14px;
   border-radius: 999px;
-  font-size: 11.5px;
+  font-family: var(--fk-font-display);
+  font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.02em;
-  border: 1px solid transparent;
   white-space: nowrap;
 }
 .fk-verdict-done {
   background: var(--fk-leaf-surface);
   color: var(--fk-leaf-ink);
-  border-color: var(--fk-leaf-surface);
 }
 .fk-verdict-failed {
   background: var(--fk-flame-surface);
   color: var(--fk-flame-ink);
-  border-color: var(--fk-flame-surface);
 }
 .fk-verdict-live {
   background: var(--fk-amber-surface);
   color: var(--fk-amber-ink);
-  border-color: var(--fk-amber-edge);
 }
 
 /* ── Theme toggle ───────────────────────────────────────────────────────── */
 
+/* A round cream button, the shape the admin's back chevron uses. */
 .fk-icon-btn {
   appearance: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 38px;
-  width: 38px;
-  border-radius: 12px;
-  border: 1px solid var(--fk-border);
-  background: var(--fk-surface);
-  color: var(--fk-text-soft);
-  font-size: 16px;
+  height: 44px;
+  width: 44px;
+  border-radius: 999px;
+  border: none;
+  background: var(--fk-surface-sunken);
+  color: var(--fk-text);
+  font-size: 17px;
+  line-height: 1;
   cursor: pointer;
-  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.2s ease,
-    background 0.2s ease;
+  transition: transform 0.15s cubic-bezier(0.34, 1.4, 0.64, 1), background-color 0.2s ease;
 }
 .fk-icon-btn:hover {
-  transform: translateY(-1px);
-  border-color: var(--fk-border-strong);
+  background: var(--fk-border);
 }
 .fk-icon-btn:active {
-  transform: translateY(0);
+  transform: scale(0.94);
 }
 
 /* ── antd, nudged into the same language ────────────────────────────────── */
 
-.ant-input,
-.ant-input-number,
-.ant-select-selector {
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease !important;
+/* Every button wears the display face, like every button in the kiosk. */
+.ant-btn {
+  font-family: var(--fk-font-display) !important;
+  letter-spacing: -0.01em;
+  transition: transform 0.15s cubic-bezier(0.34, 1.4, 0.64, 1), box-shadow 0.3s ease,
+    background-color 0.2s ease !important;
+}
+.ant-btn-primary:not(:disabled):hover {
+  background: var(--fk-amber-hover) !important;
+  box-shadow: var(--fk-shadow-brand-lg) !important;
+}
+/* `press` — the kiosk's touch feedback, on every control that takes a click. */
+.ant-btn:not(:disabled):active {
+  transform: scale(0.97);
+}
+.ant-btn:disabled {
+  opacity: 0.3;
+  box-shadow: none !important;
 }
 
 /* The coupon picker's band headings. antd's default is a faint line of body
    text; these have to read as dividers, since they are what tells the eye
    where the spendable coupons stop. */
 .ant-select-item-group {
-  font-size: 10.5px !important;
+  font-family: var(--fk-font-display) !important;
+  font-size: 11px !important;
   font-weight: 700 !important;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--fk-text-faint) !important;
   padding-top: 12px !important;
@@ -1107,43 +1063,36 @@ body {
 }
 
 .ant-form-item-label > label {
-  font-weight: 600 !important;
-  letter-spacing: -0.005em;
-}
-
-.ant-btn {
-  letter-spacing: -0.01em;
-}
-.ant-btn-primary:not(:disabled):hover {
-  transform: translateY(-1px);
-  box-shadow: 0 8px 20px rgba(255, 199, 44, 0.35) !important;
-}
-.ant-btn-primary {
-  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s ease,
-    background-color 0.2s ease !important;
-}
-.ant-btn-primary:not(:disabled):active {
-  transform: translateY(0);
+  font-family: var(--fk-font-display) !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.01em;
 }
 
 .ant-alert {
-  border-radius: 12px;
+  border-radius: 16px;
+}
+.ant-alert-message,
+.ant-alert-description {
+  font-family: var(--fk-font-display);
+}
+.ant-alert-message {
+  font-weight: 700;
 }
 
-/* Fade the panels in on first paint, top-down. */
+/* Fade the panels in on first paint, top-down — the kiosk's `slide-up`. */
 .fk-rise {
-  animation: fk-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: fk-rise 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 .fk-rise-1 {
-  animation-delay: 0.04s;
+  animation-delay: 0.06s;
 }
 .fk-rise-2 {
-  animation-delay: 0.1s;
+  animation-delay: 0.12s;
 }
 @keyframes fk-rise {
   from {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(20px);
   }
   to {
     opacity: 1;

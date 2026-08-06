@@ -3,17 +3,21 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title> Ordering Agent · Friends Kitchen</title>
-    <!-- The header mark, redrawn as a favicon: the same amber tile and robot,
-         inlined so the tab icon needs no extra request. -->
+    <title>Ordering Agent · Friends Kitchen</title>
+    <!-- The kiosk's own mark, redrawn as a favicon: the flame on its red tile,
+         inlined so the tab icon needs no extra request. Same mark as the
+         kiosk's tab, because this is the same product. -->
     <link
       rel="icon"
-      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='16' fill='%23FFC72C'/><text x='32' y='47' font-size='40' text-anchor='middle'>🤖</text></svg>"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='18' fill='%23DA291C'/><text x='32' y='47' font-size='36' text-anchor='middle'>🔥</text></svg>"
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- The kiosk's two families, in the kiosk's two roles: Plus Jakarta Sans
+         for headings and buttons, Inter for body. JetBrains Mono is this app's
+         own addition — the trace and the coupon codes need a mono face. -->
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
     <script>
@@ -28,8 +32,9 @@
             (saved === null && matchMedia('(prefers-color-scheme: dark)').matches);
           var root = document.documentElement;
           root.setAttribute('data-theme', dark ? 'dark' : 'light');
-          root.style.setProperty('--fk-bg', dark ? '#09090C' : '#F4F4F8');
-          root.style.setProperty('--fk-text', dark ? '#F3F3F6' : '#111116');
+          // cream / charcoal — the kiosk's resting surface and body colour.
+          root.style.setProperty('--fk-bg', dark ? '#0B0B0E' : '#F4F4F7');
+          root.style.setProperty('--fk-text', dark ? '#EDEDF0' : '#1C1C1F');
         } catch (e) {
           /* private mode, no storage — the default light palette is fine */
         }

@@ -14,8 +14,11 @@ import '@/styles.css';
 function Root() {
   const { scheme, toggle } = useColorScheme();
 
+  // `filled` is the variant that matches the kiosk's fields: a cream fill, no
+  // border, white and lifted on focus. Set once here rather than on every
+  // control, the way the back office does it.
   return (
-    <ConfigProvider theme={makeTheme(scheme)}>
+    <ConfigProvider theme={makeTheme(scheme)} variant="filled">
       {/* antd's App wrapper — gives message/notification the theme context. */}
       <AntApp>
         <App scheme={scheme} onToggleScheme={toggle} />

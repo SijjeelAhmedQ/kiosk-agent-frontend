@@ -5,11 +5,17 @@ import { theme as antdAlgorithm, type ThemeConfig } from 'antd';
  *
  * This app is a sibling of the kiosk, not part of it, so it cannot import the
  * kiosk's Tailwind config — but it should still look like the same product.
- * The brand hexes in `C` are copied from `kiosk-frontend/tailwind.config.js`;
+ * Every value in `C` and in the light scheme below is copied from
+ * `kiosk-frontend/tailwind.config.js` and `kiosk-frontend/src/theme/antdTheme.ts`;
  * if a colour moves there, move it here too.
  *
- * Everything else is scheme-dependent and lives in `PALETTE`. It reaches the
- * page three ways:
+ * The kiosk's *back office* is the right reference, not its customer screens:
+ * both are desk tools driven with a keyboard, so the surfaces here are the
+ * admin's — paper cards on cream, no borders, a hairline ring and a soft
+ * shadow, filled fields, pill buttons.
+ *
+ * Everything scheme-dependent lives in `PALETTE` and reaches the page three
+ * ways:
  *
  *   `makeTheme()`  → antd's own components, which need real colour values
  *   `cssVariables()` → custom properties on <html>, for stylesheet rules
@@ -30,26 +36,39 @@ export const C = {
   cream: '#F4F4F7',
   paper: '#FFFFFF',
   amber: '#FFC72C',
+  amberHover: '#F0B400',
   amberSoft: '#FFF6DF',
   amberDark: '#8A6000',
   flame: '#DA291C',
-  flameSoft: '#FDECEA',
+  flameSoft: '#FDECEE',
   leaf: '#12A150',
-  leafSoft: '#E7F6EE',
+  leafSoft: '#E4F7EC',
+} as const;
+
+/** The kiosk's two families, in the same two roles. */
+export const FONT = {
+  display: "'Plus Jakarta Sans', Inter, system-ui, sans-serif",
+  sans: "Inter, system-ui, -apple-system, sans-serif",
+  mono: "'JetBrains Mono', ui-monospace, SFMono-Regular, monospace",
 } as const;
 
 interface Palette {
   bg: string;
-  bgVeil: string;
   surface: string;
   surfaceRaised: string;
   surfaceSunken: string;
+  /** A hairline that has to be visible — dividers, the header's underline. */
   border: string;
   borderStrong: string;
+  /** The near-invisible edge the kiosk's cards carry: `ring-1 ring-ink/[0.04]`. */
+  ring: string;
+  /** Headings. The kiosk sets these a shade darker than its body text. */
+  ink: string;
   text: string;
   textSoft: string;
   textFaint: string;
   amber: string;
+  amberHover: string;
   amberInk: string;
   amberSurface: string;
   amberEdge: string;
@@ -59,82 +78,94 @@ interface Palette {
   flame: string;
   flameInk: string;
   flameSurface: string;
-  /** The two ambient washes behind the page. */
-  aura1: string;
-  aura2: string;
   shadowSm: string;
   shadowMd: string;
   shadowLg: string;
+  /** shadow-brand — the glow under an amber CTA. */
+  shadowBrand: string;
+  shadowBrandLg: string;
   glass: string;
 }
 
 const PALETTE: Record<ColorScheme, Palette> = {
+  // Straight from the kiosk. Nothing here is an approximation.
   light: {
-    bg: '#F4F4F8',
-    bgVeil: 'rgba(255,255,255,0.72)',
-    surface: '#FFFFFF',
-    surfaceRaised: '#FFFFFF',
-    surfaceSunken: '#F3F3F7',
-    border: '#E8E8F0',
-    borderStrong: '#D8D8E3',
-    text: '#111116',
-    textSoft: '#4C4C58',
-    textFaint: '#83838F',
-    amber: '#FFC72C',
-    amberInk: '#7A5400',
-    amberSurface: '#FFF6DF',
-    amberEdge: 'rgba(255,199,44,0.45)',
-    leaf: '#0F9D50',
-    leafInk: '#0A6B37',
-    leafSurface: '#E8F6EE',
-    flame: '#DA291C',
-    flameInk: '#A31C12',
-    flameSurface: '#FDECEA',
-    aura1: 'rgba(255,199,44,0.30)',
-    aura2: 'rgba(18,161,80,0.09)',
-    shadowSm: '0 1px 2px rgba(13,13,15,0.05), 0 2px 8px rgba(13,13,15,0.04)',
-    shadowMd: '0 2px 6px rgba(13,13,15,0.05), 0 12px 32px rgba(13,13,15,0.07)',
-    shadowLg: '0 10px 24px rgba(13,13,15,0.08), 0 32px 64px rgba(13,13,15,0.12)',
-    glass: 'rgba(255,255,255,0.78)',
+    bg: C.cream,
+    surface: C.paper,
+    surfaceRaised: C.paper,
+    surfaceSunken: C.cream,
+    border: C.mist,
+    borderStrong: 'rgba(118,118,126,0.32)',
+    ring: 'rgba(13,13,15,0.04)',
+    ink: C.ink,
+    text: C.charcoal,
+    textSoft: '#4B4B54',
+    textFaint: C.ash,
+    amber: C.amber,
+    amberHover: C.amberHover,
+    amberInk: C.amberDark,
+    amberSurface: C.amberSoft,
+    amberEdge: 'rgba(255,199,44,0.50)',
+    leaf: C.leaf,
+    leafInk: C.leaf,
+    leafSurface: C.leafSoft,
+    flame: C.flame,
+    flameInk: C.flame,
+    flameSurface: C.flameSoft,
+    shadowSm: '0 1px 2px rgba(13,13,15,0.04), 0 2px 8px rgba(13,13,15,0.04)',
+    shadowMd: '0 2px 6px rgba(13,13,15,0.04), 0 10px 28px rgba(13,13,15,0.06)',
+    shadowLg: '0 8px 20px rgba(13,13,15,0.07), 0 28px 56px rgba(13,13,15,0.10)',
+    shadowBrand: '0 4px 14px rgba(255,199,44,0.50)',
+    shadowBrandLg: '0 8px 26px rgba(255,199,44,0.60)',
+    glass: 'rgba(255,255,255,0.85)',
   },
+  // The kiosk has no dark mode, so this is the same palette read in the dark:
+  // the same brand hues, the same relationships, inverted surfaces.
   dark: {
-    bg: '#09090C',
-    bgVeil: 'rgba(10,10,14,0.72)',
-    surface: '#131318',
-    surfaceRaised: '#1A1A21',
-    surfaceSunken: '#0F0F14',
-    border: '#26262F',
-    borderStrong: '#35353F',
-    text: '#F3F3F6',
-    textSoft: '#B4B4C0',
-    textFaint: '#7B7B89',
-    amber: '#FFC72C',
+    bg: '#0B0B0E',
+    surface: '#161619',
+    surfaceRaised: '#1D1D21',
+    surfaceSunken: '#101014',
+    border: '#26262B',
+    borderStrong: 'rgba(160,160,172,0.30)',
+    ring: 'rgba(255,255,255,0.05)',
+    ink: '#FAFAFC',
+    text: '#EDEDF0',
+    textSoft: '#B6B6C0',
+    textFaint: '#87878F',
+    amber: C.amber,
+    amberHover: C.amberHover,
     amberInk: '#FFD973',
     amberSurface: 'rgba(255,199,44,0.13)',
-    amberEdge: 'rgba(255,199,44,0.32)',
+    amberEdge: 'rgba(255,199,44,0.38)',
     leaf: '#2FBF6B',
     leafInk: '#5EDB94',
     leafSurface: 'rgba(47,191,107,0.14)',
     flame: '#FF5C4D',
     flameInk: '#FF8C81',
     flameSurface: 'rgba(255,92,77,0.14)',
-    aura1: 'rgba(255,199,44,0.16)',
-    aura2: 'rgba(47,191,107,0.10)',
     shadowSm: '0 1px 2px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.3)',
     shadowMd: '0 2px 8px rgba(0,0,0,0.45), 0 16px 40px rgba(0,0,0,0.4)',
     shadowLg: '0 12px 28px rgba(0,0,0,0.5), 0 40px 80px rgba(0,0,0,0.55)',
-    glass: 'rgba(19,19,24,0.76)',
+    shadowBrand: '0 4px 14px rgba(255,199,44,0.28)',
+    shadowBrandLg: '0 8px 26px rgba(255,199,44,0.36)',
+    glass: 'rgba(22,22,25,0.85)',
   },
 };
 
 /** The palette as custom properties, to be set on the document root. */
 export function cssVariables(scheme: ColorScheme): Record<string, string> {
-  return Object.fromEntries(
-    Object.entries(PALETTE[scheme]).map(([key, value]) => [
-      `--fk-${key.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`)}`,
-      value,
-    ]),
-  );
+  return {
+    ...Object.fromEntries(
+      Object.entries(PALETTE[scheme]).map(([key, value]) => [
+        `--fk-${key.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`)}`,
+        value,
+      ]),
+    ),
+    '--fk-font-display': FONT.display,
+    '--fk-font-sans': FONT.sans,
+    '--fk-font-mono': FONT.mono,
+  };
 }
 
 /**
@@ -145,12 +176,13 @@ export function cssVariables(scheme: ColorScheme): Record<string, string> {
  */
 export const V = {
   bg: 'var(--fk-bg)',
-  bgVeil: 'var(--fk-bg-veil)',
   surface: 'var(--fk-surface)',
   surfaceRaised: 'var(--fk-surface-raised)',
   surfaceSunken: 'var(--fk-surface-sunken)',
   border: 'var(--fk-border)',
   borderStrong: 'var(--fk-border-strong)',
+  ring: 'var(--fk-ring)',
+  ink: 'var(--fk-ink)',
   text: 'var(--fk-text)',
   textSoft: 'var(--fk-text-soft)',
   textFaint: 'var(--fk-text-faint)',
@@ -168,13 +200,35 @@ export const V = {
   shadowMd: 'var(--fk-shadow-md)',
   shadowLg: 'var(--fk-shadow-lg)',
   glass: 'var(--fk-glass)',
+  fontDisplay: 'var(--fk-font-display)',
+  fontMono: 'var(--fk-font-mono)',
 } as const;
 
-const RADIUS = 14;
+/** rounded-2xl on the controls, rounded-xl3 on the surfaces they open. */
+const RADIUS = 16;
 
-/** antd, wearing the palette. */
+/** antd, wearing the palette — the same overrides the kiosk's back office uses. */
 export function makeTheme(scheme: ColorScheme): ThemeConfig {
   const p = PALETTE[scheme];
+
+  /**
+   * Every field renders as antd's `filled` variant, which is what the kiosk's
+   * controls look like: a cream fill, no border, white and lifted on focus.
+   * These are the tokens that variant reads for its backgrounds.
+   */
+  const filledField = {
+    colorFillTertiary: p.surfaceSunken, // resting fill
+    colorFillSecondary: p.surfaceSunken, // hover — deliberately no change
+    colorBgContainer: p.surface, // focus fill
+    activeBorderColor: 'transparent',
+    hoverBorderColor: 'transparent',
+    activeShadow: p.shadowMd,
+    colorErrorBg: p.surfaceSunken,
+    colorErrorBgHover: p.surfaceSunken,
+    colorErrorText: p.text,
+    borderRadius: RADIUS,
+    borderRadiusLG: RADIUS,
+  };
 
   return {
     algorithm: scheme === 'dark' ? antdAlgorithm.darkAlgorithm : antdAlgorithm.defaultAlgorithm,
@@ -187,92 +241,110 @@ export function makeTheme(scheme: ColorScheme): ThemeConfig {
       colorWarning: p.amber,
 
       colorText: p.text,
-      colorTextHeading: p.text,
+      colorTextHeading: p.ink,
       colorTextSecondary: p.textSoft,
       colorTextDescription: p.textFaint,
       colorTextPlaceholder: p.textFaint,
+      colorIcon: p.textFaint,
+      colorIconHover: p.text,
 
       colorBgLayout: 'transparent',
       colorBgBase: p.bg,
       colorBgContainer: p.surface,
       colorBgElevated: p.surfaceRaised,
-      colorBorder: p.border,
-      colorBorderSecondary: p.border,
+      // The kiosk draws no borders on its controls; what separates a field from
+      // the card behind it is its fill, not an outline.
+      colorBorder: 'transparent',
+      colorBorderSecondary: 'transparent',
       colorSplit: p.border,
 
-      fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
-      fontFamilyCode: "'JetBrains Mono', ui-monospace, SFMono-Regular, monospace",
+      fontFamily: FONT.sans,
+      fontFamilyCode: FONT.mono,
       fontSize: 14,
       lineHeight: 1.6,
-      controlHeight: 44,
+      controlHeight: 44, // the kiosk admin's field height
       borderRadius: RADIUS,
       borderRadiusLG: RADIUS,
-      borderRadiusSM: 10,
+      borderRadiusSM: 12,
 
       boxShadow: p.shadowMd,
       boxShadowSecondary: p.shadowLg,
       motionDurationFast: '0.12s',
-      motionDurationMid: '0.2s',
+      motionDurationMid: '0.15s',
       motionEaseInOut: 'cubic-bezier(0.22, 1, 0.36, 1)',
 
       wireframe: false,
     },
 
     components: {
-      // Amber is a light colour: antd's default white button text is unreadable
-      // on it, so primary buttons take the ink text the kiosk's CTAs use — in
-      // both schemes, because the amber itself does not change.
+      // Pills at every size — the single strongest "same app" signal the kiosk
+      // has. Amber is a light colour, so the label is ink rather than antd's
+      // default white, in both schemes: the amber itself does not change.
       Button: {
         primaryColor: C.ink,
-        primaryShadow: 'none',
+        primaryShadow: p.shadowBrand,
         defaultShadow: 'none',
         dangerShadow: 'none',
-        fontWeight: 650,
-        paddingInlineLG: 26,
-        controlHeightLG: 50,
-        borderRadiusLG: RADIUS,
+        defaultBg: p.surfaceSunken,
+        defaultColor: p.text,
+        defaultBorderColor: 'transparent',
+        defaultHoverBorderColor: 'transparent',
+        defaultActiveBorderColor: 'transparent',
+        fontWeight: 700,
+        borderRadius: 999,
+        borderRadiusLG: 999,
+        borderRadiusSM: 999,
+        paddingInline: 22,
+        paddingInlineLG: 28,
+        controlHeight: 44,
+        controlHeightLG: 52,
       },
       Input: {
-        paddingBlock: 11,
-        paddingInline: 15,
-        activeShadow: `0 0 0 4px ${p.amberEdge}`,
-        hoverBorderColor: p.borderStrong,
-        activeBorderColor: p.amber,
-        colorBgContainer: p.surfaceSunken,
+        ...filledField,
+        // 10 rather than 12: antd's line-height is 22px against Tailwind's 20,
+        // and this is what lands the field back on 44px.
+        paddingBlock: 10,
+        paddingInline: 16,
+        inputFontSize: 14,
       },
       InputNumber: {
-        paddingBlock: 8,
-        paddingInline: 12,
-        activeShadow: `0 0 0 4px ${p.amberEdge}`,
-        hoverBorderColor: p.borderStrong,
-        activeBorderColor: p.amber,
-        colorBgContainer: p.surfaceSunken,
+        ...filledField,
+        paddingBlock: 10,
+        paddingInline: 16,
+        inputFontSize: 14,
       },
       Select: {
+        ...filledField,
         optionSelectedBg: p.amberSurface,
+        optionSelectedColor: p.text,
         optionSelectedFontWeight: 600,
-        optionPadding: '10px 14px',
+        optionActiveBg: p.surfaceSunken,
+        optionPadding: '9px 14px',
+        optionFontSize: 14,
         optionHeight: 40,
-        selectorBg: p.surfaceSunken,
-        colorBorder: p.border,
-        hoverBorderColor: p.borderStrong,
-        activeBorderColor: p.amber,
-        activeOutlineColor: p.amberEdge,
-        borderRadiusSM: 10,
+        borderRadiusLG: 20, // the dropdown card
+        paddingSM: 8,
       },
       Switch: {
+        // The kiosk's toggle, to the pixel: 48×28 track, 24px knob, 2px inset.
+        trackHeight: 28,
+        trackMinWidth: 48,
+        trackPadding: 2,
+        handleSize: 24,
+        handleShadow: p.shadowSm,
         colorPrimary: p.leaf,
         colorPrimaryHover: p.leaf,
-        handleShadow: p.shadowSm,
+        colorTextQuaternary: 'rgba(118,118,126,0.4)',
+        colorTextTertiary: 'rgba(118,118,126,0.4)',
       },
       Alert: {
-        borderRadiusLG: 12,
-        defaultPadding: '12px 16px',
-        withDescriptionPadding: '14px 16px',
+        borderRadiusLG: RADIUS,
+        defaultPadding: '14px 20px',
+        withDescriptionPadding: '16px 20px',
       },
       Tooltip: {
         colorBgSpotlight: scheme === 'dark' ? '#2A2A33' : C.ink,
-        borderRadius: 10,
+        borderRadius: 12,
       },
       Progress: {
         defaultColor: p.amber,
@@ -282,10 +354,10 @@ export function makeTheme(scheme: ColorScheme): ThemeConfig {
         colorTextDescription: p.textFaint,
       },
       Form: {
-        labelColor: p.text,
-        labelFontSize: 13,
+        labelColor: p.textFaint,
+        labelFontSize: 12,
         itemMarginBottom: 20,
-        verticalLabelPadding: '0 0 6px',
+        verticalLabelPadding: '0 0 8px',
       },
     },
   };

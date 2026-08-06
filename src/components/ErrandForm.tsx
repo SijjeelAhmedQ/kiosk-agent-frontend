@@ -1,4 +1,4 @@
-import { useEffect, useState, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { Button, Input, InputNumber, Select, Switch, Tooltip, Typography } from 'antd';
 import type { DefaultOptionType } from 'antd/es/select';
 import { Panel } from '@/components/Panel';
@@ -10,11 +10,12 @@ const { Text } = Typography;
 
 /** Starting points, so nobody faces an empty box wondering what to type. */
 const EXAMPLES = [
+  'Order one Big Mac®',
   'Order two cheeseburgers',
-  'Get me a Big Mac meal and a coffee',
-  'Order the cheapest burger on the menu',
-  'Order fries and a drink for someone who is very hungry',
 ];
+
+/** What the cash box starts on when there is no coupon paying for the errand. */
+const DEFAULT_CASH_LIMIT = 3000;
 
 /** The two ways the agent can shop, as the operator picks between them. */
 const MODES: { value: AgentMode; icon: string; name: string; desc: string }[] = [
@@ -137,14 +138,37 @@ function describe(coupon: CouponOption): string {
 export function ErrandForm({ onRun, onCancel, busy, blockedReason }: Props) {
   const [instruction, setInstruction] = useState(EXAMPLES[0]);
   const [couponCode, setCouponCode] = useState<string | null>(null);
-  const [cashLimit, setCashLimit] = useState<number>(3000);
+  /** Empty means "nothing beyond the coupon" — not the same as never set. */
+  const [cashLimit, setCashLimit] = useState<number | null>(DEFAULT_CASH_LIMIT);
   const [mode, setMode] = useState<AgentMode>('api');
   const [headless, setHeadless] = useState(false);
   const [coupons, setCoupons] = useState<CouponOption[]>([]);
 
+  /** What the box held before a coupon emptied it, so clearing puts it back. */
+  const lastCashLimit = useRef(DEFAULT_CASH_LIMIT);
+
   useEffect(() => {
     void couponApi.list().then(setCoupons);
   }, []);
+
+  /**
+   * Picking a coupon empties the cash limit.
+   *
+   * A coupon is the money for that errand, and a default sitting in the box
+   * underneath it is cash nobody asked to spend — so the operator has to say,
+   * deliberately, how much may go on top. Clearing the coupon puts back
+   * whatever the box held before, since an errand with neither cannot run.
+   */
+  const pickCoupon = (code: string | null) => {
+    setCouponCode(code);
+
+    if (code) {
+      if (cashLimit !== null) lastCashLimit.current = cashLimit;
+      setCashLimit(null);
+    } else if (cashLimit === null) {
+      setCashLimit(lastCashLimit.current);
+    }
+  };
 
   // What is wrong with the code currently in the box, if the list knows it. A
   // dead one cannot be picked from the dropdown, but it can still be typed.
@@ -160,7 +184,7 @@ export function ErrandForm({ onRun, onCancel, busy, blockedReason }: Props) {
       ? 'Say what the agent should order.'
       : chosenProblem
         ? `That coupon is ${chosenProblem} — pick another, or clear it and pay cash.`
-        : !couponCode && cashLimit <= 0
+        : !couponCode && (cashLimit ?? 0) <= 0
           ? 'Give it a coupon, a cash limit, or both — it cannot buy anything with neither.'
           : null);
 
@@ -171,7 +195,8 @@ export function ErrandForm({ onRun, onCancel, busy, blockedReason }: Props) {
     onRun({
       instruction: instruction.trim(),
       couponCode,
-      cashLimit,
+      // An empty box is a zero limit: spend the coupon and nothing else.
+      cashLimit: cashLimit ?? 0,
       mode,
       headless,
       customerId: null,
@@ -256,10 +281,7 @@ export function ErrandForm({ onRun, onCancel, busy, blockedReason }: Props) {
 
       <div className="fk-eyebrow">The money</div>
 
-      <label
-        style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}
-        htmlFor="fk-coupon"
-      >
+      <label className="fk-label" htmlFor="fk-coupon">
         Coupon
       </label>
       <Select
@@ -268,14 +290,14 @@ export function ErrandForm({ onRun, onCancel, busy, blockedReason }: Props) {
         showSearch
         disabled={busy}
         value={couponCode}
-        onChange={setCouponCode}
+        onChange={pickCoupon}
         placeholder="No coupon — pay cash only"
         optionFilterProp="label"
         style={{ width: '100%' }}
         options={options}
         // A code that is not in the list is still usable — the agent finds
         // out from the restaurant, not from this dropdown.
-        onSearch={(value) => value.length > 3 && setCouponCode(value.toUpperCase())}
+        onSearch={(value) => value.length > 3 && pickCoupon(value.toUpperCase())}
         optionRender={(option) => {
           const coupon = (option.data as { coupon?: CouponOption }).coupon;
           if (!coupon) return option.label;
@@ -300,7 +322,7 @@ export function ErrandForm({ onRun, onCancel, busy, blockedReason }: Props) {
               <div style={{ minWidth: 0, flex: 1 }}>
                 <div
                   style={{
-                    fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+                    fontFamily: V.fontMono,
                     fontSize: 12,
                     fontWeight: 600,
                     textDecoration: problem ? 'line-through' : undefined,
@@ -331,28 +353,34 @@ export function ErrandForm({ onRun, onCancel, busy, blockedReason }: Props) {
               ' (greyed out). Pick one, or type a code.'}
       </p>
 
-      <label
-        style={{ display: 'block', fontSize: 13, fontWeight: 600, margin: '18px 0 6px' }}
-        htmlFor="fk-cash"
-      >
+      <label className="fk-label" style={{ marginTop: 20 }} htmlFor="fk-cash">
         Cash limit
       </label>
       <InputNumber
         id="fk-cash"
         disabled={busy}
         value={cashLimit}
-        onChange={(value) => setCashLimit(value ?? 0)}
+        onChange={setCashLimit}
         min={0}
         max={1000000}
         step={500}
         style={{ width: '100%' }}
+        placeholder={couponCode ? 'Coupon only — no cash' : '0'}
         prefix={<span style={{ color: V.textFaint, fontWeight: 600 }}>Rs</span>}
-        formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+        // Guarded: an empty box has no number to group, and `${undefined}`
+        // would put the word "undefined" in the field.
+        formatter={(value) =>
+          value === undefined || value === null
+            ? ''
+            : `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+        }
         parser={(value) => Number((value ?? '').replace(/,/g, '')) as 0}
       />
       <p className="fk-hint">
-        What the agent may spend beyond the coupon. It is refused at payment if the bill is
-        higher.
+        {couponCode
+          ? 'Left empty, the errand is the coupon and nothing more. Put a number here only if' +
+            ' the agent may top it up with cash.'
+          : 'What the agent may spend. It is refused at payment if the bill is higher.'}
       </p>
 
       <div className="fk-eyebrow">The method</div>
@@ -386,15 +414,15 @@ export function ErrandForm({ onRun, onCancel, busy, blockedReason }: Props) {
 
       {mode === 'browser' && (
         <div
+          // The kiosk's Toggle row: a cream capsule, no border.
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: 12,
+            gap: 14,
             marginTop: 12,
-            padding: '11px 14px',
-            borderRadius: 12,
+            padding: '12px 16px',
+            borderRadius: 16,
             background: V.surfaceSunken,
-            border: `1px solid ${V.border}`,
           }}
         >
           <Switch
@@ -443,12 +471,13 @@ export function ErrandForm({ onRun, onCancel, busy, blockedReason }: Props) {
         {reason && !busy ? (
           <Text style={{ fontSize: 12.5, color: V.flame }}>{reason}</Text>
         ) : (
-          !busy && (
-            <Text style={{ fontSize: 12, color: V.textFaint }}>
-              Press <span className="fk-kbd">Ctrl</span> <span className="fk-kbd">↵</span> in
-              the order box to send.
-            </Text>
-          )
+          !busy && null
+          // (
+          //   <Text style={{ fontSize: 12, color: V.textFaint }}>
+          //     Press <span className="fk-kbd">Ctrl</span> <span className="fk-kbd">↵</span> in
+          //     the order box to send.
+          //   </Text>
+          // )
         )}
       </div>
     </Panel>
