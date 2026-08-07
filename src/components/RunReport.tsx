@@ -12,14 +12,21 @@ interface Props {
 
 const money = (value: number) => `Rs ${value.toLocaleString()}`;
 
-/** One figure from the wallet, with a spine saying what kind of money it is. */
+/**
+ * One figure from the wallet, with a spine saying what kind of money it is.
+ *
+ * The footnote carries what the figure is measured against — a number on its
+ * own ("Rs 340") answers less than half of what someone is actually asking.
+ */
 function Tile({
   label,
   value,
+  foot,
   tone,
 }: {
   label: string;
   value: number;
+  foot?: string;
   tone?: 'leaf' | 'amber';
 }) {
   return (
@@ -28,6 +35,8 @@ function Tile({
       <div className={`fk-tile-value${tone === 'leaf' ? ' fk-tile-value-leaf' : ''}`}>
         {money(value)}
       </div>
+      {/* Held even when empty, so the three tiles keep a common baseline. */}
+      <div className="fk-tile-foot">{foot ?? ' '}</div>
     </div>
   );
 }
@@ -74,6 +83,10 @@ export function RunReport({ status, narration, finalText, wallet, error }: Props
       icon={icon}
       title={title}
       live={!settled}
+      // The larger half of the column: the report is what someone reads twice,
+      // so it gets the room and a long one scrolls inside the card.
+      fill="scroll"
+      className="fk-panel-report"
       extra={
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span className={`fk-verdict ${verdictClass}`}>
@@ -103,7 +116,7 @@ export function RunReport({ status, narration, finalText, wallet, error }: Props
       )}
 
       {text ? (
-        <p className="fk-prose" style={{ marginBottom: wallet ? 20 : 0 }}>
+        <p className="fk-prose">
           {text}
           {!settled && <span className="fk-caret" aria-hidden />}
         </p>
@@ -118,18 +131,49 @@ export function RunReport({ status, narration, finalText, wallet, error }: Props
         )
       )}
 
+      {/* The foot of the card is the bill's place — so while the agent is still
+          out, say that rather than leaving the room under the prose looking like
+          the panel simply ran out of things to show. */}
+      {!wallet && !settled && (
+        <div className="fk-bill">
+          <div className="fk-eyebrow">What it cost</div>
+          <p className="fk-bill-wait">Nothing spent yet — the figures land here as the agent pays.</p>
+        </div>
+      )}
+
+      {/* The bill sits at the foot of the card, not directly under the last line
+          of prose: the report is read top-down and the figures are what you come
+          back to, so they keep one place rather than moving with the text. */}
       {wallet && (
-        <>
+        <div className="fk-bill">
+          <div className="fk-eyebrow">What it cost</div>
+
           <div className="fk-tiles">
-            <Tile label="Coupon covered" value={wallet.couponRedeemed} tone="leaf" />
-            <Tile label="Cash spent" value={wallet.cashSpent} tone="amber" />
-            <Tile label="Left in the wallet" value={wallet.cashRemaining} />
+            <Tile
+              label="Coupon covered"
+              value={wallet.couponRedeemed}
+              foot={wallet.couponRedeemed > 0 ? 'off the bill' : 'no coupon used'}
+              tone="leaf"
+            />
+            <Tile
+              label="Cash spent"
+              value={wallet.cashSpent}
+              foot={wallet.cashLimit > 0 ? `of ${money(wallet.cashLimit)} allowed` : undefined}
+              tone="amber"
+            />
+            <Tile
+              label="Left in the wallet"
+              value={wallet.cashRemaining}
+              foot={wallet.cashRemaining > 0 ? 'still unspent' : 'nothing left'}
+            />
           </div>
 
           {wallet.cashLimit > 0 && (
             <div className="fk-meter">
               <div className="fk-meter-head">
-                <span>{spentPct}% of the cash limit</span>
+                <span className="fk-meter-lead">
+                  {spentPct > 100 ? 'Over the cash limit' : `${spentPct}% of the cash limit`}
+                </span>
                 <span>
                   {money(wallet.cashSpent)} of {money(wallet.cashLimit)}
                 </span>
@@ -148,7 +192,7 @@ export function RunReport({ status, narration, finalText, wallet, error }: Props
               </div>
             </div>
           )}
-        </>
+        </div>
       )}
     </Panel>
   );

@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import { Button, Input, InputNumber, Select, Switch, Tooltip, Typography } from 'antd';
+import { Button, Input, InputNumber, Select, Tooltip, Typography } from 'antd';
 import type { DefaultOptionType } from 'antd/es/select';
 import { Panel } from '@/components/Panel';
 import { couponApi } from '@/services/couponApi';
-import type { AgentMode, CouponOption, CouponStatus, StartAgentRunInput } from '@/types';
+import type { CouponOption, CouponStatus, StartAgentRunInput } from '@/types';
 import { V } from '@/theme';
 
 const { Text } = Typography;
@@ -16,22 +16,6 @@ const EXAMPLES = [
 
 /** What the cash box starts on when there is no coupon paying for the errand. */
 const DEFAULT_CASH_LIMIT = 3000;
-
-/** The two ways the agent can shop, as the operator picks between them. */
-const MODES: { value: AgentMode; icon: string; name: string; desc: string }[] = [
-  {
-    value: 'api',
-    icon: '⚡',
-    name: 'Through the API',
-    desc: 'Calls the restaurant’s API directly. Fast and deterministic.',
-  },
-  {
-    value: 'browser',
-    icon: '🖥️',
-    name: 'Through the website',
-    desc: 'Drives the real kiosk in Chromium — tapping, typing and paying like a customer.',
-  },
-];
 
 interface Props {
   onRun: (input: StartAgentRunInput) => void;
@@ -140,8 +124,6 @@ export function ErrandForm({ onRun, onCancel, busy, blockedReason }: Props) {
   const [couponCode, setCouponCode] = useState<string | null>(null);
   /** Empty means "nothing beyond the coupon" — not the same as never set. */
   const [cashLimit, setCashLimit] = useState<number | null>(DEFAULT_CASH_LIMIT);
-  const [mode, setMode] = useState<AgentMode>('api');
-  const [headless, setHeadless] = useState(false);
   const [coupons, setCoupons] = useState<CouponOption[]>([]);
 
   /** What the box held before a coupon emptied it, so clearing puts it back. */
@@ -197,8 +179,10 @@ export function ErrandForm({ onRun, onCancel, busy, blockedReason }: Props) {
       couponCode,
       // An empty box is a zero limit: spend the coupon and nothing else.
       cashLimit: cashLimit ?? 0,
-      mode,
-      headless,
+      // The agent always shops through the restaurant's API — there is nothing
+      // to choose, so the form does not ask.
+      mode: 'api',
+      headless: true,
       customerId: null,
     });
   };
@@ -240,6 +224,44 @@ export function ErrandForm({ onRun, onCancel, busy, blockedReason }: Props) {
       title="The errand"
       note="What to order, and what it may spend"
       live={busy}
+      // The fields scroll inside the card; the button that sends the agent is
+      // pinned under them, so it is never the thing you have to scroll to find.
+      fill="scroll"
+      footer={
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+          <div className="fk-actions">
+            {/* The Tooltip needs a wrapper: antd puts `pointer-events: none` on a
+                disabled button, so hovering the button itself fires nothing. */}
+            <Tooltip title={reason ?? ''}>
+              <span style={{ display: 'block' }}>
+                <Button
+                  type="primary"
+                  size="large"
+                  className="fk-cta"
+                  onClick={submit}
+                  disabled={!canRun}
+                  loading={busy}
+                  block
+                >
+                  {busy ? 'On its way…' : 'Send the agent →'}
+                </Button>
+              </span>
+            </Tooltip>
+
+            {busy && (
+              <Button size="large" danger onClick={onCancel}>
+                Stop
+              </Button>
+            )}
+          </div>
+
+          {/* Spelled out under the button as well as in the tooltip — a reason you
+              have to hover to discover is a reason most people never read. */}
+          {reason && !busy && (
+            <Text style={{ fontSize: 12.5, color: V.flame }}>{reason}</Text>
+          )}
+        </div>
+      }
     >
       <div className="fk-eyebrow">The order</div>
 
@@ -382,104 +404,6 @@ export function ErrandForm({ onRun, onCancel, busy, blockedReason }: Props) {
             ' the agent may top it up with cash.'
           : 'What the agent may spend. It is refused at payment if the bill is higher.'}
       </p>
-
-      <div className="fk-eyebrow">The method</div>
-
-      <div className="fk-choices" role="radiogroup" aria-label="How should it order?">
-        {MODES.map((option) => (
-          <button
-            key={option.value}
-            type="button"
-            role="radio"
-            className="fk-choice"
-            aria-checked={mode === option.value}
-            disabled={busy}
-            onClick={() => setMode(option.value)}
-          >
-            {mode === option.value && (
-              <span className="fk-choice-tick" aria-hidden>
-                ✓
-              </span>
-            )}
-            <span className="fk-choice-top">
-              <span className="fk-choice-icon" aria-hidden>
-                {option.icon}
-              </span>
-              <span className="fk-choice-name">{option.name}</span>
-            </span>
-            <span className="fk-choice-desc">{option.desc}</span>
-          </button>
-        ))}
-      </div>
-
-      {mode === 'browser' && (
-        <div
-          // The kiosk's Toggle row: a cream capsule, no border.
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 14,
-            marginTop: 12,
-            padding: '12px 16px',
-            borderRadius: 16,
-            background: V.surfaceSunken,
-          }}
-        >
-          <Switch
-            checked={!headless}
-            disabled={busy}
-            onChange={(on) => setHeadless(!on)}
-            aria-label="Watch it happen"
-          />
-          <Text style={{ fontSize: 12.5, color: V.textFaint }}>
-            {headless
-              ? 'Running invisibly'
-              : 'Chromium opens on this machine so you can watch'}
-          </Text>
-        </div>
-      )}
-
-      <div style={{ marginTop: 22, display: 'flex', flexDirection: 'column', gap: 9 }}>
-        <div className="fk-actions">
-          {/* The Tooltip needs a wrapper: antd puts `pointer-events: none` on a
-              disabled button, so hovering the button itself fires nothing. */}
-          <Tooltip title={reason ?? ''}>
-            <span style={{ display: 'block' }}>
-              <Button
-                type="primary"
-                size="large"
-                className="fk-cta"
-                onClick={submit}
-                disabled={!canRun}
-                loading={busy}
-                block
-              >
-                {busy ? 'On its way…' : 'Send the agent →'}
-              </Button>
-            </span>
-          </Tooltip>
-
-          {busy && (
-            <Button size="large" danger onClick={onCancel}>
-              Stop
-            </Button>
-          )}
-        </div>
-
-        {/* Spelled out under the button as well as in the tooltip — a reason you
-            have to hover to discover is a reason most people never read. */}
-        {reason && !busy ? (
-          <Text style={{ fontSize: 12.5, color: V.flame }}>{reason}</Text>
-        ) : (
-          !busy && null
-          // (
-          //   <Text style={{ fontSize: 12, color: V.textFaint }}>
-          //     Press <span className="fk-kbd">Ctrl</span> <span className="fk-kbd">↵</span> in
-          //     the order box to send.
-          //   </Text>
-          // )
-        )}
-      </div>
     </Panel>
   );
 }

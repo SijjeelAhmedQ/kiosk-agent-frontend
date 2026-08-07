@@ -118,12 +118,12 @@ export default function App({ scheme, onToggleScheme }: Props) {
       </header>
 
       <main className="fk-content">
-        <div className="fk-rise" style={{ marginBottom: 18 }}>
+        <div className="fk-status-bar fk-rise">
           <ServiceStatus health={health} checking={checking} />
         </div>
 
         <div className="fk-columns">
-          <div className="fk-col-sticky fk-rise fk-rise-1">
+          <div className="fk-col fk-rise fk-rise-1">
             <ErrandForm
               onRun={start}
               onCancel={() => void run.cancel()}
@@ -132,7 +132,7 @@ export default function App({ scheme, onToggleScheme }: Props) {
             />
           </div>
 
-          <div className="fk-col-stack fk-rise fk-rise-2">
+          <div className="fk-col fk-col-stack fk-rise fk-rise-2">
             <RunTrace
               toolCalls={run.toolCalls}
               busy={run.busy}

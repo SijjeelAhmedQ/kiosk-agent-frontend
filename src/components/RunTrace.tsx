@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import { Panel } from '@/components/Panel';
 import type { AgentRunStatus, AgentToolCall } from '@/types';
 import { toolLabel } from '@/toolLabels';
@@ -37,6 +37,82 @@ function useElapsed(busy: boolean): number {
   return seconds;
 }
 
+/**
+ * Keeps the newest step in the trace's own scroll box.
+ *
+ * The list scrolls, not the page — a fifteen-step errand should not push the
+ * report below the fold — so nothing brings a new step into view on its own.
+ * Aligning its top rather than jumping to the bottom keeps the title readable
+ * when a step's summary is taller than the box.
+ */
+function useFollowNewest(count: number) {
+  const boxRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const box = boxRef.current;
+    if (!box || count === 0) return;
+
+    const list = box.querySelector<HTMLElement>('.fk-trace');
+    const newest = list?.lastElementChild as HTMLElement | null;
+    if (!list || !newest) return;
+
+    // offsetTop, not a rect: a step enters under a slide-in transform, and a
+    // rect measured mid-animation would aim 20px past where the step lands.
+    box.scrollTo({
+      // Clamped by the browser, so a short last step still settles at the end.
+      top: list.offsetTop + newest.offsetTop - 8,
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        ? 'auto'
+        : 'smooth',
+    });
+  }, [count]);
+
+  return boxRef;
+}
+
+/**
+ * Whether the trace has steps hidden above or below its scroll box.
+ *
+ * The fades that mark a cut-off step have to be conditional. Painted always,
+ * the top one would sit over the first step of a run that fits — which reads as
+ * a smudge on the card rather than as "there is more up there".
+ */
+function useCutOff(boxRef: RefObject<HTMLDivElement | null>, count: number) {
+  const [cut, setCut] = useState({ above: false, below: false });
+
+  useEffect(() => {
+    const box = boxRef.current;
+    if (!box) return;
+
+    const read = () => {
+      const { scrollTop, scrollHeight, clientHeight } = box;
+      setCut({
+        // A pixel of slack: sub-pixel scroll positions would otherwise leave a
+        // fade lit at a hard end of the list.
+        above: scrollTop > 2,
+        below: scrollTop + clientHeight < scrollHeight - 2,
+      });
+    };
+
+    read();
+    box.addEventListener('scroll', read, { passive: true });
+
+    // The box's height and the list's are both in play: the panel resizes with
+    // the column, and a summary streaming in grows the list under a still box.
+    const sizes = new ResizeObserver(read);
+    sizes.observe(box);
+    const list = box.querySelector('.fk-trace');
+    if (list) sizes.observe(list);
+
+    return () => {
+      box.removeEventListener('scroll', read);
+      sizes.disconnect();
+    };
+  }, [boxRef, count]);
+
+  return cut;
+}
+
 /** A dot per step: running, succeeded, or refused. */
 function Dot({ ok }: { ok: boolean | null }) {
   if (ok === null) return <span className="fk-step-dot fk-step-dot-run">•</span>;
@@ -57,11 +133,28 @@ function Dot({ ok }: { ok: boolean | null }) {
 export function RunTrace({ toolCalls, busy, status, browserOpen }: Props) {
   const elapsed = useElapsed(busy);
   const done = toolCalls.filter((call) => call.ok !== null).length;
+  const scrollBox = useFollowNewest(toolCalls.length);
+  const cut = useCutOff(scrollBox, toolCalls.length);
 
+  // The count carries a track beside it. The steps themselves are the honest
+  // measure of progress — but they scroll, and this line does not, so it is the
+  // one place a folded or half-scrolled trace can still say how far along it is.
   const note =
-    toolCalls.length === 0
-      ? 'Every step, as it happens'
-      : `${done} of ${toolCalls.length} step${toolCalls.length === 1 ? '' : 's'} finished`;
+    toolCalls.length === 0 ? (
+      'Every step, as it happens'
+    ) : (
+      <span className="fk-progress">
+        <span>
+          {done} of {toolCalls.length} step{toolCalls.length === 1 ? '' : 's'} finished
+        </span>
+        <span className="fk-progress-track" aria-hidden>
+          <span
+            className="fk-progress-fill"
+            style={{ width: `${Math.round((done / toolCalls.length) * 100)}%` }}
+          />
+        </span>
+      </span>
+    );
 
   return (
     <Panel
@@ -69,6 +162,11 @@ export function RunTrace({ toolCalls, busy, status, browserOpen }: Props) {
       title="What the agent did"
       note={note}
       live={busy}
+      collapsible
+      // The trace takes the smaller share of the column — it is a log, skimmed
+      // rather than read — and the list inside it, not the panel body, scrolls.
+      fill="flex"
+      className="fk-panel-trace"
       extra={
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {browserOpen && (
@@ -97,37 +195,44 @@ export function RunTrace({ toolCalls, busy, status, browserOpen }: Props) {
           </p>
         </div>
       ) : (
-        <ol className="fk-trace">
-          {toolCalls.map((call) => {
-            const meta = toolLabel(call.name);
-            const failed = call.ok === false;
+        <div
+          className={`fk-trace-scroll${cut.above ? ' fk-cut-above' : ''}${
+            cut.below ? ' fk-cut-below' : ''
+          }`}
+          ref={scrollBox}
+        >
+          <ol className="fk-trace">
+            {toolCalls.map((call) => {
+              const meta = toolLabel(call.name);
+              const failed = call.ok === false;
 
-            return (
-              <li key={call.toolUseId} className="fk-step">
-                <Dot ok={call.ok} />
+              return (
+                <li key={call.toolUseId} className="fk-step">
+                  <Dot ok={call.ok} />
 
-                <div className="fk-step-body">
-                  <div className="fk-step-title">
-                    <span aria-hidden>{meta.icon}</span>
-                    <span>{meta.label}</span>
-                    {meta.spends && <span className="fk-badge">spends money</span>}
+                  <div className="fk-step-body">
+                    <div className="fk-step-title">
+                      <span aria-hidden>{meta.icon}</span>
+                      <span>{meta.label}</span>
+                      {meta.spends && <span className="fk-badge">spends money</span>}
+                    </div>
+
+                    <div className={`fk-step-summary${failed ? ' fk-step-summary-bad' : ''}`}>
+                      {call.summary ?? (
+                        <span className="fk-working">
+                          working
+                          <i />
+                          <i />
+                          <i />
+                        </span>
+                      )}
+                    </div>
                   </div>
-
-                  <div className={`fk-step-summary${failed ? ' fk-step-summary-bad' : ''}`}>
-                    {call.summary ?? (
-                      <span className="fk-working">
-                        working
-                        <i />
-                        <i />
-                        <i />
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </li>
-            );
-          })}
-        </ol>
+                </li>
+              );
+            })}
+          </ol>
+        </div>
       )}
     </Panel>
   );

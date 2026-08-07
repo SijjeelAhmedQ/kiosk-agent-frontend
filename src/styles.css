@@ -8,11 +8,16 @@
    main.tsx, so both schemes are one stylesheet rather than two.
 --------------------------------------------------------------------------- */
 
+/* The page itself never scrolls. The app is exactly one viewport tall and the
+   sections inside it carry their own scroll, so the header, the errand's button
+   and the run's verdict are always where you left them. */
 html,
 body,
 #root {
   height: 100%;
   margin: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
 html {
@@ -67,20 +72,29 @@ body {
 /* ── The page shell ─────────────────────────────────────────────────────── */
 
 /* Flat cream, like every kiosk screen. The depth on this page comes from the
-   cards sitting on it, never from the background itself. */
+   cards sitting on it, never from the background itself.
+
+   A fixed column: a header that cannot move and a content region that takes
+   whatever is left. `dvh` rather than `vh` so a phone's collapsing address bar
+   does not leave the last panel cut off. */
 .fk-shell {
   position: relative;
-  min-height: 100vh;
+  height: 100%;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   isolation: isolate;
 }
 
 /* ── Header ─────────────────────────────────────────────────────────────── */
 
-/* The kiosk's own header: solid paper, one mist hairline, 80px tall. */
+/* The kiosk's own header: solid paper, one mist hairline, 80px tall. It sits at
+   the top of the shell's column, so it stays put without needing to be sticky. */
 .fk-header {
-  position: sticky;
-  top: 0;
+  position: relative;
   z-index: 20;
+  flex: none;
   background: var(--fk-surface);
   border-bottom: 1px solid var(--fk-border);
 }
@@ -163,39 +177,66 @@ body {
 
 /* ── Content ────────────────────────────────────────────────────────────── */
 
+/* Everything under the header, and never taller than it: the status strip keeps
+   its own height and the columns take the rest. */
 .fk-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
   max-width: 1400px;
   margin: 0 auto;
-  padding: 28px 32px 64px;
+  padding: 20px 32px 24px;
+  display: flex;
+  flex-direction: column;
+  /* Deliberately not `overflow: hidden` — the shell already clips, and clipping
+     here would shave the soft shadow off the panels nearest the edges. */
+}
+
+.fk-status-bar {
+  flex: none;
+  margin-bottom: 16px;
 }
 
 .fk-columns {
+  flex: 1 1 auto;
+  min-height: 0;
   display: grid;
   grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
-  gap: 20px;
-  align-items: start;
+  /* One row, exactly the height on offer — without this the row sizes itself to
+     its tallest child and the panels inside it never learn they are capped. */
+  grid-template-rows: minmax(0, 1fr);
+  gap: 18px;
 }
 
-/* The errand stays in view while the trace on the right grows past the fold —
-   the form is what you come back to, so it should not scroll away. */
-.fk-col-sticky {
-  position: sticky;
-  top: 104px;
+/* A column is a flex track for the panels in it; `min-height: 0` is what lets
+   those panels shrink below their content and scroll instead. */
+.fk-col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
 }
 
 .fk-col-stack {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  min-width: 0;
+  gap: 18px;
 }
 
+/* Too narrow to sit side by side, or too short to hold both panels at a usable
+   height. Either way the content region takes the scroll — the page still does
+   not, and the panels hand their own scroll back further down the sheet. */
+@media (max-width: 1100px), (max-height: 620px) {
+  .fk-content {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .fk-columns {
+    flex: none;
+    grid-template-rows: none;
+  }
+}
 @media (max-width: 1100px) {
   .fk-columns {
     grid-template-columns: minmax(0, 1fr);
-  }
-  .fk-col-sticky {
-    position: static;
   }
 }
 @media (max-width: 640px) {
@@ -205,7 +246,7 @@ body {
     padding-right: 16px;
   }
   .fk-content {
-    padding-top: 18px;
+    padding-top: 16px;
   }
   /* Keep the header one row on a phone: the brand shrinks, the controls do
      not — an actions row that wraps under the logo looks like a mistake. */
@@ -270,6 +311,24 @@ body {
   line-height: 1;
 }
 
+/* A collapsible panel's title is a button — strip the chrome back to the plain
+   heading it looks like, and let the whole block take the click. */
+.fk-panel-disclosure {
+  appearance: none;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 18px;
+  /* Takes the free space in the header, so the click target runs the width of
+     the row and `extra` still sits beside the chevron on the right. */
+  flex: 1 1 auto;
+}
+
 .fk-panel-heading {
   margin: 0;
   font-family: var(--fk-font-display);
@@ -279,6 +338,62 @@ body {
   color: var(--fk-ink);
   line-height: 1.25;
 }
+
+/* The chevron tile. Sized and rounded like the icon tile on the other side of
+   the header, so the row reads as a pair rather than as a stray control. */
+.fk-panel-caret {
+  display: inline-flex;
+  height: 36px;
+  width: 36px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  margin-left: 2px;
+  padding: 0;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  color: var(--fk-text-faint);
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+/* Hovering anywhere on the header lights the chevron: it is the affordance for
+   the whole row, not a control that happens to sit at the end of it. */
+.fk-panel-collapsible .fk-panel-head:hover .fk-panel-caret,
+.fk-panel-disclosure:focus-visible ~ .fk-panel-caret {
+  background: var(--fk-surface-sunken);
+  color: var(--fk-ink);
+}
+.fk-panel-caret:active {
+  transform: scale(0.94);
+}
+
+.fk-caret-glyph {
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.fk-panel-folded .fk-caret-glyph {
+  transform: rotate(-90deg);
+}
+
+/* 1fr → 0fr is the one way to animate to and from an unknown height. The child
+   needs `min-height: 0` and its own clip or its padding shows through at 0. */
+.fk-panel-fold {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 0.34s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.fk-panel-fold > * {
+  min-height: 0;
+  overflow: hidden;
+  transition: opacity 0.24s ease 0.06s;
+}
+.fk-panel-folded .fk-panel-fold {
+  grid-template-rows: 0fr;
+}
+.fk-panel-folded .fk-panel-fold > * {
+  opacity: 0;
+  transition-delay: 0s;
+}
 .fk-panel-note {
   margin-top: 3px;
   font-size: 13px;
@@ -286,8 +401,143 @@ body {
   line-height: 1.45;
 }
 
+/* A count and the same count as a bar. The track is short on purpose — it is a
+   note under a heading, not the panel's own progress bar. */
+.fk-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.fk-progress-track {
+  flex: none;
+  width: 64px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--fk-surface-sunken);
+  overflow: hidden;
+}
+.fk-progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--fk-leaf);
+  transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 .fk-panel-body {
   padding: 6px 24px 24px;
+}
+
+/* With the body gone the header carries the panel's bottom edge on its own —
+   eased, so it settles with the fold instead of snapping ahead of it. */
+.fk-panel-collapsible .fk-panel-head {
+  transition: padding-bottom 0.34s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.fk-panel-folded .fk-panel-head {
+  padding-bottom: 22px;
+}
+
+/* ── Panels that fill their column ──────────────────────────────────────── */
+
+/* The page has no scroll of its own, so a panel is given a height rather than
+   taking one: `fill` grows into whatever the column has spare, `shrink` asks
+   only for its content and gives the remainder back. Either way the head and
+   the footer are fixed and the body is what moves. */
+.fk-panel-fill,
+.fk-panel-shrink {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.fk-panel-fill {
+  flex: 1 1 auto;
+  /* Enough to be worth scrolling. A filling panel squeezed to a strip by a tall
+     neighbour is worse than one that makes the neighbour give ground. */
+  min-height: 168px;
+}
+.fk-panel-shrink {
+  flex: 0 1 auto;
+}
+/* With the panel above it folded away there is nobody left to take the spare
+   height, so the shrinking panel grows into it rather than leaving bare cream
+   under the card. */
+.fk-panel-folded + .fk-panel-shrink {
+  flex: 1 1 auto;
+}
+/* Folded, a collapsible panel is its header and nothing else — it must stop
+   claiming the column's height or it leaves a paper-coloured gap. */
+.fk-panel-folded.fk-panel-fill {
+  flex: 0 0 auto;
+  min-height: 0;
+}
+
+/* How the right-hand column is split. Both panels fill, but not evenly: the
+   report is the thing worth reading — prose, three figures and the meter — so
+   it takes the larger share, and the trace is capped to a band it scrolls
+   inside. A basis of 0 is what makes the ratio hold; with `auto` the panel with
+   the taller content would quietly take more than its share. */
+.fk-panel-trace {
+  flex: 2 1 0;
+  min-height: 150px;
+}
+.fk-panel-report {
+  flex: 3 1 0;
+  min-height: 210px;
+}
+
+.fk-panel-fill > .fk-panel-head,
+.fk-panel-shrink > .fk-panel-head,
+.fk-panel-fill > .fk-panel-foot,
+.fk-panel-shrink > .fk-panel-foot {
+  flex: none;
+}
+
+.fk-panel-fill > .fk-panel-body,
+.fk-panel-shrink > .fk-panel-body,
+.fk-panel-fill > .fk-panel-fold,
+.fk-panel-shrink > .fk-panel-fold {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* `fill="scroll"` — the body is the scroll box. The `> *` rule on the fold sets
+   `overflow: hidden` for the fold animation, so this has to out-specify it. */
+.fk-panel-scrolls > .fk-panel-body,
+.fk-panel-scrolls > .fk-panel-fold > .fk-panel-body {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* `fill="flex"` — the body lays its children out and one of them scrolls. */
+.fk-panel-flex > .fk-panel-body,
+.fk-panel-flex > .fk-panel-fold > .fk-panel-body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* ── Panel footer ───────────────────────────────────────────────────────── */
+
+/* Pinned under a scrolling body, on the same paper, so the panel's action is
+   always one click away rather than one scroll away. */
+.fk-panel-foot {
+  position: relative;
+  padding: 14px 24px 20px;
+  background: var(--fk-surface);
+}
+
+/* A short fade above it: content passing under the footer dissolves instead of
+   being cut by a line, which is the only edge this design would tolerate. */
+.fk-panel-foot::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  height: 20px;
+  pointer-events: none;
+  background: linear-gradient(to top, var(--fk-surface), transparent);
 }
 
 /* An indeterminate bar across the panel's top edge while a run is live. */
@@ -645,6 +895,59 @@ html[data-theme='dark'] .fk-chip[aria-pressed='true'] {
 
 /* ── Trace ──────────────────────────────────────────────────────────────── */
 
+/* The trace carries its own scroll: a long errand should not push the report
+   off the bottom of the page, and the run's newest step should always be one
+   glance away rather than one page-scroll away. It takes the height its panel
+   was given rather than measuring the viewport itself. */
+.fk-trace-scroll {
+  /* Positioned so a step's offsetTop is measured against this box — that is
+     what the "follow the newest step" scroll is computed from. */
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  /* Room for the scrollbar so it never sits on top of a step's summary. */
+  padding-right: 10px;
+  margin-right: -6px;
+  /* The page behind stays put once the list hits either end. */
+  overscroll-behavior: contain;
+  scroll-behavior: smooth;
+}
+
+/* A step cut off by the top or bottom of the box dissolves into the paper
+   instead of being sliced by an edge — the same fade the panel footer uses, and
+   for the same reason: this design draws no lines across a card.
+
+   Sticky rather than fixed to the panel, because the scroll box is the element
+   that scrolls; the negative margin cancels the height so neither fade takes a
+   row of its own and pushes the list off the offsets the auto-scroll reads. */
+.fk-trace-scroll::before,
+.fk-trace-scroll::after {
+  content: '';
+  display: block;
+  position: sticky;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.22s ease;
+}
+.fk-trace-scroll::before {
+  top: 0;
+  height: 18px;
+  margin-bottom: -18px;
+  background: linear-gradient(to bottom, var(--fk-surface) 25%, transparent);
+}
+.fk-trace-scroll::after {
+  bottom: 0;
+  height: 24px;
+  margin-top: -24px;
+  background: linear-gradient(to top, var(--fk-surface) 25%, transparent);
+}
+.fk-cut-above::before,
+.fk-cut-below::after {
+  opacity: 1;
+}
+
 .fk-trace {
   position: relative;
   margin: 0;
@@ -652,12 +955,14 @@ html[data-theme='dark'] .fk-chip[aria-pressed='true'] {
   list-style: none;
 }
 
+/* Compact on purpose: the trace holds the smaller half of the column, so a step
+   is sized to be skimmed in a stack of a dozen rather than read on its own. */
 .fk-step {
   position: relative;
   display: grid;
-  grid-template-columns: 30px minmax(0, 1fr);
-  gap: 14px;
-  padding-bottom: 20px;
+  grid-template-columns: 26px minmax(0, 1fr);
+  gap: 12px;
+  padding-bottom: 14px;
   animation: fk-step-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 .fk-step:last-child {
@@ -668,8 +973,9 @@ html[data-theme='dark'] .fk-chip[aria-pressed='true'] {
 .fk-step:not(:last-child)::before {
   content: '';
   position: absolute;
-  left: 14.5px;
-  top: 30px;
+  /* Half the dot, less half the stroke, so the line runs through its centre. */
+  left: 12px;
+  top: 26px;
   bottom: 0;
   width: 2px;
   border-radius: 999px;
@@ -688,8 +994,8 @@ html[data-theme='dark'] .fk-chip[aria-pressed='true'] {
 }
 
 .fk-step-dot {
-  height: 30px;
-  width: 30px;
+  height: 26px;
+  width: 26px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -728,33 +1034,40 @@ html[data-theme='dark'] .fk-chip[aria-pressed='true'] {
 
 .fk-step-body {
   min-width: 0;
-  padding-top: 4px;
+  padding-top: 2px;
 }
 
 .fk-step-title {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
   flex-wrap: wrap;
   font-family: var(--fk-font-display);
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 700;
   letter-spacing: -0.01em;
   color: var(--fk-ink);
-  line-height: 1.4;
+  line-height: 1.35;
 }
 
 .fk-step-summary {
-  margin-top: 5px;
+  margin-top: 3px;
   font-family: var(--fk-font-mono);
-  font-size: 11.5px;
-  line-height: 1.55;
+  font-size: 11px;
+  line-height: 1.5;
   color: var(--fk-text-faint);
   word-break: break-word;
   white-space: pre-wrap;
 }
 .fk-step-summary-bad {
   color: var(--fk-flame);
+}
+
+/* The full-size badge is built for a panel header; on a step's title line it
+   out-weighs the label it is qualifying. */
+.fk-step-title .fk-badge {
+  padding: 2px 9px;
+  font-size: 10.5px;
 }
 
 /* The kiosk's status pill: display face, sentence case, soft tone, no edge. */
@@ -820,14 +1133,20 @@ html[data-theme='dark'] .fk-chip[aria-pressed='true'] {
 /* The kiosk's EmptyPanel: a cream tile, a display-face title, a line of ash. */
 .fk-empty {
   display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
   flex-direction: column;
   align-items: center;
+  /* Centred in the height the panel was given, rather than sitting under a
+     fixed slab of padding that a short viewport would clip. */
+  justify-content: center;
+  overflow-y: auto;
   text-align: center;
-  padding: 56px 32px 60px;
+  padding: 32px 28px 36px;
 }
 .fk-empty-art {
-  height: 80px;
-  width: 80px;
+  height: 72px;
+  width: 72px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -854,13 +1173,40 @@ html[data-theme='dark'] .fk-chip[aria-pressed='true'] {
 
 /* ── Report ─────────────────────────────────────────────────────────────── */
 
+/* The report owns the taller half of the column, so its body is a column too:
+   the prose reads from the top and the bill settles against the bottom, giving
+   the figures one fixed place instead of one that walks down as text streams
+   in. Once the report is long enough to scroll, `margin-top: auto` resolves to
+   nothing and the two simply follow each other. */
+.fk-panel-report > .fk-panel-body {
+  display: flex;
+  flex-direction: column;
+}
+.fk-panel-report > .fk-panel-body > * {
+  flex: 0 0 auto;
+}
+.fk-bill {
+  margin-top: auto;
+  padding-top: 26px;
+}
+/* The placeholder that holds the bill's place while the agent is still out. */
+.fk-bill-wait {
+  margin: 0;
+  padding: 18px 20px;
+  border-radius: 24px;
+  background: var(--fk-surface-sunken);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--fk-text-faint);
+}
+
 /* The agent's report is prose someone reads — give it a comfortable measure
    rather than letting it run the full width of the column. */
 .fk-prose {
   max-width: 68ch;
   margin: 0;
-  font-size: 14.5px;
-  line-height: 1.72;
+  font-size: 15px;
+  line-height: 1.75;
   color: var(--fk-text);
   white-space: pre-wrap;
   word-break: break-word;
@@ -896,7 +1242,7 @@ html[data-theme='dark'] .fk-chip[aria-pressed='true'] {
 /* The admin's Stat, without the icon: a cream tile inside a paper card. */
 .fk-tile {
   position: relative;
-  padding: 16px 18px;
+  padding: 16px 18px 14px;
   border-radius: 24px;
   background: var(--fk-surface-sunken);
   overflow: hidden;
@@ -924,9 +1270,9 @@ html[data-theme='dark'] .fk-chip[aria-pressed='true'] {
   color: var(--fk-text-faint);
 }
 .fk-tile-value {
-  margin-top: 8px;
+  margin-top: 7px;
   font-family: var(--fk-font-display);
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 800;
   letter-spacing: -0.025em;
   line-height: 1.15;
@@ -937,8 +1283,20 @@ html[data-theme='dark'] .fk-chip[aria-pressed='true'] {
   color: var(--fk-leaf);
 }
 
+/* What the figure above is measured against. Kept quiet — it qualifies the
+   number, it does not compete with it. */
+.fk-tile-foot {
+  margin-top: 4px;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--fk-text-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .fk-meter {
-  margin-top: 16px;
+  margin-top: 18px;
 }
 .fk-meter-head {
   display: flex;
@@ -949,6 +1307,12 @@ html[data-theme='dark'] .fk-chip[aria-pressed='true'] {
   color: var(--fk-text-faint);
   margin-bottom: 8px;
 }
+/* The reading itself, against the raw figures on the right. */
+.fk-meter-lead {
+  font-family: var(--fk-font-display);
+  font-weight: 700;
+  color: var(--fk-text);
+}
 .fk-meter-track {
   height: 10px;
   border-radius: 999px;
@@ -958,11 +1322,13 @@ html[data-theme='dark'] .fk-chip[aria-pressed='true'] {
 .fk-meter-fill {
   height: 100%;
   border-radius: 999px;
-  background: var(--fk-amber);
+  /* Lit along its length rather than flat, so a nearly-full bar still reads as
+     a bar and not as a solid amber slab. */
+  background: linear-gradient(90deg, var(--fk-amber-ink), var(--fk-amber));
   transition: width 0.7s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .fk-meter-fill-over {
-  background: var(--fk-flame);
+  background: linear-gradient(90deg, var(--fk-flame-ink), var(--fk-flame));
 }
 
 /* ── Verdict ribbon ─────────────────────────────────────────────────────── */
@@ -1097,6 +1463,36 @@ html[data-theme='dark'] .fk-chip[aria-pressed='true'] {
   to {
     opacity: 1;
     transform: none;
+  }
+}
+
+/* ── Giving the scroll back ─────────────────────────────────────────────── */
+
+/* The counterpart to the media query up in the layout section: once the content
+   region is the scroller, a panel that caps its own height would be capping it
+   twice. Written here, after the rules it undoes, so the cascade lands the right
+   way round. */
+@media (max-width: 1100px), (max-height: 620px) {
+  .fk-panel-fill,
+  .fk-panel-shrink {
+    flex: none;
+    min-height: 0;
+  }
+  .fk-panel-scrolls > .fk-panel-body,
+  .fk-panel-scrolls > .fk-panel-fold > .fk-panel-body {
+    overflow: hidden;
+  }
+  /* The trace keeps a scroll of its own here — a fifteen-step errand should
+     still not push the report off the bottom. Capped tighter than the height it
+     could take, for the same reason it is the smaller panel up on the wide
+     layout: it is the log, and the report is what you came for. */
+  .fk-trace-scroll {
+    flex: none;
+    max-height: clamp(220px, 34vh, 420px);
+  }
+  .fk-empty {
+    flex: none;
+    overflow: visible;
   }
 }
 
