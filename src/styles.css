@@ -8,6 +8,21 @@
    main.tsx, so both schemes are one stylesheet rather than two.
 --------------------------------------------------------------------------- */
 
+/* antd v6 resets only its own components, so the page never got a global
+   border-box — and a `width: 100%` box with padding is then wider than the
+   thing it sits in. `.fk-content` was overflowing its shell by its own 32px of
+   padding and `html { overflow: hidden }` was quietly clipping the difference
+   off the right-hand edge, which is why the right margin vanished and the cards
+   were cut on a narrow screen. Two more followed from the same cause: `.fk-mark`
+   drew at 50px against the 44px its rule asks for (and against the 44px panel
+   tile it is meant to match), and `.fk-things-more` sat wider than the receipt
+   it belongs to. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 /* The page itself never scrolls. The app is exactly one viewport tall and the
    sections inside it carry their own scroll, so the header, the errand's button
    and the run's verdict are always where you left them. */
@@ -41,32 +56,68 @@ body {
   color: var(--fk-ink);
 }
 
-/* Slim, neutral scrollbars — chrome should disappear, same as the kiosk's. */
+/* Slim, neutral scrollbars — chrome should disappear, same as the kiosk's.
+   `border-strong` rather than `border`: three boxes on this page carry their own
+   scroll, and a mist-coloured thumb on paper is invisible, so the only cue that
+   a panel scrolls was the fade at its edge. Quiet is the goal, not absent. */
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--fk-border) transparent;
+  scrollbar-color: var(--fk-border-strong) transparent;
 }
 *::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
 }
 *::-webkit-scrollbar-track {
   background: transparent;
 }
 *::-webkit-scrollbar-thumb {
-  background: var(--fk-border);
+  background: var(--fk-border-strong);
   border-radius: 999px;
+  /* Drawn inside a transparent border so the thumb reads as a floating pill
+     rather than as a bar welded to the edge of the card. */
+  border: 3px solid transparent;
+  background-clip: content-box;
 }
 *::-webkit-scrollbar-thumb:hover {
-  background: var(--fk-border-strong);
+  background: var(--fk-text-faint);
+  background-clip: content-box;
 }
 
 /* A visible focus ring on keyboard navigation only — this is a tool people
-   drive from the keyboard while watching a run. */
+   drive from the keyboard while watching a run.
+
+   `amber-ink`, not `amber-edge`: the brand amber at half alpha sits at roughly
+   1.7:1 on cream, which is not a focus indicator so much as a suggestion of one.
+   The ink shade of the same hue still reads as amber and clears 4.5:1 in both
+   schemes — including on the amber surfaces the ring can land on. */
 :focus-visible {
-  outline: 3px solid var(--fk-amber-edge);
+  outline: 3px solid var(--fk-amber-ink);
   outline-offset: 2px;
   border-radius: 12px;
+}
+
+/* Touch: no grey flash on tap, no text selected by a long press on a control,
+   and no 300ms wait for a second tap that is not coming. Applied to the custom
+   controls and to antd's, since both are driven by finger on a kiosk desk. */
+button,
+[role='button'],
+.ant-btn,
+.ant-select-selector,
+.fk-chip,
+.fk-choice,
+.fk-things-more,
+.fk-raw > summary {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+button,
+.ant-btn,
+.fk-chip,
+.fk-choice,
+.fk-raw > summary {
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 /* ── The page shell ─────────────────────────────────────────────────────── */
@@ -147,6 +198,12 @@ body {
   color: var(--fk-ink);
   line-height: 1.2;
   margin: 0;
+  /* The brand block is the flex item that gives way on a phone, and the header
+     is held to one row there — so the name has to cut cleanly. Without this it
+     is the heading itself that overflows the row. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .fk-brand-sub {
   margin-top: 2px;
@@ -225,10 +282,18 @@ body {
   gap: 18px;
 }
 
-/* Too narrow to sit side by side, or too short to hold both panels at a usable
+/* Too narrow to sit side by side, or too short to hold the panels at a usable
    height. Either way the content region takes the scroll — the page still does
-   not, and the panels hand their own scroll back further down the sheet. */
-@media (max-width: 1100px), (max-height: 620px) {
+   not, and the panels hand their own scroll back further down the sheet.
+
+   620px was the floor while the errand form scrolled inside its own card: it
+   could be squeezed to a strip and still be usable, because every field was
+   reachable either way. Now that the form does not scroll, the height it needs
+   is the height it needs — under about 760px of viewport the card can no longer
+   hold it without clipping, so that is where the scroll moves out to the page
+   instead. The two numbers have to move together: a form that cannot scroll and
+   a card that will not grow means the page has to be the one that gives. */
+@media (max-width: 1100px), (max-height: 760px) {
   .fk-content {
     overflow-y: auto;
     overscroll-behavior: contain;
@@ -267,6 +332,35 @@ body {
   .fk-tag {
     display: none;
   }
+  .fk-header-actions {
+    gap: 8px;
+  }
+}
+
+/* A phone. The actions row alone — pill, button, toggle — wants more width than
+   the whole header has here, and the brand is the flex item that pays for it,
+   so it gets squeezed to a couple of letters. The run pill is what gives way:
+   the report card carries the same verdict as a ribbon, the live bar is still
+   on the panels, and a legible name beats a third copy of the status. */
+@media (max-width: 430px) {
+  .fk-header-inner > .fk-header-actions > .fk-pill {
+    display: none;
+  }
+  .fk-header-inner {
+    min-height: 72px;
+    padding: 10px 16px;
+  }
+  .fk-mark {
+    height: 40px;
+    width: 40px;
+    border-radius: 14px;
+  }
+  .fk-brand {
+    gap: 11px;
+  }
+  .fk-brand-name {
+    font-size: 18px;
+  }
 }
 
 /* ── Panel ──────────────────────────────────────────────────────────────── */
@@ -282,8 +376,13 @@ body {
   overflow: hidden;
   transition: box-shadow 0.3s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.35s ease;
 }
-.fk-panel:hover {
-  box-shadow: var(--fk-shadow-md), 0 0 0 1px var(--fk-ring);
+/* Only where a pointer can actually leave again. On a touch screen `:hover`
+   latches on tap and stays lit until something else is touched, so a lift meant
+   as feedback becomes a card that is permanently raised for no reason. */
+@media (hover: hover) {
+  .fk-panel:hover {
+    box-shadow: var(--fk-shadow-md), 0 0 0 1px var(--fk-ring);
+  }
 }
 
 .fk-panel-head {
@@ -333,6 +432,9 @@ body {
   flex: 1 1 auto;
 }
 
+/* Truncating rather than wrapping: the header row is a fixed-height band with
+   the verdict, the clock and the chevron sharing it, and a title that wraps to
+   two lines pushes all of them out of alignment on a narrow column. */
 .fk-panel-heading {
   margin: 0;
   font-family: var(--fk-font-display);
@@ -341,14 +443,17 @@ body {
   letter-spacing: -0.02em;
   color: var(--fk-ink);
   line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* The chevron tile. Sized and rounded like the icon tile on the other side of
    the header, so the row reads as a pair rather than as a stray control. */
 .fk-panel-caret {
   display: inline-flex;
-  height: 36px;
-  width: 36px;
+  height: 40px;
+  width: 40px;
   flex: none;
   align-items: center;
   justify-content: center;
@@ -359,7 +464,7 @@ body {
   background: transparent;
   color: var(--fk-text-faint);
   cursor: pointer;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  transition: background-color 0.2s ease, color 0.2s ease, transform 0.15s ease;
 }
 /* Hovering anywhere on the header lights the chevron: it is the affordance for
    the whole row, not a control that happens to sit at the end of it. */
@@ -580,7 +685,7 @@ body {
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.16em;
-  text-transform: uppercase;
+  text-transform: capitalize;
   color: var(--fk-text-faint);
   margin: 26px 0 12px;
 }
@@ -588,7 +693,7 @@ body {
   margin-top: 0;
 }
 
-/* The Field label — sentence case, not caps: these read as words. */
+/* The Field label — title case, not caps: these read as words. */
 .fk-label {
   display: block;
   font-family: var(--fk-font-display);
@@ -618,13 +723,99 @@ body {
   margin-top: 8px;
   flex: none;
   font-family: var(--fk-font-mono);
-  font-size: 11px;
+  font-size: 11.5px;
   color: var(--fk-text-faint);
   font-variant-numeric: tabular-nums;
+  transition: color 0.2s ease;
 }
 .fk-count-near {
   color: var(--fk-amber-ink);
   font-weight: 600;
+}
+
+/* ── The errand form ────────────────────────────────────────────────────── */
+
+/* The one panel on the page that does not scroll.
+
+   It used to: the body was a scroll box, and everything below the chips —
+   including the coupon picker — lived under the fold on anything shorter than a
+   desktop monitor. The fix is not a taller card but a shorter form. The two
+   money fields share a row instead of stacking, each carries one line of help
+   instead of a wrapped paragraph, and the chips say the item rather than the
+   whole sentence. What is left fits, and the order box absorbs whatever height
+   the screen has spare, so there is no gap where the scroll used to be. */
+.fk-panel-errand > .fk-panel-body {
+  /* Nothing here may be squeezed by a tall neighbour except the order box,
+     which asks for it below. */
+  gap: 0;
+}
+.fk-panel-errand > .fk-panel-body > * {
+  flex: 0 0 auto;
+}
+
+.fk-panel-errand .fk-eyebrow {
+  margin: 0 0 10px;
+}
+
+/* The only element that takes the spare height. Capped, because a box eight
+   lines tall for a sentence like "Order one Big Mac" is not a better box — past
+   the cap the money block takes the remainder instead.
+
+   Two selectors: antd hands the className to the textarea itself here, but adds
+   a wrapper around it the moment the field grows a count or a clear button, and
+   a rule that quietly stops applying is not worth the one it saves. */
+.fk-panel-errand > .fk-panel-body > textarea.fk-order-box,
+.fk-panel-errand > .fk-panel-body > .ant-input-textarea {
+  flex: 1 1 auto;
+  min-height: 58px;
+  max-height: 210px;
+}
+.fk-panel-errand > .fk-panel-body > .ant-input-textarea > textarea.fk-order-box {
+  height: 100%;
+}
+textarea.fk-order-box {
+  resize: none;
+}
+
+.fk-panel-errand .fk-chips {
+  margin-top: 10px;
+}
+
+/* Settled against the footer: on a tall screen the order and the money sit at
+   the two ends of the card, and on a short one the auto margin resolves to
+   nothing and the padding is all that separates them. */
+.fk-money {
+  margin-top: auto;
+  padding-top: 16px;
+}
+
+/* Coupon and cash limit on one row. The coupon takes what is going — it holds
+   a code and a status badge — and the cash box needs only room for a figure. */
+.fk-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 150px);
+  gap: 12px;
+  align-items: start;
+}
+.fk-field {
+  min-width: 0;
+}
+/* Too narrow for two: below this the cash box is squeezed past the point where
+   its own prefix and a four-figure limit both fit. */
+@media (max-width: 560px) {
+  .fk-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* A hint held to one line, with the full sentence on hover. Only where the text
+   is a tally or a short caveat — a hint that has something to explain is left to
+   wrap. */
+.fk-hint-1 {
+  margin-top: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ── Chips (the example errands) ────────────────────────────────────────── */
@@ -636,21 +827,38 @@ body {
   gap: 8px;
 }
 
+/* Sized to be tapped, not just clicked: 40px is the shortest a pill can be and
+   still take a fingertip reliably, and these sit in a wrapped row where a miss
+   lands on the neighbouring chip rather than on nothing. */
 .fk-chip {
   appearance: none;
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
   font-family: var(--fk-font-display);
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 700;
   line-height: 1.4;
-  padding: 8px 16px;
+  padding: 9px 18px;
   border-radius: 999px;
   border: none;
   background: var(--fk-surface-sunken);
   color: var(--fk-text);
   cursor: pointer;
   transition: transform 0.15s cubic-bezier(0.34, 1.4, 0.64, 1), background-color 0.2s ease,
-    color 0.2s ease;
+    color 0.2s ease, box-shadow 0.2s ease;
 }
+/* The errand's examples. Shorter than a chip that has to be read as a sentence,
+   because these now carry the item alone — two rows instead of three, which is
+   most of a field's worth of height back. Still 36px: a shade under the row a
+   finger wants, but these sit in a wrapped row where a near miss lands on the
+   neighbouring example rather than on nothing. */
+.fk-chip-sm {
+  min-height: 36px;
+  padding: 7px 14px;
+  font-size: 12.5px;
+}
+
 .fk-chip:hover:not(:disabled) {
   background: var(--fk-border);
 }
@@ -660,13 +868,17 @@ body {
 .fk-chip[aria-pressed='true'] {
   background: var(--fk-ink);
   color: var(--fk-surface);
+  /* The picked chip is the one thing in the row that should carry weight. */
+  box-shadow: var(--fk-shadow-sm);
 }
 html[data-theme='dark'] .fk-chip[aria-pressed='true'] {
   background: var(--fk-amber);
   color: #0d0d0f;
 }
+/* 0.4 fades the label past reading. A disabled chip still has to say which
+   example it is — it is off because a run is live, not because it is gone. */
 .fk-chip:disabled {
-  opacity: 0.4;
+  opacity: 0.55;
   cursor: not-allowed;
 }
 
@@ -779,18 +991,26 @@ html[data-theme='dark'] .fk-chip[aria-pressed='true'] {
   overflow: hidden;
 }
 /* A shine that crosses the button on hover — only when it is actually
-   clickable, so a blocked button never looks alive. */
-.fk-cta:not(:disabled)::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.55) 50%, transparent 70%);
-  transform: translateX(-130%);
-  transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
-  pointer-events: none;
-}
-.fk-cta:not(:disabled):hover::after {
-  transform: translateX(130%);
+   clickable, so a blocked button never looks alive, and only on a real pointer,
+   since a tap would light it and leave it parked mid-sweep. */
+@media (hover: hover) {
+  .fk-cta:not(:disabled)::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      110deg,
+      transparent 30%,
+      rgba(255, 255, 255, 0.55) 50%,
+      transparent 70%
+    );
+    transform: translateX(-130%);
+    transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+    pointer-events: none;
+  }
+  .fk-cta:not(:disabled):hover::after {
+    transform: translateX(130%);
+  }
 }
 
 .fk-actions {
@@ -1066,11 +1286,13 @@ html[data-theme='dark'] .fk-chip[aria-pressed='true'] {
    The mono face is kept for values only — money, counts, references. Prose in
    mono is what made this panel read as a log rather than as a report. */
 
+/* The sentence that answers "did it work" — the most-read line in the panel,
+   so it is the one that gets the size rather than the pills underneath it. */
 .fk-said {
   margin: 3px 0 0;
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 500;
-  line-height: 1.5;
+  line-height: 1.55;
   color: var(--fk-text);
   word-break: break-word;
 }
@@ -1079,9 +1301,9 @@ html[data-theme='dark'] .fk-chip[aria-pressed='true'] {
    about a meal. Quieter than the sentence it qualifies. */
 .fk-step-note {
   margin: 4px 0 0;
-  font-size: 11.5px;
-  line-height: 1.5;
-  color: var(--fk-text-faint);
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--fk-text-soft);
   word-break: break-word;
 }
 
@@ -1090,13 +1312,16 @@ html[data-theme='dark'] .fk-chip[aria-pressed='true'] {
    findable in a stack of a dozen green steps rather than merely tinted. */
 .fk-step-refusal {
   margin: 5px 0 0;
-  padding: 7px 11px;
-  border-radius: 12px;
+  padding: 9px 12px;
+  border-radius: 14px;
   background: var(--fk-flame-surface);
   color: var(--fk-flame-ink);
-  font-size: 12px;
+  /* A spine in the same red: the tint alone carries the meaning on paper, but
+     it is the weakest signal in the panel on a screen someone is skimming. */
+  box-shadow: inset 3px 0 0 var(--fk-flame);
+  font-size: 12.5px;
   font-weight: 500;
-  line-height: 1.5;
+  line-height: 1.55;
   word-break: break-word;
 }
 
@@ -1129,19 +1354,22 @@ html[data-theme='dark'] .fk-chip[aria-pressed='true'] {
   box-shadow: 0 0 0 1px var(--fk-ring);
   min-width: 0;
 }
+/* 9.5px caps is under the size this face stays legible at, and these labels are
+   what tell you which figure you are looking at. 10.5px with a shade more
+   tracking costs the row nothing and reads at a glance. */
 .fk-fact-label {
-  font-size: 9.5px;
+  font-size: 10.5px;
   font-weight: 700;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--fk-text-faint);
   white-space: nowrap;
 }
 .fk-fact-value {
   font-family: var(--fk-font-mono);
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 600;
-  line-height: 1.35;
+  line-height: 1.4;
   color: var(--fk-text);
   white-space: nowrap;
 }
@@ -1187,8 +1415,8 @@ html[data-theme='dark'] .fk-chip[aria-pressed='true'] {
   align-items: baseline;
   justify-content: space-between;
   gap: 12px;
-  padding: 6px 11px;
-  font-size: 11.5px;
+  padding: 7px 12px;
+  font-size: 12px;
   line-height: 1.45;
 }
 .fk-things > li:not(:last-child) {
@@ -1218,27 +1446,32 @@ html[data-theme='dark'] .fk-chip[aria-pressed='true'] {
 }
 
 /* The tail of a cut list. The button reveals what the server sent; the plain
-   row is for what it never sent — a count that can be reported, not opened. */
+   row is for what it never sent — a count that can be reported, not opened.
+
+   Given a row's worth of height rather than a line's: it is the one control
+   inside a step, and at 6px of padding it was a smaller target than the text
+   above it while being the only part meant to be pressed. */
 .fk-things-more {
   display: block;
   width: 100%;
-  padding: 6px 11px;
+  min-height: 34px;
+  padding: 8px 12px;
   border: 0;
   background: none;
   font: inherit;
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 11.5px;
+  font-weight: 700;
   text-align: left;
-  color: var(--fk-text-faint);
+  color: var(--fk-text-soft);
   cursor: pointer;
   transition: color 0.15s ease, background-color 0.15s ease;
 }
 .fk-things-more:hover {
-  color: var(--fk-text);
+  color: var(--fk-ink);
   background: var(--fk-border);
 }
 .fk-thing-rest {
-  font-size: 11px;
+  font-size: 11.5px;
   color: var(--fk-text-faint);
 }
 
@@ -1250,21 +1483,25 @@ html[data-theme='dark'] .fk-chip[aria-pressed='true'] {
 .fk-raw {
   margin-top: 8px;
 }
+/* Quieter than the pills above it: it repeats on every step, and on all but one
+   of them it is not what anyone came to read. Quiet by colour alone, though —
+   the old 0.75 opacity dropped faint-on-paper to about 2.9:1, and a control has
+   to be readable to be found. The padding is what makes it a target rather than
+   a 10px line of text. */
 .fk-raw > summary {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   list-style: none;
   width: fit-content;
   margin-top: 2px;
-  font-size: 10.5px;
+  padding: 5px 10px 5px 8px;
+  border-radius: 999px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--fk-text-faint);
-  /* Quieter than the pills above it: it repeats on every step, and on all but
-     one of them it is not what anyone came to read. */
-  opacity: 0.75;
   cursor: pointer;
-  transition: color 0.15s ease, opacity 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease;
 }
 .fk-raw > summary::-webkit-details-marker {
   display: none;
@@ -1278,20 +1515,21 @@ html[data-theme='dark'] .fk-chip[aria-pressed='true'] {
   content: '▾';
 }
 .fk-raw > summary:hover {
-  color: var(--fk-text);
-  opacity: 1;
+  color: var(--fk-ink);
+  background: var(--fk-surface-sunken);
 }
 .fk-raw pre {
   margin: 7px 0 0;
-  padding: 10px 12px;
-  border-radius: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
   max-height: 220px;
   overflow: auto;
+  overscroll-behavior: contain;
   background: var(--fk-surface-sunken);
   box-shadow: 0 0 0 1px var(--fk-ring);
   font-family: var(--fk-font-mono);
-  font-size: 10.5px;
-  line-height: 1.55;
+  font-size: 11px;
+  line-height: 1.6;
   color: var(--fk-text-soft);
 }
 
@@ -1376,9 +1614,12 @@ html[data-theme='dark'] .fk-chip[aria-pressed='true'] {
   text-align: center;
   padding: 32px 28px 36px;
 }
+/* The tile the glyph sits on. Ringed and softly lit rather than a flat grey
+   square: this is the first thing on the page before a run, so it should look
+   like a considered empty state and not like a component that failed to load. */
 .fk-empty-art {
-  height: 72px;
-  width: 72px;
+  height: 76px;
+  width: 76px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1386,6 +1627,7 @@ html[data-theme='dark'] .fk-chip[aria-pressed='true'] {
   font-size: 40px;
   line-height: 1;
   background: var(--fk-surface-sunken);
+  box-shadow: var(--fk-shadow-sm), 0 0 0 1px var(--fk-ring);
 }
 .fk-empty-title {
   margin: 18px 0 0;
@@ -1431,6 +1673,7 @@ html[data-theme='dark'] .fk-chip[aria-pressed='true'] {
   padding: 18px 20px;
   border-radius: 24px;
   background: var(--fk-surface-sunken);
+  box-shadow: 0 0 0 1px var(--fk-ring);
   font-size: 13px;
   line-height: 1.5;
   color: var(--fk-text-faint);
@@ -1475,12 +1718,16 @@ html[data-theme='dark'] .fk-chip[aria-pressed='true'] {
   }
 }
 
-/* The admin's Stat, without the icon: a cream tile inside a paper card. */
+/* The admin's Stat, without the icon: a cream tile inside a paper card. The
+   ring is the one every other sunken surface on this page carries — without it
+   the three tiles dissolve into the card on the dark scheme, where sunken and
+   surface are four points of luminance apart. */
 .fk-tile {
   position: relative;
   padding: 16px 18px 14px;
   border-radius: 24px;
   background: var(--fk-surface-sunken);
+  box-shadow: 0 0 0 1px var(--fk-ring);
   overflow: hidden;
 }
 /* A coloured spine on the left says which kind of money this is at a glance. */
@@ -1636,9 +1883,20 @@ html[data-theme='dark'] .fk-chip[aria-pressed='true'] {
 .ant-btn:not(:disabled):active {
   transform: scale(0.97);
 }
+/* 0.3 put the label of a blocked button below reading, and the button that
+   spends the most time disabled here is the one that sends the agent — the
+   control someone is looking straight at while working out what is wrong. It
+   still has to read as off, so it keeps the flat fill and loses the shadow; it
+   no longer has to be illegible to do that. */
 .ant-btn:disabled {
-  opacity: 0.3;
+  opacity: 0.5;
   box-shadow: none !important;
+}
+/* Loading is not disabled — the run is under way and the label says so. Full
+   strength, so "On its way…" reads as the state it is. */
+.ant-btn.ant-btn-loading {
+  opacity: 1;
+  cursor: progress;
 }
 
 /* The coupon picker's band headings. antd's default is a faint line of body
@@ -1708,11 +1966,22 @@ html[data-theme='dark'] .fk-chip[aria-pressed='true'] {
    region is the scroller, a panel that caps its own height would be capping it
    twice. Written here, after the rules it undoes, so the cascade lands the right
    way round. */
-@media (max-width: 1100px), (max-height: 620px) {
+@media (max-width: 1100px), (max-height: 760px) {
   .fk-panel-fill,
   .fk-panel-shrink {
     flex: none;
     min-height: 0;
+  }
+  /* With the card sized to its contents there is no spare height to absorb, and
+     a box that grew to fill one would only push the button further down a page
+     that is already scrolling. Back to the two rows it asks for. */
+  .fk-panel-errand > .fk-panel-body > textarea.fk-order-box,
+  .fk-panel-errand > .fk-panel-body > .ant-input-textarea {
+    flex: none;
+    max-height: none;
+  }
+  .fk-money {
+    margin-top: 0;
   }
   .fk-panel-scrolls > .fk-panel-body,
   .fk-panel-scrolls > .fk-panel-fold > .fk-panel-body {

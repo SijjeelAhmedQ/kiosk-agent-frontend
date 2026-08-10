@@ -8,13 +8,19 @@ import { V } from '@/theme';
 
 const { Text } = Typography;
 
-/** Starting points, so nobody faces an empty box wondering what to type. */
+/**
+ * Starting points, so nobody faces an empty box wondering what to type.
+ *
+ * The chip shows the item and the box gets the whole sentence: five chips each
+ * beginning "Order one" wrapped to three rows and said the same thing three
+ * times over, and the rows were height the panel could not spare.
+ */
 const EXAMPLES = [
-  'Order one Big Mac®',
-  'Order one Strawberry Shake',
-  'Order one Ranch Snack Wrap®',
-  'Order one Creamy Ranch Sauce',
-  'Order one Coca-Cola®',
+  { label: 'Big Mac®', order: 'Order one Big Mac®' },
+  { label: 'Strawberry Shake', order: 'Order one Strawberry Shake' },
+  { label: 'Ranch Snack Wrap®', order: 'Order one Ranch Snack Wrap®' },
+  { label: 'Creamy Ranch Sauce', order: 'Order one Creamy Ranch Sauce' },
+  { label: 'Coca-Cola®', order: 'Order one Coca-Cola®' },
 ];
 
 /** What the cash box starts on when there is no coupon paying for the errand. */
@@ -137,7 +143,7 @@ export function ErrandForm({
   blockedReason,
   couponsRefreshKey,
 }: Props) {
-  const [instruction, setInstruction] = useState(EXAMPLES[0]);
+  const [instruction, setInstruction] = useState(EXAMPLES[0].order);
   const [couponCode, setCouponCode] = useState<string | null>(null);
   /** Empty means "nothing beyond the coupon" — not the same as never set. */
   const [cashLimit, setCashLimit] = useState<number | null>(DEFAULT_CASH_LIMIT);
@@ -235,15 +241,32 @@ export function ErrandForm({
   const partCount = countOf('partially_redeemed');
   const deadCount = countOf('fully_redeemed', 'expired', 'cancelled');
 
+  // The two lines of help, one per money field, each written to fit on one row.
+  // The pair used to run to five wrapped lines between them, which was most of
+  // the height the card was scrolling to recover.
+  const couponSummary =
+    coupons.length === 0
+      ? 'None found — you can still type a code.'
+      : unusedCount + partCount === 0
+        ? `All ${coupons.length} are spent — you can still type a code.`
+        : `${unusedCount} unused · ${partCount} part-used · ${deadCount} spent · or type a code`;
+
+  const cashHint = couponCode
+    ? 'Empty spends the coupon and nothing else.'
+    : 'Refused at payment if the bill is higher.';
+
   return (
     <Panel
       icon="✍️"
       title="The errand"
       note="What to order, and what it may spend"
       live={busy}
-      // The fields scroll inside the card; the button that sends the agent is
-      // pinned under them, so it is never the thing you have to scroll to find.
-      fill="scroll"
+      className="fk-panel-errand"
+      // Nothing here scrolls. The form is short enough to be read in one look —
+      // two money fields on one row, one line of help under each — and the order
+      // box takes whatever height is left over, so a taller screen buys a bigger
+      // box to type in rather than a stretch of empty paper.
+      fill="flex"
       footer={
         <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
           <div className="fk-actions">
@@ -282,15 +305,18 @@ export function ErrandForm({
     >
       <div className="fk-eyebrow">The order</div>
 
+      {/* The one element that grows: it takes the panel's spare height, between
+          two rows' worth and a sensible cap, so the card is filled by the field
+          people type in rather than by a gap above the button. */}
       <Input.TextArea
+        className="fk-order-box"
         value={instruction}
         onChange={(event) => setInstruction(event.target.value)}
         onKeyDown={onKeyDown}
         disabled={busy}
-        rows={3}
+        rows={2}
         maxLength={2000}
         placeholder="Order two cheeseburgers"
-        style={{ resize: 'none' }}
       />
 
       {/* antd's own `showCount` is absolutely positioned and lands on top of the
@@ -303,124 +329,130 @@ export function ErrandForm({
         </span>
       </div>
 
-      <div style={{ marginTop: 12 }} className="fk-chips">
+      <div className="fk-chips">
         {EXAMPLES.map((example) => (
           <button
-            key={example}
+            key={example.order}
             type="button"
-            className="fk-chip"
-            aria-pressed={instruction === example}
+            className="fk-chip fk-chip-sm"
+            aria-pressed={instruction === example.order}
+            aria-label={example.order}
             disabled={busy}
-            onClick={() => setInstruction(example)}
+            onClick={() => setInstruction(example.order)}
           >
-            {example}
+            {example.label}
           </button>
         ))}
       </div>
 
-      <div className="fk-eyebrow">The money</div>
+      {/* Settled against the button rather than following the chips: the two
+          halves of the form then sit at the two ends of the card on a tall
+          screen, and close up as one block when the height is tight. */}
+      <div className="fk-money">
+        <div className="fk-eyebrow">The money</div>
 
-      <label className="fk-label" htmlFor="fk-coupon">
-        Coupon
-      </label>
-      <Select
-        id="fk-coupon"
-        allowClear
-        showSearch
-        disabled={busy}
-        value={couponCode}
-        onChange={pickCoupon}
-        placeholder="No coupon — pay cash only"
-        optionFilterProp="label"
-        style={{ width: '100%' }}
-        options={options}
-        // A code that is not in the list is still usable — the agent finds
-        // out from the restaurant, not from this dropdown.
-        onSearch={(value) => value.length > 3 && pickCoupon(value.toUpperCase())}
-        optionRender={(option) => {
-          const coupon = (option.data as { coupon?: CouponOption }).coupon;
-          if (!coupon) return option.label;
-          const problem = problemWith(coupon);
-          return (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                // antd fades a disabled option, but not far enough to read as
-                // "this one is out" at a glance next to the live ones.
-                opacity: problem ? 0.55 : 1,
+        <div className="fk-fields">
+          <div className="fk-field">
+            <label className="fk-label" htmlFor="fk-coupon">
+              Coupon
+            </label>
+            <Select
+              id="fk-coupon"
+              allowClear
+              showSearch
+              disabled={busy}
+              value={couponCode}
+              onChange={pickCoupon}
+              placeholder="None — pay cash"
+              optionFilterProp="label"
+              style={{ width: '100%' }}
+              options={options}
+              // A code that is not in the list is still usable — the agent finds
+              // out from the restaurant, not from this dropdown.
+              onSearch={(value) => value.length > 3 && pickCoupon(value.toUpperCase())}
+              optionRender={(option) => {
+                const coupon = (option.data as { coupon?: CouponOption }).coupon;
+                if (!coupon) return option.label;
+                const problem = problemWith(coupon);
+                return (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
+                      // antd fades a disabled option, but not far enough to read
+                      // as "this one is out" beside the live ones.
+                      opacity: problem ? 0.55 : 1,
+                    }}
+                  >
+                    <span
+                      style={{ fontSize: 15, filter: problem ? 'grayscale(1)' : undefined }}
+                      aria-hidden
+                    >
+                      {coupon.couponType === 'value' ? '💰' : '🎁'}
+                    </span>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div
+                        style={{
+                          fontFamily: V.fontMono,
+                          fontSize: 12,
+                          fontWeight: 600,
+                          textDecoration: problem ? 'line-through' : undefined,
+                        }}
+                      >
+                        {coupon.couponCode}
+                      </div>
+                      <div style={{ fontSize: 11.5, color: V.textFaint }}>{worthOf(coupon)}</div>
+                    </div>
+                    {/* On every row, not just the broken ones — the state of a
+                        coupon is what the operator is scanning this list for. */}
+                    <span
+                      className={`fk-badge ${STATUS_TONE[coupon.status]}`}
+                      style={{ flexShrink: 0 }}
+                    >
+                      {STATUS_LABEL[coupon.status]}
+                    </span>
+                  </div>
+                );
               }}
-            >
-              <span
-                style={{ fontSize: 15, filter: problem ? 'grayscale(1)' : undefined }}
-                aria-hidden
-              >
-                {coupon.couponType === 'value' ? '💰' : '🎁'}
-              </span>
-              <div style={{ minWidth: 0, flex: 1 }}>
-                <div
-                  style={{
-                    fontFamily: V.fontMono,
-                    fontSize: 12,
-                    fontWeight: 600,
-                    textDecoration: problem ? 'line-through' : undefined,
-                  }}
-                >
-                  {coupon.couponCode}
-                </div>
-                <div style={{ fontSize: 11.5, color: V.textFaint }}>{worthOf(coupon)}</div>
-              </div>
-              {/* On every row, not just the broken ones — the state of a coupon
-                  is what the operator is scanning this list for. */}
-              <span
-                className={`fk-badge ${STATUS_TONE[coupon.status]}`}
-                style={{ flexShrink: 0 }}
-              >
-                {STATUS_LABEL[coupon.status]}
-              </span>
-            </div>
-          );
-        }}
-      />
-      <p className="fk-hint">
-        {coupons.length === 0
-          ? 'No coupons found — you can still type a code.'
-          : unusedCount + partCount === 0
-            ? `All ${coupons.length} coupons are used, expired or cancelled — you can still type a code.`
-            : `${unusedCount} unused, ${partCount} partly used, ${deadCount} spent or cancelled` +
-              ' (greyed out). Pick one, or type a code.'}
-      </p>
+            />
+            {/* One line, and the whole sentence on hover: the picker itself
+                labels every row, so this is a tally, not the explanation. */}
+            <p className="fk-hint fk-hint-1" title={couponSummary}>
+              {couponSummary}
+            </p>
+          </div>
 
-      <label className="fk-label" style={{ marginTop: 20 }} htmlFor="fk-cash">
-        Cash limit
-      </label>
-      <InputNumber
-        id="fk-cash"
-        disabled={busy}
-        value={cashLimit}
-        onChange={setCashLimit}
-        min={0}
-        max={1000000}
-        step={500}
-        style={{ width: '100%' }}
-        placeholder={couponCode ? 'Coupon only — no cash' : '0'}
-        prefix={<span style={{ color: V.textFaint, fontWeight: 600 }}>Rs</span>}
-        // Guarded: an empty box has no number to group, and `${undefined}`
-        // would put the word "undefined" in the field.
-        formatter={(value) =>
-          value === undefined || value === null
-            ? ''
-            : `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-        }
-        parser={(value) => Number((value ?? '').replace(/,/g, '')) as 0}
-      />
-      <p className="fk-hint">
-        {couponCode
-          ? 'Left empty, the errand is the coupon and nothing more. Put a number here only if' +
-            ' the agent may top it up with cash.'
-          : 'What the agent may spend. It is refused at payment if the bill is higher.'}
-      </p>
+          <div className="fk-field fk-field-cash">
+            <label className="fk-label" htmlFor="fk-cash">
+              Cash Limit
+            </label>
+            <InputNumber
+              id="fk-cash"
+              disabled={busy}
+              value={cashLimit}
+              onChange={setCashLimit}
+              min={0}
+              max={1000000}
+              step={500}
+              style={{ width: '100%' }}
+              placeholder={couponCode ? 'Coupon only' : '0'}
+              prefix={<span style={{ color: V.textFaint, fontWeight: 600 }}>Rs</span>}
+              // Guarded: an empty box has no number to group, and `${undefined}`
+              // would put the word "undefined" in the field.
+              formatter={(value) =>
+                value === undefined || value === null
+                  ? ''
+                  : `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+              }
+              parser={(value) => Number((value ?? '').replace(/,/g, '')) as 0}
+            />
+            <p className="fk-hint fk-hint-1" title={cashHint}>
+              {cashHint}
+            </p>
+          </div>
+        </div>
+      </div>
     </Panel>
   );
 }
