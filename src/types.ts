@@ -56,12 +56,28 @@ export interface AgentWalletSummary {
 export type AgentEvent =
   | { type: 'status'; status: AgentRunStatus; queued?: boolean }
   | { type: 'tool'; toolUseId: string; name: string }
-  | { type: 'tool_result'; toolUseId: string; ok: boolean; summary: string }
+  | {
+      type: 'tool_result';
+      toolUseId: string;
+      ok: boolean;
+      summary: string;
+      detail?: ToolDetail | null;
+    }
   | { type: 'text'; text: string }
   | { type: 'browser'; state: 'opened' | 'closed'; headless?: boolean }
   | { type: 'final'; text: string; wallet: AgentWalletSummary }
   | { type: 'error'; message: string }
   | { type: 'end' };
+
+/**
+ * What a tool handed back, field by field.
+ *
+ * Deliberately loose: every tool returns a different shape and new ones arrive
+ * without this file changing. `toolStory.ts` is where a shape is read, and it
+ * checks each field it reads rather than trusting a type that cannot be checked
+ * at the wire.
+ */
+export type ToolDetail = Record<string, unknown>;
 
 /** A tool call as the timeline shows it — the call and its outcome, merged. */
 export interface AgentToolCall {
@@ -70,6 +86,8 @@ export interface AgentToolCall {
   /** null while the call is still running. */
   ok: boolean | null;
   summary: string | null;
+  /** The tool's own return value, for the timeline to put into words. */
+  detail: ToolDetail | null;
 }
 
 /**

@@ -65,7 +65,13 @@ export function useAgentRun() {
             ...prev,
             toolCalls: [
               ...prev.toolCalls,
-              { toolUseId: event.toolUseId, name: event.name, ok: null, summary: null },
+              {
+                toolUseId: event.toolUseId,
+                name: event.name,
+                ok: null,
+                summary: null,
+                detail: null,
+              },
             ],
           };
 
@@ -74,7 +80,7 @@ export function useAgentRun() {
             ...prev,
             toolCalls: prev.toolCalls.map((call) =>
               call.toolUseId === event.toolUseId
-                ? { ...call, ok: event.ok, summary: event.summary }
+                ? { ...call, ok: event.ok, summary: event.summary, detail: event.detail ?? null }
                 : call,
             ),
           };

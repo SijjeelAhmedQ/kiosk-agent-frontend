@@ -1054,17 +1054,245 @@ html[data-theme='dark'] .fk-chip[aria-pressed='true'] {
   line-height: 1.35;
 }
 
-.fk-step-summary {
-  margin-top: 3px;
-  font-family: var(--fk-font-mono);
-  font-size: 11px;
+/* ── What came back, in words ────────────────────────────────────────────────
+   A tool answers with a dict, and the panel's job is to say what that dict
+   means. Three registers, in the order someone reads them:
+
+     .fk-said    the sentence — sans, near-ink, the part that answers "did it
+                 work"; the only line that is always there
+     .fk-fact    the figures the sentence leaves out, as labelled pills
+     .fk-thing   the named items involved, as a quiet table
+
+   The mono face is kept for values only — money, counts, references. Prose in
+   mono is what made this panel read as a log rather than as a report. */
+
+.fk-said {
+  margin: 3px 0 0;
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--fk-text);
+  word-break: break-word;
+}
+
+/* The restaurant's own words when it has any — a coupon's reason, a caveat
+   about a meal. Quieter than the sentence it qualifies. */
+.fk-step-note {
+  margin: 4px 0 0;
+  font-size: 11.5px;
   line-height: 1.5;
   color: var(--fk-text-faint);
   word-break: break-word;
-  white-space: pre-wrap;
 }
-.fk-step-summary-bad {
-  color: var(--fk-flame);
+
+/* A refused step, boxed. Colour alone is not enough: a refusal is a normal part
+   of a run — the wallet turning down an over-budget payment — so it has to be
+   findable in a stack of a dozen green steps rather than merely tinted. */
+.fk-step-refusal {
+  margin: 5px 0 0;
+  padding: 7px 11px;
+  border-radius: 12px;
+  background: var(--fk-flame-surface);
+  color: var(--fk-flame-ink);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+/* "working…" while the call is still out. */
+.fk-step-wait {
+  margin-top: 4px;
+  font-family: var(--fk-font-mono);
+  font-size: 11px;
+  color: var(--fk-text-faint);
+}
+
+/* ── Figures ─────────────────────────────────────────────────────────────── */
+
+.fk-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 7px;
+}
+
+/* Label above value rather than beside it: the labels are short and the values
+   are the thing being scanned down a column of steps. */
+.fk-fact {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 4px 11px 5px;
+  border-radius: 12px;
+  background: var(--fk-surface-sunken);
+  box-shadow: 0 0 0 1px var(--fk-ring);
+  min-width: 0;
+}
+.fk-fact-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--fk-text-faint);
+  white-space: nowrap;
+}
+.fk-fact-value {
+  font-family: var(--fk-font-mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--fk-text);
+  white-space: nowrap;
+}
+
+/* Money the coupon covered, money that left the wallet, and a figure that is a
+   problem — the same three tones the bill in the report card uses. */
+.fk-fact-leaf {
+  background: var(--fk-leaf-surface);
+}
+.fk-fact-leaf .fk-fact-value {
+  color: var(--fk-leaf-ink);
+}
+.fk-fact-amber {
+  background: var(--fk-amber-surface);
+}
+.fk-fact-amber .fk-fact-value {
+  color: var(--fk-amber-ink);
+}
+.fk-fact-flame {
+  background: var(--fk-flame-surface);
+}
+.fk-fact-flame .fk-fact-value {
+  color: var(--fk-flame-ink);
+}
+
+/* ── The named things ────────────────────────────────────────────────────── */
+
+/* A receipt, not a bulleted list: a name on the left, its price right-aligned,
+   hairlines between. Sunken so it reads as something the panel quotes rather
+   than something it says. */
+.fk-things {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--fk-surface-sunken);
+  box-shadow: 0 0 0 1px var(--fk-ring);
+}
+
+.fk-thing {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 11px;
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+.fk-things > li:not(:last-child) {
+  border-bottom: 1px solid var(--fk-border);
+}
+
+/* One line each. A long product name is cut rather than wrapped, so a list of
+   six stays six rows tall and the eye can run down the prices. */
+.fk-thing-name {
+  min-width: 0;
+  color: var(--fk-text-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fk-thing-name em {
+  margin-left: 7px;
+  font-style: normal;
+  font-size: 10.5px;
+  color: var(--fk-text-faint);
+}
+.fk-thing-value {
+  flex: none;
+  font-family: var(--fk-font-mono);
+  font-weight: 600;
+  color: var(--fk-text);
+}
+
+/* The tail of a cut list. The button reveals what the server sent; the plain
+   row is for what it never sent — a count that can be reported, not opened. */
+.fk-things-more {
+  display: block;
+  width: 100%;
+  padding: 6px 11px;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: left;
+  color: var(--fk-text-faint);
+  cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+.fk-things-more:hover {
+  color: var(--fk-text);
+  background: var(--fk-border);
+}
+.fk-thing-rest {
+  font-size: 11px;
+  color: var(--fk-text-faint);
+}
+
+/* ── The result as it arrived ────────────────────────────────────────────── */
+
+/* Folded away, because the sentence above it is the answer nearly every time —
+   but kept, because when the *kiosk* is what is in question, the fields are.
+   `list-style: none` on both selectors: Safari uses the second. */
+.fk-raw {
+  margin-top: 8px;
+}
+.fk-raw > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  list-style: none;
+  width: fit-content;
+  margin-top: 2px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--fk-text-faint);
+  /* Quieter than the pills above it: it repeats on every step, and on all but
+     one of them it is not what anyone came to read. */
+  opacity: 0.75;
+  cursor: pointer;
+  transition: color 0.15s ease, opacity 0.15s ease;
+}
+.fk-raw > summary::-webkit-details-marker {
+  display: none;
+}
+.fk-raw > summary::before {
+  content: '▸';
+  font-size: 9px;
+  letter-spacing: 0;
+}
+.fk-raw[open] > summary::before {
+  content: '▾';
+}
+.fk-raw > summary:hover {
+  color: var(--fk-text);
+  opacity: 1;
+}
+.fk-raw pre {
+  margin: 7px 0 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  max-height: 220px;
+  overflow: auto;
+  background: var(--fk-surface-sunken);
+  box-shadow: 0 0 0 1px var(--fk-ring);
+  font-family: var(--fk-font-mono);
+  font-size: 10.5px;
+  line-height: 1.55;
+  color: var(--fk-text-soft);
 }
 
 /* The full-size badge is built for a panel header; on a step's title line it

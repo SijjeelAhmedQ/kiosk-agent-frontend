@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type RefObject } from 'react';
 import { Panel } from '@/components/Panel';
 import type { AgentRunStatus, AgentToolCall } from '@/types';
 import { toolLabel } from '@/toolLabels';
+import { rawDetail, toolStory, type Thing } from '@/toolStory';
 
 interface Props {
   toolCalls: AgentToolCall[];
@@ -123,6 +124,123 @@ function Dot({ ok }: { ok: boolean | null }) {
   );
 }
 
+/** How many named things a step shows before it asks to be opened. */
+const THINGS_SHOWN = 3;
+
+/**
+ * The named things a step involved — products found, lines ordered.
+ *
+ * Capped, because a browse of the menu returns dozens and the trace is skimmed:
+ * three is enough to recognise that the agent found the right burger. The rest
+ * are one click away, and `beyond` covers what the agent saw but the server
+ * never sent — that count can only be reported, not revealed.
+ */
+function Things({ things, beyond }: { things: Thing[]; beyond: number }) {
+  const [all, setAll] = useState(false);
+  const shown = all ? things : things.slice(0, THINGS_SHOWN);
+  const foldedAway = things.length - shown.length;
+
+  return (
+    <ul className="fk-things">
+      {shown.map((thing, index) => (
+        <li className="fk-thing" key={`${thing.name}-${index}`}>
+          <span className="fk-thing-name">
+            {thing.name}
+            {thing.note && <em>{thing.note}</em>}
+          </span>
+          {thing.value && <span className="fk-thing-value">{thing.value}</span>}
+        </li>
+      ))}
+
+      {foldedAway > 0 ? (
+        <li>
+          <button type="button" className="fk-things-more" onClick={() => setAll(true)}>
+            and {foldedAway + beyond} more
+          </button>
+        </li>
+      ) : (
+        beyond > 0 && <li className="fk-thing fk-thing-rest">and {beyond} more besides</li>
+      )}
+    </ul>
+  );
+}
+
+/**
+ * One step: what the agent did, and what came back — in words.
+ *
+ * The result is a sentence first and figures second, because the question being
+ * asked of this panel is "did the right thing happen", not "what did the API
+ * return". The raw result is kept, folded away, for when it is the API that is
+ * in question.
+ */
+function Step({ call }: { call: AgentToolCall }) {
+  const meta = toolLabel(call.name);
+  const story = toolStory(call);
+  const raw = call.ok === true ? rawDetail(call.detail) : null;
+
+  return (
+    <li className="fk-step">
+      <Dot ok={call.ok} />
+
+      <div className="fk-step-body">
+        <div className="fk-step-title">
+          <span aria-hidden>{meta.icon}</span>
+          <span>{meta.label}</span>
+          {meta.spends && <span className="fk-badge">spends money</span>}
+        </div>
+
+        {/* No story yet: the call is still out. */}
+        {story === null ? (
+          <div className="fk-step-wait">
+            <span className="fk-working">
+              working
+              <i />
+              <i />
+              <i />
+            </span>
+          </div>
+        ) : (
+          <>
+            {/* A refusal is boxed rather than merely coloured: the wallet turning
+                down an over-budget payment is a normal part of a run, and it has
+                to be findable in a stack of a dozen green steps. */}
+            {call.ok === false ? (
+              <p className="fk-step-refusal">{story.headline}</p>
+            ) : (
+              <p className="fk-said">{story.headline}</p>
+            )}
+
+            {story.note && <p className="fk-step-note">{story.note}</p>}
+
+            {story.facts.length > 0 && (
+              <div className="fk-facts">
+                {story.facts.map((item) => (
+                  <span
+                    className={`fk-fact${item.tone ? ` fk-fact-${item.tone}` : ''}`}
+                    key={item.label}
+                  >
+                    <span className="fk-fact-label">{item.label}</span>
+                    <span className="fk-fact-value">{item.value}</span>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {story.things.length > 0 && <Things things={story.things} beyond={story.more} />}
+
+            {raw && (
+              <details className="fk-raw">
+                <summary>raw result</summary>
+                <pre>{raw}</pre>
+              </details>
+            )}
+          </>
+        )}
+      </div>
+    </li>
+  );
+}
+
 /**
  * What the agent did, step by step.
  *
@@ -202,35 +320,9 @@ export function RunTrace({ toolCalls, busy, status, browserOpen }: Props) {
           ref={scrollBox}
         >
           <ol className="fk-trace">
-            {toolCalls.map((call) => {
-              const meta = toolLabel(call.name);
-              const failed = call.ok === false;
-
-              return (
-                <li key={call.toolUseId} className="fk-step">
-                  <Dot ok={call.ok} />
-
-                  <div className="fk-step-body">
-                    <div className="fk-step-title">
-                      <span aria-hidden>{meta.icon}</span>
-                      <span>{meta.label}</span>
-                      {meta.spends && <span className="fk-badge">spends money</span>}
-                    </div>
-
-                    <div className={`fk-step-summary${failed ? ' fk-step-summary-bad' : ''}`}>
-                      {call.summary ?? (
-                        <span className="fk-working">
-                          working
-                          <i />
-                          <i />
-                          <i />
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </li>
-              );
-            })}
+            {toolCalls.map((call) => (
+              <Step call={call} key={call.toolUseId} />
+            ))}
           </ol>
         </div>
       )}
