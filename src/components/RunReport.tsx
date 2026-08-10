@@ -83,6 +83,7 @@ export function RunReport({ status, narration, finalText, wallet, error }: Props
       icon={icon}
       title={title}
       live={!settled}
+      collapsible
       // The larger half of the column: the report is what someone reads twice,
       // so it gets the room and a long one scrolls inside the card.
       fill="scroll"

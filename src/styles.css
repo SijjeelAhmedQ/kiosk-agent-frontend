@@ -118,21 +118,25 @@ body {
   min-width: 0;
 }
 
-/* The kiosk's mark, unchanged: the flame on a red rounded tile. Copying it
-   rather than inventing an agent logo is the whole point — this app should
-   read as Friends Kitchen's own agent, not as a separate product. */
+/* The agent's own mark: the robot on a rounded tile. The artwork is drawn in
+   navy on a transparent ground, so the tile stays light in both schemes — on
+   the dark surface the ears and face plate would otherwise vanish into it.
+   `contain` rather than `cover` because the antenna and the three dots are the
+   parts a crop would eat first. */
 .fk-mark {
-  display: inline-flex;
+  display: block;
   height: 44px;
   width: 44px;
   flex: none;
-  align-items: center;
-  justify-content: center;
   border-radius: 16px;
-  font-size: 22px;
-  line-height: 1;
-  background: var(--fk-flame);
-  box-shadow: 0 4px 14px rgba(218, 41, 28, 0.28);
+  padding: 3px;
+  object-fit: contain;
+  /* Literal rather than --fk-surface: this one tile has to stay the same white
+     in both schemes, so it is not a palette colour. */
+  background: #ffffff;
+  box-shadow:
+    0 4px 14px rgba(12, 28, 47, 0.16),
+    0 0 0 1px var(--fk-ring);
 }
 
 .fk-brand-name {
@@ -1177,12 +1181,16 @@ html[data-theme='dark'] .fk-chip[aria-pressed='true'] {
    the prose reads from the top and the bill settles against the bottom, giving
    the figures one fixed place instead of one that walks down as text streams
    in. Once the report is long enough to scroll, `margin-top: auto` resolves to
-   nothing and the two simply follow each other. */
-.fk-panel-report > .fk-panel-body {
+   nothing and the two simply follow each other. The fold wrapper sits between
+   the panel and its body once the report can be collapsed, so both paths are
+   spelled out. */
+.fk-panel-report > .fk-panel-body,
+.fk-panel-report > .fk-panel-fold > .fk-panel-body {
   display: flex;
   flex-direction: column;
 }
-.fk-panel-report > .fk-panel-body > * {
+.fk-panel-report > .fk-panel-body > *,
+.fk-panel-report > .fk-panel-fold > .fk-panel-body > * {
   flex: 0 0 auto;
 }
 .fk-bill {

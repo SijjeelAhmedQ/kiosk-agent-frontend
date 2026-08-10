@@ -78,9 +78,14 @@ export default function App({ scheme, onToggleScheme }: Props) {
               Kitchen's agent, so it wears Friends Kitchen's name first and
               says what it is underneath. */}
           <div className="fk-brand">
-            <span className="fk-mark" aria-hidden>
-              🔥
-            </span>
+            <img
+              className="fk-mark"
+              src="/logo.png"
+              alt=""
+              width={44}
+              height={44}
+              aria-hidden
+            />
             <div style={{ minWidth: 0 }}>
               <h1 className="fk-brand-name">Friends Kitchen</h1>
               <div className="fk-brand-sub">
