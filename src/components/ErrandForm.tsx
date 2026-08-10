@@ -32,6 +32,14 @@ interface Props {
    * the page that the two do not obviously connect.
    */
   blockedReason: string | null;
+  /**
+   * Bumped to re-read the coupon list.
+   *
+   * The picker is otherwise loaded once, and an errand that spends a coupon
+   * leaves it showing a balance the restaurant no longer agrees with — so
+   * whoever starts the next errand says here that the list is stale.
+   */
+  couponsRefreshKey: number;
 }
 
 /**
@@ -122,7 +130,13 @@ function describe(coupon: CouponOption): string {
   return `${coupon.couponCode} — ${noteOn(coupon)}`;
 }
 
-export function ErrandForm({ onRun, onCancel, busy, blockedReason }: Props) {
+export function ErrandForm({
+  onRun,
+  onCancel,
+  busy,
+  blockedReason,
+  couponsRefreshKey,
+}: Props) {
   const [instruction, setInstruction] = useState(EXAMPLES[0]);
   const [couponCode, setCouponCode] = useState<string | null>(null);
   /** Empty means "nothing beyond the coupon" — not the same as never set. */
@@ -134,7 +148,7 @@ export function ErrandForm({ onRun, onCancel, busy, blockedReason }: Props) {
 
   useEffect(() => {
     void couponApi.list().then(setCoupons);
-  }, []);
+  }, [couponsRefreshKey]);
 
   /**
    * Picking a coupon empties the cash limit.

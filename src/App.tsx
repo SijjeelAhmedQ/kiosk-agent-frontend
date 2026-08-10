@@ -56,6 +56,20 @@ export default function App({ scheme, onToggleScheme }: Props) {
 
   const start = (input: StartAgentRunInput) => void run.start(input);
 
+  /**
+   * Clearing the last errand also re-reads the coupons.
+   *
+   * The errand that just finished may have spent the coupon it carried, and the
+   * picker was filled when the page loaded — so the moment the operator asks for
+   * a fresh errand is the moment to go and find out what is still spendable.
+   */
+  const [couponsRefreshKey, setCouponsRefreshKey] = useState(0);
+
+  const newErrand = () => {
+    run.reset();
+    setCouponsRefreshKey((key) => key + 1);
+  };
+
   // What is stopping a run, said plainly. The form puts this under the button,
   // so a disabled control always carries its own explanation.
   const blockedReason: string | null = !health
@@ -105,7 +119,7 @@ export default function App({ scheme, onToggleScheme }: Props) {
             <RunPill status={run.status} busy={run.busy} />
 
             {run.status !== 'idle' && !run.busy && (
-              <Button onClick={run.reset}>New errand</Button>
+              <Button onClick={newErrand}>New errand</Button>
             )}
 
             <Tooltip title={dark ? 'Switch to light' : 'Switch to dark'}>
@@ -134,6 +148,7 @@ export default function App({ scheme, onToggleScheme }: Props) {
               onCancel={() => void run.cancel()}
               busy={run.busy}
               blockedReason={blockedReason}
+              couponsRefreshKey={couponsRefreshKey}
             />
           </div>
 
