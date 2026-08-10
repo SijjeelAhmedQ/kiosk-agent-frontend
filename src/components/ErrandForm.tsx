@@ -11,7 +11,10 @@ const { Text } = Typography;
 /** Starting points, so nobody faces an empty box wondering what to type. */
 const EXAMPLES = [
   'Order one Big Mac®',
-  'Order two cheeseburgers',
+  'Order one Strawberry Shake',
+  'Order one Ranch Snack Wrap®',
+  'Order one Creamy Ranch Sauce',
+  'Order one Coca-Cola®',
 ];
 
 /** What the cash box starts on when there is no coupon paying for the errand. */
