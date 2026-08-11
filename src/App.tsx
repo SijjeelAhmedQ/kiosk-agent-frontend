@@ -122,7 +122,7 @@ export default function App({ scheme, onToggleScheme }: Props) {
               <Button onClick={newErrand}>New errand</Button>
             )}
 
-            <Tooltip title={dark ? 'Switch to light' : 'Switch to dark'}>
+            {/* <Tooltip title={dark ? 'Switch to light' : 'Switch to dark'}>
               <button
                 type="button"
                 className="fk-icon-btn"
@@ -131,7 +131,7 @@ export default function App({ scheme, onToggleScheme }: Props) {
               >
                 {dark ? '☀️' : '🌙'}
               </button>
-            </Tooltip>
+            </Tooltip> */}
           </div>
         </div>
       </header>
