@@ -279,8 +279,9 @@ export function ErrandForm({
                   size="large"
                   className="fk-cta"
                   onClick={submit}
-                  disabled={!canRun}
+                  disabled={!canRun || busy}
                   loading={busy}
+                  
                   block
                 >
                   {busy ? 'On its way…' : 'Send the agent →'}

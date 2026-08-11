@@ -60,6 +60,18 @@ interface Palette {
   /** A hairline that has to be visible — dividers, the header's underline. */
   border: string;
   borderStrong: string;
+  /**
+   * What a field is filled with, and what it turns on hover.
+   *
+   * Deeper than the sunken surfaces beside it, and deliberately so: a chip or a
+   * tile sits on the page as often as in a card, but every field on this screen
+   * sits *inside* a white one, and cream on paper is four points of luminance —
+   * near enough to nothing on a desk monitor at an angle. The fill is what tells
+   * you where the box is, since this design draws no outlines around its
+   * controls.
+   */
+  field: string;
+  fieldHover: string;
   /** The near-invisible edge the kiosk's cards carry: `ring-1 ring-ink/[0.04]`. */
   ring: string;
   /** Headings. The kiosk sets these a shade darker than its body text. */
@@ -96,6 +108,8 @@ const PALETTE: Record<ColorScheme, Palette> = {
     surfaceSunken: C.cream,
     border: C.mist,
     borderStrong: 'rgba(118,118,126,0.32)',
+    field: C.mist,
+    fieldHover: '#E0E0E8',
     ring: 'rgba(13,13,15,0.04)',
     ink: C.ink,
     text: C.charcoal,
@@ -128,6 +142,11 @@ const PALETTE: Record<ColorScheme, Palette> = {
     surfaceSunken: '#101014',
     border: '#26262B',
     borderStrong: 'rgba(160,160,172,0.30)',
+    // Lighter than the card rather than darker: on the dark scheme a sunken
+    // field and the surface behind it are six points apart, and the pair the
+    // eye can actually separate is the lit one.
+    field: '#212128',
+    fieldHover: '#282830',
     ring: 'rgba(255,255,255,0.05)',
     ink: '#FAFAFC',
     text: '#EDEDF0',
@@ -213,18 +232,30 @@ export function makeTheme(scheme: ColorScheme): ThemeConfig {
 
   /**
    * Every field renders as antd's `filled` variant, which is what the kiosk's
-   * controls look like: a cream fill, no border, white and lifted on focus.
-   * These are the tokens that variant reads for its backgrounds.
+   * controls look like: a filled box, no border. These are the tokens that
+   * variant reads for its backgrounds.
+   *
+   * Two departures from the kiosk, both because of where these fields sit. The
+   * kiosk fills a field with cream and repaints it white on focus — it can,
+   * because its fields sit on a cream page. Every field here sits inside a white
+   * card, so cream barely reads as a box at all and white on focus is a field
+   * that vanishes the moment it is clicked. So the fill is a shade deeper than
+   * the surfaces around it, it stays put through focus, and focus is said in
+   * amber on the border instead — which is the one thing the fill cannot say.
    */
   const filledField = {
-    colorFillTertiary: p.surfaceSunken, // resting fill
-    colorFillSecondary: p.surfaceSunken, // hover — deliberately no change
-    colorBgContainer: p.surface, // focus fill
-    activeBorderColor: 'transparent',
+    colorFillTertiary: p.field, // resting fill
+    colorFillSecondary: p.fieldHover, // hover
+    // Read as the focus fill by Input and InputNumber (via `activeBg`) and by
+    // Select (directly), and as the backdrop of the Select's clear button, which
+    // has to match the field it sits on.
+    colorBgContainer: p.field,
+    activeBg: p.field,
+    activeBorderColor: p.amber,
     hoverBorderColor: 'transparent',
     activeShadow: p.shadowMd,
-    colorErrorBg: p.surfaceSunken,
-    colorErrorBgHover: p.surfaceSunken,
+    colorErrorBg: p.field,
+    colorErrorBgHover: p.fieldHover,
     colorErrorText: p.text,
     borderRadius: RADIUS,
     borderRadiusLG: RADIUS,
