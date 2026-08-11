@@ -859,7 +859,10 @@ textarea.fk-order-box {
   font-size: 12.5px;
 }
 
-.fk-chip:hover:not(:disabled) {
+/* Only the chips that are not the picked one: an unscoped `:hover` outweighs
+   the `[aria-pressed]` rule below on specificity, so it repainted the picked
+   chip's background out from under its light label — white on mist. */
+.fk-chip:not([aria-pressed='true']):hover:not(:disabled) {
   background: var(--fk-border);
 }
 .fk-chip:active:not(:disabled) {
@@ -871,8 +874,19 @@ textarea.fk-order-box {
   /* The picked chip is the one thing in the row that should carry weight. */
   box-shadow: var(--fk-shadow-sm);
 }
+/* The picked chip hovers within its own palette — a shade off its background
+   and a little more lift, never a repaint into the unpicked colours. */
+.fk-chip[aria-pressed='true']:hover:not(:disabled) {
+  background: var(--fk-text);
+  color: var(--fk-surface);
+  box-shadow: var(--fk-shadow-md);
+}
 html[data-theme='dark'] .fk-chip[aria-pressed='true'] {
   background: var(--fk-amber);
+  color: #0d0d0f;
+}
+html[data-theme='dark'] .fk-chip[aria-pressed='true']:hover:not(:disabled) {
+  background: var(--fk-amber-hover);
   color: #0d0d0f;
 }
 /* 0.4 fades the label past reading. A disabled chip still has to say which
