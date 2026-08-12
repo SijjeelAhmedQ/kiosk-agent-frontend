@@ -1,0 +1,882 @@
+/*
+ * The A2A console's own rules, on top of the shared stylesheet.
+ *
+ * Everything here is either a three-column layout the errand console does not
+ * have, or the transcript — two speakers and a till slip, neither of which
+ * exists on the other page.
+ *
+ * This file is imported by `src/a2a/main.tsx` and by nothing else, so every
+ * rule in it is already scoped to this page: the errand console cannot be
+ * changed by editing it. That is what lets the handful of rules below reach
+ * back into a shared class (`.fk-status`, `.fk-tag`, `.fk-panel-scrolls`) —
+ * each one is either repainting a shared part for this page only, or undoing a
+ * shared rule that assumes the other page's two-column layout.
+ */
+
+/* --------------------------------------------------------------------------
+ * Layout — form, conversation, outcome
+ * -------------------------------------------------------------------------- */
+
+/* Three columns, exactly the height on offer. `grid-template-rows` is what
+ * caps the row: without it the row sizes itself to its tallest child, the
+ * transcript panel never learns it is capped, and a long negotiation grows the
+ * page past a viewport that `html { overflow: hidden }` then quietly clips.
+ * The panel owns the scrolling, not the page. */
+.a2a-columns {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(310px, 360px) minmax(0, 1fr) minmax(300px, 340px);
+  grid-template-rows: minmax(0, 1fr);
+  gap: 18px;
+}
+
+/* The outcome panel is not asked to fill its column, so on the full layout it
+   sizes to its contents — and a long report then runs off the bottom of a page
+   that cannot scroll. Capped to the column and given the scroll in its body,
+   which is what `fill="scroll"` does for the transcript beside it. */
+.a2a-columns > .fk-col-stack > .fk-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-height: 100%;
+}
+.a2a-columns > .fk-col-stack > .fk-panel > .fk-panel-head {
+  flex: none;
+}
+.a2a-columns > .fk-col-stack > .fk-panel > .fk-panel-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* Below a laptop the third column has nowhere to go, so the outcome moves under
+   the conversation rather than being squeezed into a strip. */
+@media (max-width: 1280px) {
+  .a2a-columns {
+    grid-template-columns: minmax(300px, 340px) minmax(0, 1fr);
+  }
+  .a2a-columns > :last-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 900px) {
+  .a2a-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .a2a-columns > :last-child {
+    grid-column: auto;
+  }
+}
+
+/* Stacked, or too short to hold three full-height panels: the content region
+   takes the scroll — the page itself still does not. The transcript keeps a
+   scroll of its own even here, capped to a band, because a twenty-turn
+   negotiation should not push the wallet off the bottom of the page.
+
+   The shared sheet makes the same handoff at 1100px and shuts the panel's own
+   scroll off when it does; this page needs it back, and one breakpoint earlier,
+   because it is the layout with the extra column. */
+@media (max-width: 1280px), (max-height: 760px) {
+  .fk-content {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .a2a-columns {
+    flex: none;
+    grid-template-rows: none;
+  }
+  .a2a-columns .fk-panel-fill {
+    flex: none;
+    max-height: clamp(340px, 58vh, 680px);
+  }
+  .a2a-columns .fk-panel-scrolls > .fk-panel-body {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  /* Except the errand, which is a form: it is read top to bottom and filled in,
+     and a form that scrolls inside a box on a page that also scrolls is two
+     scrollbars for one column. It takes the height it needs and the page
+     carries it — which also puts the send button back under the last field
+     rather than at the bottom of a card that is no longer stretched. */
+  .a2a-columns .a2a-panel-errand {
+    max-height: none;
+  }
+  .a2a-columns .a2a-panel-errand > .fk-panel-body {
+    overflow: visible;
+  }
+  .a2a-panel-errand .a2a-form {
+    min-height: 0;
+  }
+  /* The outcome gives its scroll back — with the page scrolling, a card that
+     capped its own height would be capping it twice. */
+  .a2a-columns > .fk-col-stack > .fk-panel {
+    max-height: none;
+  }
+  .a2a-columns > .fk-col-stack > .fk-panel > .fk-panel-body {
+    overflow: visible;
+  }
+}
+
+/* --------------------------------------------------------------------------
+ * Header
+ * -------------------------------------------------------------------------- */
+
+/* The page's own badge, in the brand amber — the errand console's tag is the
+   neutral one, and this is the fastest way to know which console is open. */
+.fk-header .fk-tag {
+  background: var(--fk-amber-surface);
+  color: var(--fk-amber-ink);
+  letter-spacing: 0.02em;
+}
+
+/* --------------------------------------------------------------------------
+ * The services strip
+ * -------------------------------------------------------------------------- */
+
+/* One bar carrying three readings, rather than three cards in a row. The three
+   are read together — "is everything up" is a single question — and three
+   separate paper cards said the opposite. So the strip is the card and each
+   reading is a pill inside it. */
+.a2a-services {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 24px;
+  background: var(--fk-surface);
+  box-shadow: var(--fk-shadow-sm), 0 0 0 1px var(--fk-ring);
+}
+
+.a2a-services .fk-status {
+  gap: 9px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: var(--fk-surface-sunken);
+  box-shadow: none;
+  font-family: var(--fk-font-display);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--fk-text);
+  transition: background-color 0.2s ease;
+}
+
+@media (hover: hover) {
+  .a2a-services .fk-status:hover {
+    background: var(--fk-border);
+  }
+}
+
+/* The provider and the tool count hang off the name, so they read as a caption
+   to it rather than as a second label. */
+.a2a-services .fk-pill-mono {
+  padding-left: 9px;
+  border-left: 1px solid var(--fk-border);
+}
+
+/* Nothing answering at all. This is the one state that stops the page working,
+   so it is the one state that does not look like the others: the full-width
+   card it already was, tinted, with a marker down its edge. */
+.a2a-services-down {
+  gap: 10px;
+  background: var(--fk-flame-surface);
+  box-shadow: var(--fk-shadow-sm), inset 3px 0 0 var(--fk-flame);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--fk-flame-ink);
+}
+
+/* --------------------------------------------------------------------------
+ * The errand form
+ * -------------------------------------------------------------------------- */
+
+/* A plain stack. The shared `.fk-fields` is the errand console's two-up money
+   row — coupon beside cash — and this form is three fields, a warning and a
+   button, none of which pair off. Its own class rather than an override, so
+   neither page has to know about the other's form. */
+.a2a-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  /* The card is given the column's full height, so the form is given the
+     card's: without this the fields sit in a short block at the top of a tall
+     sheet of paper, which is what a stretched card looks like when nothing
+     inside it knows it was stretched. */
+  min-height: 100%;
+}
+
+.a2a-form .fk-field {
+  min-width: 0;
+}
+
+/* The errand is written, not typed into a slot — a hand-resized box that leaves
+   the button hanging in mid-air is worse than one that is simply tall enough. */
+.a2a-form textarea {
+  resize: none;
+}
+
+.a2a-form .fk-hint {
+  margin-top: 7px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* The spare height goes here, between the last field and the button, so the
+   send control settles against the bottom of the card the way the negotiation's
+   own footer does. The fields stay where they are and the button stays where it
+   is, whatever the screen is tall enough for.
+
+   Two rules, because the warning is part of the same block: it explains why the
+   button is off, so when it is there it takes the auto margin and the button
+   follows it down rather than being separated from its own reason. */
+.a2a-form > .fk-actions {
+  margin-top: auto;
+}
+.a2a-form > .ant-alert {
+  margin-top: auto;
+}
+.a2a-form > .ant-alert ~ .fk-actions {
+  margin-top: 0;
+}
+
+/* --------------------------------------------------------------------------
+ * The coupon picker's rows
+ * -------------------------------------------------------------------------- */
+
+/* The same row the errand console's picker draws: what kind of coupon it is,
+   the code, what it is worth, and where it stands. Four things at four weights,
+   so the list can be scanned down any one of them.
+
+   In the stylesheet rather than inline, which is the one departure from the
+   other console's copy — these rows sit in an antd dropdown that is portalled
+   out of the panel, and a class is what lets them follow the scheme. */
+.a2a-coupon {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Spent, expired or cancelled. antd's own disabled fade is not far enough to
+   read as "this one is out" next to the live rows. */
+.a2a-coupon-out {
+  opacity: 0.55;
+}
+
+.a2a-coupon-glyph {
+  flex: none;
+  font-size: 15px;
+  line-height: 1;
+}
+.a2a-coupon-out .a2a-coupon-glyph {
+  filter: grayscale(1);
+}
+
+.a2a-coupon-main {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Mono, because it is a code that gets read character by character when a
+   figure looks wrong. */
+.a2a-coupon-code {
+  font-family: var(--fk-font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.45;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.a2a-coupon-out .a2a-coupon-code {
+  text-decoration: line-through;
+}
+
+.a2a-coupon-worth {
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--fk-text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.a2a-coupon .fk-badge {
+  flex: none;
+}
+
+/* --------------------------------------------------------------------------
+ * The transcript
+ * -------------------------------------------------------------------------- */
+.a2a-transcript {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 2px 2px 6px;
+}
+
+/* Every row of the conversation arrives rather than appears — the transcript
+   streams in, and a row that materialises is hard to notice mid-scroll. */
+@keyframes a2a-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.a2a-discovery {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  align-self: center;
+  max-width: 100%;
+  padding: 9px 16px;
+  border-radius: 999px;
+  background: var(--fk-surface-sunken);
+  box-shadow: 0 0 0 1px var(--fk-ring);
+  font-size: 13px;
+  color: var(--fk-text-soft);
+  animation: a2a-arrive 0.36s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.a2a-discovery-lead {
+  font-family: var(--fk-font-display);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fk-text-faint);
+}
+
+.a2a-discovery strong {
+  color: var(--fk-ink);
+  font-family: var(--fk-font-display);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.a2a-discovery-skills {
+  font-family: var(--fk-font-mono);
+  font-size: 11px;
+  color: var(--fk-text-faint);
+}
+
+/* One turn. The buyer leans left and amber, the merchant right and neutral —
+   the fastest way to read who is asking and who is answering. Capped in ch as
+   well as in per cent: on a wide monitor a 78% bubble is a paragraph the eye
+   has to track back across. */
+.a2a-turn {
+  position: relative;
+  max-width: min(80%, 60ch);
+  padding: 13px 17px 14px;
+  border-radius: 20px;
+  box-shadow: var(--fk-shadow-sm), 0 0 0 1px var(--fk-ring);
+  animation: a2a-arrive 0.36s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transition: box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Only where a pointer can leave again — on a touch screen `:hover` latches on
+   tap and the bubble stays lit for no reason. */
+@media (hover: hover) {
+  .a2a-turn:hover {
+    box-shadow: var(--fk-shadow-md), 0 0 0 1px var(--fk-ring);
+  }
+}
+
+.a2a-turn-buyer {
+  align-self: flex-start;
+  background: var(--fk-amber-surface);
+  border-bottom-left-radius: 7px;
+}
+
+.a2a-turn-merchant {
+  align-self: flex-end;
+  background: var(--fk-surface-sunken);
+  border-bottom-right-radius: 7px;
+}
+
+/* Who is speaking, as a line rather than a word: a small round tile with the
+   side's glyph, then the name. Two speakers alternating down a column need to
+   be told apart at a glance and from the corner of the eye, and the tile does
+   that at a distance the colour alone does not. */
+.a2a-who {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 6px;
+  font-family: var(--fk-font-display);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--fk-text-faint);
+}
+
+.a2a-who::before {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  height: 20px;
+  width: 20px;
+  border-radius: 999px;
+  background: var(--fk-surface);
+  box-shadow: 0 0 0 1px var(--fk-ring);
+  font-size: 10.5px;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.a2a-turn-buyer .a2a-who {
+  color: var(--fk-amber-ink);
+}
+.a2a-turn-buyer .a2a-who::before {
+  content: '🛒';
+}
+.a2a-turn-merchant .a2a-who::before {
+  content: '🍔';
+}
+
+.a2a-said {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.62;
+  color: var(--fk-text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* The machinery under a turn: what the side actually did while it was talking.
+   Boxed and quiet, aligned with its speaker — it belongs to that turn, but it
+   is a log and should not read as speech. */
+.a2a-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: -6px 0 0;
+  padding: 9px 13px;
+  list-style: none;
+  max-width: min(80%, 60ch);
+  border-radius: 14px;
+  background: var(--fk-surface-sunken);
+  box-shadow: 0 0 0 1px var(--fk-ring);
+  animation: a2a-arrive 0.36s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.a2a-tools-buyer {
+  align-self: flex-start;
+}
+
+.a2a-tools-merchant {
+  align-self: flex-end;
+}
+
+.a2a-tools li {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--fk-text-soft);
+}
+
+.a2a-tool-failed {
+  color: var(--fk-flame-ink);
+}
+
+.a2a-tool-name {
+  font-family: var(--fk-font-mono);
+  font-size: 11.5px;
+  letter-spacing: -0.01em;
+}
+
+.a2a-tool-why {
+  font-family: var(--fk-font-sans);
+  font-size: 12px;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.a2a-tool-dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--fk-border-strong);
+  transform: translateY(-1px);
+}
+
+.a2a-tool-dot-ok {
+  background: var(--fk-leaf);
+  box-shadow: 0 0 0 2.5px var(--fk-leaf-surface);
+}
+
+.a2a-tool-dot-bad {
+  background: var(--fk-flame);
+  box-shadow: 0 0 0 2.5px var(--fk-flame-surface);
+}
+
+.a2a-tool-dot-run {
+  background: var(--fk-amber);
+  box-shadow: 0 0 0 2.5px var(--fk-amber-surface);
+  animation: a2a-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes a2a-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .a2a-tool-dot-run {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+/* Still going. Sits under the last turn, so the transcript never looks like it
+   has simply stopped. */
+.a2a-thinking {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: var(--fk-amber-surface);
+  font-family: var(--fk-font-display);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--fk-amber-ink);
+}
+
+/* A breakdown mid-conversation. Marked down its edge as well as tinted: colour
+   alone is the weakest signal in a column someone is skimming. */
+.a2a-fault {
+  padding: 12px 16px;
+  border-radius: 16px;
+  background: var(--fk-flame-surface);
+  box-shadow: inset 3px 0 0 var(--fk-flame);
+  color: var(--fk-flame-ink);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.55;
+  word-break: break-word;
+  animation: a2a-arrive 0.36s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* --------------------------------------------------------------------------
+ * The till slip
+ * -------------------------------------------------------------------------- */
+
+/* The only rows in the transcript that carry money, so the only ones drawn as
+   paper: raised off the conversation, centred, its own object. */
+.a2a-slip {
+  align-self: center;
+  width: min(100%, 340px);
+  padding: 15px 18px 14px;
+  border-radius: 18px;
+  background: var(--fk-surface);
+  box-shadow:
+    var(--fk-shadow-md),
+    inset 0 0 0 1px var(--fk-ring);
+  animation: a2a-arrive 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Paid: a leaf bar across the top edge, the way a stamped receipt reads. */
+.a2a-slip-paid {
+  box-shadow:
+    var(--fk-shadow-md),
+    inset 0 0 0 1px var(--fk-leaf-surface),
+    inset 0 3px 0 0 var(--fk-leaf);
+}
+
+.a2a-slip-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 9px;
+  border-bottom: 1px dashed var(--fk-border);
+}
+
+.a2a-slip-title {
+  font-family: var(--fk-font-display);
+  font-weight: 800;
+  font-size: 13.5px;
+  letter-spacing: -0.01em;
+  color: var(--fk-ink);
+}
+
+.a2a-slip-tag {
+  flex: none;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--fk-surface-sunken);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--fk-text-faint);
+}
+
+.a2a-slip-paid .a2a-slip-tag {
+  background: var(--fk-leaf-surface);
+  color: var(--fk-leaf-ink);
+}
+
+.a2a-slip-lines {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.a2a-slip-lines li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--fk-text);
+}
+
+.a2a-slip-item {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+.a2a-slip-item em {
+  font-style: normal;
+  font-family: var(--fk-font-mono);
+  font-size: 11.5px;
+  color: var(--fk-text-faint);
+}
+
+/* The item's `meal` marker is a caption on a receipt line, not a control — the
+   shared chip is sized to be tapped, which is a row and a half of height here. */
+.a2a-slip-item .fk-chip {
+  min-height: 0;
+  padding: 2px 8px;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: default;
+}
+
+.a2a-slip-sums {
+  margin-top: 11px;
+  padding-top: 9px;
+  border-top: 1px dashed var(--fk-border);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.a2a-slip-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12.5px;
+  color: var(--fk-text-soft);
+}
+
+.a2a-slip-row-good {
+  color: var(--fk-leaf-ink);
+}
+
+.a2a-slip-row-strong {
+  margin-top: 4px;
+  padding-top: 7px;
+  border-top: 1px solid var(--fk-border);
+  font-size: 15px;
+  font-weight: 800;
+  font-family: var(--fk-font-display);
+  color: var(--fk-ink);
+}
+
+/* Every figure on the slip, in one face. Tabular so the column of prices lines
+   up on the decimal down the card.
+
+   Its own class rather than the shared `.fk-money`, which on the other page is
+   the *container* the money fields sit in — `margin-top: auto` on a figure
+   inside a baseline row drops it off its own line. */
+.a2a-amount {
+  flex: none;
+  font-family: var(--fk-font-mono);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  color: var(--fk-text);
+}
+
+.a2a-slip-row-strong .a2a-amount {
+  font-family: var(--fk-font-display);
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--fk-ink);
+}
+
+.a2a-slip-row-good .a2a-amount {
+  color: var(--fk-leaf-ink);
+}
+
+.a2a-slip-note {
+  margin: 10px 0 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--fk-text-faint);
+}
+
+.a2a-slip-ref {
+  margin: 9px 0 0;
+  padding-top: 8px;
+  border-top: 1px dashed var(--fk-border);
+  font-family: var(--fk-font-mono);
+  font-size: 10.5px;
+  color: var(--fk-text-faint);
+  word-break: break-all;
+}
+
+/* --------------------------------------------------------------------------
+ * The outcome
+ * -------------------------------------------------------------------------- */
+
+/* The panel body stacks whatever the run produced — tiles, a warning, the
+   verdict, the report, an error — and none of those carry a margin of their
+   own, so the spacing between them belongs here. */
+.a2a-outcome {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* One tile per row. The shared bill sets the three side by side, which fits the
+   errand console's wide card; here they sit in a 300–340px column, where three
+   across leaves each figure a third of that and the labels break mid-word. Read
+   down instead: coupon, cash out, cash left, one line each. */
+.a2a-outcome .fk-tiles {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+}
+
+.a2a-outcome .fk-prose {
+  font-size: 14.5px;
+  line-height: 1.7;
+}
+
+/* Paid, or an order on the restaurant's books that nobody paid for. The second
+   is the one outcome that must not look like the others, so it is the only
+   thing on the page that carries both the flame tint and a marked edge. */
+.a2a-verdict {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.a2a-verdict > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+/* The tick or the warning, in a tile the same size either way — the row should
+   not shift between the two outcomes. */
+.a2a-verdict > span::before {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  height: 22px;
+  width: 22px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.a2a-verdict strong {
+  flex: none;
+  font-family: var(--fk-font-display);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.a2a-verdict-paid {
+  background: var(--fk-leaf-surface);
+  color: var(--fk-leaf-ink);
+}
+.a2a-verdict-paid > span::before {
+  content: '✓';
+  background: var(--fk-leaf);
+  color: #ffffff;
+}
+
+.a2a-verdict-owing {
+  background: var(--fk-flame-surface);
+  box-shadow: inset 3px 0 0 var(--fk-flame);
+  color: var(--fk-flame-ink);
+}
+.a2a-verdict-owing > span::before {
+  content: '!';
+  background: var(--fk-flame);
+  color: #ffffff;
+}
+
+/* --------------------------------------------------------------------------
+ * Small screens
+ * -------------------------------------------------------------------------- */
+
+/* A phone. The bubbles take nearly the full width — 80% of a 360px column is a
+   four-word line — and the slip stops pretending to be a narrow card. */
+@media (max-width: 560px) {
+  .a2a-transcript {
+    gap: 14px;
+  }
+  .a2a-turn,
+  .a2a-tools {
+    max-width: 92%;
+  }
+  .a2a-said {
+    font-size: 14px;
+  }
+  .a2a-slip {
+    width: 100%;
+  }
+  .a2a-services {
+    gap: 6px;
+    padding: 8px;
+  }
+  .a2a-services .fk-status {
+    width: 100%;
+  }
+}

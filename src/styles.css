@@ -236,6 +236,44 @@ button,
   white-space: nowrap;
 }
 
+/* The way across to the family's other console. The two screens are separate
+   Vite entries, so this is a plain anchor to a second page rather than a route —
+   which is also why it is an <a>: middle-click and "open in new tab" keep
+   working, and the browser does the navigating. It wears the capsule shape the
+   header already uses, outlined so it reads as a control next to the filled
+   tag rather than a second label. */
+.fk-nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--fk-border);
+  background: transparent;
+  font-family: var(--fk-font-display);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--fk-text);
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform 0.15s cubic-bezier(0.34, 1.4, 0.64, 1), background-color 0.2s ease,
+    border-color 0.2s ease;
+}
+.fk-nav-link:hover {
+  background: var(--fk-surface-sunken);
+  border-color: var(--fk-text-faint);
+  color: var(--fk-text);
+}
+.fk-nav-link:active {
+  transform: scale(0.97);
+}
+.fk-nav-link-arrow {
+  font-size: 13px;
+  line-height: 1;
+  color: var(--fk-text-faint);
+}
+
 /* ── Content ────────────────────────────────────────────────────────────── */
 
 /* Everything under the header, and never taller than it: the status strip keeps
@@ -334,6 +372,15 @@ button,
   }
   .fk-header-actions {
     gap: 8px;
+  }
+  /* The tag goes, the way across stays — losing the only route to the other
+     console is worse than losing a label, so it keeps its arrow and drops its
+     words down to the icon. */
+  .fk-nav-link {
+    padding: 9px 12px;
+  }
+  .fk-nav-link-label {
+    display: none;
   }
 }
 

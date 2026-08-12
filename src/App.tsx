@@ -116,6 +116,18 @@ export default function App({ scheme, onToggleScheme }: Props) {
               AI agent
             </span>
 
+            {/* The way over to the A2A console. It is a second Vite entry, not a
+                route in this app, so a plain href is the whole of it — a full
+                page load is what we want anyway, since the other console talks
+                to a different service and starts from a clean slate. */}
+            <a className="fk-nav-link" href="/a2a.html" title="Open the A2A ordering console">
+              <span aria-hidden>🤝</span>
+              <span className="fk-nav-link-label">A2A ordering</span>
+              <span className="fk-nav-link-arrow" aria-hidden>
+                →
+              </span>
+            </a>
+
             <RunPill status={run.status} busy={run.busy} />
 
             {run.status !== 'idle' && !run.busy && (
