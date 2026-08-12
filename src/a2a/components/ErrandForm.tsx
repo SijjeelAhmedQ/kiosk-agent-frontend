@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Alert, Button, Input, InputNumber, Select } from 'antd';
+import { useEffect, useMemo, useState, type KeyboardEvent } from 'react';
+import { Button, Input, InputNumber, Select, Tooltip } from 'antd';
 import type { DefaultOptionType } from 'antd/es/select';
+import { Panel } from '@/components/Panel';
 import { a2aApi } from '../api';
 import type { StartA2ARunInput } from '../types';
 import type { CouponOption, CouponStatus } from '@/types';
@@ -12,7 +13,39 @@ import type { CouponOption, CouponStatus } from '@/types';
  * the mode switch. The operator is doing the same thing either way — writing an
  * order and deciding how much it may cost — and two forms that disagree about
  * what an errand is would be two mental models for one idea.
+ *
+ * And, like that form, this one does not scroll. It is read top to bottom and
+ * filled in once; a field that has to be scrolled into view is a field that
+ * gets missed, and the coupon picker was living under that fold. The height
+ * comes back from the layout rather than from a taller card: the two money
+ * fields share a row, every hint is held to one line, and the order box absorbs
+ * whatever the screen has spare — so a tall screen buys a bigger box to type in
+ * instead of a stretch of empty paper above the button.
  */
+
+/**
+ * Starting points, so nobody faces an empty box wondering what to type.
+ *
+ * The same five the errand console offers, worded the same way: the operator is
+ * writing one kind of thing on both screens, and examples that disagreed about
+ * how an errand is phrased would suggest the two agents want different English.
+ * The chip carries the item alone and the box gets the whole sentence — five
+ * chips each beginning "Order one" wrapped to three rows and said the same
+ * thing three times over.
+ */
+const EXAMPLES = [
+  { label: 'Big Mac®', errand: 'Order one Big Mac®' },
+  { label: 'Strawberry Shake', errand: 'Order one Strawberry Shake' },
+  { label: 'Ranch Snack Wrap®', errand: 'Order one Ranch Snack Wrap®' },
+  { label: 'Creamy Ranch Sauce', errand: 'Order one Creamy Ranch Sauce' },
+  { label: 'Coca-Cola®', errand: 'Order one Coca-Cola®' },
+];
+
+/** The send shortcut, named the way the keyboard in front of the operator is. */
+const SEND_KEYS =
+  typeof navigator !== 'undefined' && /Mac|iPhone|iPad/i.test(navigator.userAgent)
+    ? '⌘ + Enter'
+    : 'Ctrl + Enter';
 
 interface Props {
   onRun: (input: StartA2ARunInput) => void;
@@ -104,7 +137,7 @@ function couponLabel(coupon: CouponOption): string {
 }
 
 export function ErrandForm({ onRun, onCancel, busy, blockedReason, couponsKey }: Props) {
-  const [instruction, setInstruction] = useState('');
+  const [instruction, setInstruction] = useState('Order one Big Mac®');
   const [cashLimit, setCashLimit] = useState<number | null>(2500);
   const [couponCode, setCouponCode] = useState<string | null>(null);
   const [coupons, setCoupons] = useState<CouponOption[]>([]);
@@ -143,129 +176,245 @@ export function ErrandForm({ onRun, onCancel, busy, blockedReason, couponsKey }:
   );
 
   const cash = cashLimit ?? 0;
-  // The service refuses this combination too; saying so here means the operator
-  // finds out while looking at the field rather than after pressing the button.
-  const pointless = !couponCode && cash <= 0;
-  const stopped = blockedReason ?? (pointless ? 'Give the buyer a coupon, a cash limit, or both.' : null);
+  const chosen = coupons.find((coupon) => coupon.couponCode === couponCode) ?? null;
+
+  // Every reason the buyer cannot go, in the order worth reporting: a dead
+  // service first, then an errand nobody could carry out. One string, so the
+  // button, its tooltip and the line under it can never disagree about why it
+  // is off — and the empty-box case says so now instead of leaving a dead
+  // button with nothing to explain it.
+  const reason: string | null =
+    blockedReason ??
+    (!instruction.trim()
+      ? 'Say what the buyer should order.'
+      : !couponCode && cash <= 0
+        ? 'Give the buyer a coupon, a cash limit, or both.'
+        : null);
+
+  const canRun = reason === null;
 
   const submit = () => {
-    if (!instruction.trim() || stopped) return;
+    if (!canRun || busy) return;
     onRun({ instruction: instruction.trim(), cashLimit: cash, couponCode });
   };
 
-  // `a2a-form`, not the shared `fk-fields`: that class is the errand console's
-  // two-up money row — coupon beside cash — and this is a plain stack of three.
+  // Ctrl/⌘+Enter from the errand box sends it. Whoever runs a dozen of these in
+  // a row should not have to reach for the mouse each time.
+  const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) submit();
+  };
+
+  // The two lines of help, one per money field, each written to fit on one row —
+  // with the whole sentence on hover. The picker labels every row itself, so the
+  // coupon's line is a tally, or what the chosen one is worth: not a repeat of
+  // what the dropdown already says.
+  const spendable = coupons.filter((coupon) => problemWith(coupon) === null).length;
+  const couponHint = chosen
+    ? `${worthOf(chosen)} · ${STATUS_LABEL[chosen.status]}`
+    : coupons.length === 0
+      ? 'None found — the buyer pays cash.'
+      : `${spendable} spendable of ${coupons.length}`;
+
+  const cashHint = couponCode ? 'On top of the coupon.' : 'A hard ceiling, in code.';
+  const cashTitle = couponCode
+    ? 'What may be spent on top of the coupon. Zero means the coupon must cover the whole order.'
+    : 'A hard ceiling, enforced in code — the buyer is refused at payment above it.';
+
+  // The panel is drawn here rather than by the page, as it is on the errand
+  // console, so the send control can sit in the footer: `Panel` pins that below
+  // the body and outside its scroll, which is what keeps the button on the
+  // bottom edge of the card however long the form above it runs.
   return (
-    <div className="a2a-form">
-      <div className="fk-field">
-        <label className="fk-label" htmlFor="a2a-errand">
-          The errand
-        </label>
-        <Input.TextArea
-          id="a2a-errand"
-          rows={3}
-          maxLength={2000}
-          showCount
-          placeholder="Two Big Macs and a large Coke, dine in."
-          value={instruction}
-          onChange={(event) => setInstruction(event.target.value)}
-          disabled={busy}
-        />
-        <p className="fk-hint">
-          Written for the buying agent, which cannot see the menu. It asks the
-          restaurant’s agent for everything.
-        </p>
+    <Panel
+      icon={<span aria-hidden>🧾</span>}
+      title="The errand"
+      note="What the buying agent is sent out to do"
+      // Full height, like the conversation beside it — three cards of three
+      // different heights read as three unrelated things. `flex`, not `scroll`:
+      // the body lays the form out and the order box takes the slack, so the
+      // card is filled without anything in it ever needing to be scrolled to.
+      fill="flex"
+      className="a2a-panel-errand"
+      footer={
+        <div className="a2a-send">
+          <div className="fk-actions">
+            {/* The Tooltip needs a wrapper: antd puts `pointer-events: none` on
+                a disabled button, so hovering the button itself fires nothing. */}
+            <Tooltip title={busy ? '' : (reason ?? `${SEND_KEYS} sends it`)}>
+              <span style={{ display: 'block' }}>
+                <Button
+                  type="primary"
+                  size="large"
+                  className="fk-cta"
+                  onClick={submit}
+                  disabled={!canRun || busy}
+                  loading={busy}
+                  block
+                >
+                  {busy ? 'Negotiating…' : 'Send the buyer out →'}
+                </Button>
+              </span>
+            </Tooltip>
+
+            {busy && (
+              <Button danger size="large" onClick={onCancel}>
+                Stop
+              </Button>
+            )}
+          </div>
+
+          {/* Spelled out under the button as well as in the tooltip — a reason
+              you have to hover to discover is one most people never read. */}
+          {reason && !busy && <p className="a2a-why">{reason}</p>}
+        </div>
+      }
+    >
+      {/* Each section is headed, and the heading carries the aside that used to
+          be a wrapped paragraph in the body: it reads as a caption to the
+          section, and costs a line that was already there. */}
+      <div className="a2a-section">
+        <div className="fk-eyebrow">The errand</div>
+        <span className="a2a-section-note">Plain language</span>
       </div>
 
-      <div className="fk-field">
-        <label className="fk-label" htmlFor="a2a-coupon">
-          Coupon
-        </label>
-        <Select
-          id="a2a-coupon"
-          allowClear
-          showSearch
-          placeholder="None — pay cash"
-          value={couponCode}
-          onChange={setCouponCode}
-          options={options}
-          disabled={busy}
-          optionFilterProp="label"
-          style={{ width: '100%' }}
-          optionRender={(option) => {
-            const coupon = (option.data as { coupon?: CouponOption }).coupon;
-            if (!coupon) return option.label;
-            // antd fades a disabled option, but not far enough to read as
-            // "this one is out" beside the live ones — hence `a2a-coupon-out`.
-            const out = problemWith(coupon) !== null;
-            return (
-              <div className={`a2a-coupon${out ? ' a2a-coupon-out' : ''}`}>
-                <span className="a2a-coupon-glyph" aria-hidden>
-                  {coupon.couponType === 'value' ? '💰' : '🎁'}
-                </span>
-                <div className="a2a-coupon-main">
-                  <div className="a2a-coupon-code">{coupon.couponCode}</div>
-                  <div className="a2a-coupon-worth">{worthOf(coupon)}</div>
-                </div>
-                {/* On every row, not just the broken ones — the state of a
-                    coupon is what the operator is scanning this list for. */}
-                <span className={`fk-badge ${STATUS_TONE[coupon.status]}`}>
-                  {STATUS_LABEL[coupon.status]}
-                </span>
-              </div>
-            );
-          }}
-        />
-        <p className="fk-hint">
-          The buyer is never told the code. It offers the coupon as data, so it
-          cannot mistype one.
-        </p>
+      {/* The one element that grows: it takes the panel's spare height, between
+          two rows' worth and a sensible cap, so the card is filled by the field
+          people type in rather than by a gap above the button. */}
+      <Input.TextArea
+        id="a2a-errand"
+        className="a2a-errand-box"
+        // The eyebrow above it is a heading, not a `<label>` — the box says what
+        // it is for in its own words instead of borrowing one.
+        aria-label="The errand"
+        rows={2}
+        maxLength={2000}
+        placeholder="Two Big Macs and a large Coke, dine in."
+        value={instruction}
+        onChange={(event) => setInstruction(event.target.value)}
+        onKeyDown={onKeyDown}
+        disabled={busy}
+      />
+
+      {/* antd's own `showCount` is absolutely positioned and lands on top of the
+          hint the moment the hint wraps. Counting here puts both on one row that
+          cannot collide. */}
+      <div className="fk-hint-row">
+        <p className="fk-hint">Written for the buyer, which cannot see the menu.</p>
+        <span className={`fk-count${instruction.length > 1800 ? ' fk-count-near' : ''}`}>
+          {instruction.length} / 2000
+        </span>
       </div>
 
-      <div className="fk-field">
-        <label className="fk-label" htmlFor="a2a-cash">
-          Cash limit
-        </label>
-        <InputNumber
-          id="a2a-cash"
-          min={0}
-          max={1000000}
-          step={100}
-          value={cashLimit}
-          onChange={setCashLimit}
-          disabled={busy}
-          style={{ width: '100%' }}
-          prefix="Rs"
-        />
-        <p className="fk-hint">
-          A hard ceiling, enforced in code. Zero means the coupon must cover the
-          whole order.
-        </p>
-      </div>
-
-      {/* `title`, not `message` — antd 6 deprecated the latter. The errand
-          console still uses the old prop; this page is not going to inherit a
-          console warning it does not have to. */}
-      {stopped && !busy && <Alert type="warning" showIcon title={stopped} />}
-
-      <div className="fk-actions">
-        {busy ? (
-          <Button danger size="large" onClick={onCancel} block>
-            Stop
-          </Button>
-        ) : (
-          <Button
-            type="primary"
-            size="large"
-            className="fk-cta"
-            onClick={submit}
-            disabled={!instruction.trim() || Boolean(stopped)}
-            block
+      {/* One press writes the whole errand into the box above, where it can
+          still be edited — an example is a starting point, not a preset. */}
+      <div className="fk-chips a2a-chips">
+        {EXAMPLES.map((example) => (
+          <button
+            key={example.errand}
+            type="button"
+            className="fk-chip fk-chip-sm"
+            aria-pressed={instruction === example.errand}
+            aria-label={example.errand}
+            disabled={busy}
+            onClick={() => setInstruction(example.errand)}
           >
-            Send the buyer out
-          </Button>
-        )}
+            {example.label}
+          </button>
+        ))}
       </div>
-    </div>
+
+      {/* Settled against the footer rather than following the chips: the two
+          halves of the form then sit at the two ends of the card on a tall
+          screen, and close up as one block when the height is tight. */}
+      <div className="a2a-money">
+        <div className="a2a-section">
+          <div className="fk-eyebrow">The money</div>
+          <span className="a2a-section-note" title="The buyer offers the coupon as data, so it cannot mistype one.">
+            The buyer never sees the code
+          </span>
+        </div>
+
+        <div className="a2a-fields">
+          <div className="fk-field">
+            <label className="fk-label" htmlFor="a2a-coupon">
+              Coupon
+            </label>
+            <Select
+              id="a2a-coupon"
+              allowClear
+              showSearch
+              placeholder="None — pay cash"
+              value={couponCode}
+              onChange={setCouponCode}
+              options={options}
+              disabled={busy}
+              optionFilterProp="label"
+              style={{ width: '100%' }}
+              // Picked, the field shows the code alone. The searchable label
+              // carries the worth and the status as well, which is right in a
+              // dropdown the width of the panel and three ellipses wide in a
+              // box sharing its row with the cash limit — so what is worth
+              // knowing about the chosen one moves to the line underneath.
+              labelRender={({ value }) => <span className="a2a-coupon-picked">{value}</span>}
+              optionRender={(option) => {
+                const coupon = (option.data as { coupon?: CouponOption }).coupon;
+                if (!coupon) return option.label;
+                // antd fades a disabled option, but not far enough to read as
+                // "this one is out" beside the live ones — hence `a2a-coupon-out`.
+                const out = problemWith(coupon) !== null;
+                return (
+                  <div className={`a2a-coupon${out ? ' a2a-coupon-out' : ''}`}>
+                    <span className="a2a-coupon-glyph" aria-hidden>
+                      {coupon.couponType === 'value' ? '💰' : '🎁'}
+                    </span>
+                    <div className="a2a-coupon-main">
+                      <div className="a2a-coupon-code">{coupon.couponCode}</div>
+                      <div className="a2a-coupon-worth">{worthOf(coupon)}</div>
+                    </div>
+                    {/* On every row, not just the broken ones — the state of a
+                        coupon is what the operator is scanning this list for. */}
+                    <span className={`fk-badge ${STATUS_TONE[coupon.status]}`}>
+                      {STATUS_LABEL[coupon.status]}
+                    </span>
+                  </div>
+                );
+              }}
+            />
+            <p className="fk-hint fk-hint-1" title={couponHint}>
+              {couponHint}
+            </p>
+          </div>
+
+          <div className="fk-field">
+            <label className="fk-label" htmlFor="a2a-cash">
+              Cash limit
+            </label>
+            <InputNumber
+              id="a2a-cash"
+              min={0}
+              max={1000000}
+              step={100}
+              value={cashLimit}
+              onChange={setCashLimit}
+              disabled={busy}
+              style={{ width: '100%' }}
+              placeholder={couponCode ? 'Coupon only' : '0'}
+              prefix={<span className="a2a-cash-prefix">Rs</span>}
+              // Guarded: an empty box has no number to group, and `${undefined}`
+              // would put the word "undefined" in the field.
+              formatter={(value) =>
+                value === undefined || value === null
+                  ? ''
+                  : `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+              }
+              parser={(value) => Number((value ?? '').replace(/,/g, '')) as 0}
+            />
+            <p className="fk-hint fk-hint-1" title={cashTitle}>
+              {cashHint}
+            </p>
+          </div>
+        </div>
+      </div>
+    </Panel>
   );
 }

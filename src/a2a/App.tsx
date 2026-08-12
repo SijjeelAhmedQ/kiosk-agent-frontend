@@ -152,23 +152,16 @@ export default function App() {
 
         <div className="a2a-columns">
           <div className="fk-col fk-rise fk-rise-1">
-            <Panel
-              icon={<span aria-hidden>🧾</span>}
-              title="The errand"
-              note="What the buying agent is sent out to do"
-              // Full height, like the conversation beside it — three cards of
-              // three different heights read as three unrelated things.
-              fill="scroll"
-              className="a2a-panel-errand"
-            >
-              <ErrandForm
-                onRun={(input: StartA2ARunInput) => void run.start(input)}
-                onCancel={() => void run.cancel()}
-                busy={run.busy}
-                blockedReason={blocked}
-                couponsKey={couponsKey}
-              />
-            </Panel>
+            {/* The form draws its own panel: the send button belongs in the
+                panel's footer, pinned under the fields rather than scrolling
+                away with them, and only the form knows what that button says. */}
+            <ErrandForm
+              onRun={(input: StartA2ARunInput) => void run.start(input)}
+              onCancel={() => void run.cancel()}
+              busy={run.busy}
+              blockedReason={blocked}
+              couponsKey={couponsKey}
+            />
           </div>
 
           <div className="fk-col fk-rise fk-rise-2">

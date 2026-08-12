@@ -26,7 +26,7 @@
   flex: 1 1 auto;
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(310px, 360px) minmax(0, 1fr) minmax(300px, 340px);
+  grid-template-columns: minmax(345px, 400px) minmax(0, 1fr) minmax(300px, 340px);
   grid-template-rows: minmax(0, 1fr);
   gap: 18px;
 }
@@ -55,7 +55,7 @@
    the conversation rather than being squeezed into a strip. */
 @media (max-width: 1280px) {
   .a2a-columns {
-    grid-template-columns: minmax(300px, 340px) minmax(0, 1fr);
+    grid-template-columns: minmax(330px, 380px) minmax(0, 1fr);
   }
   .a2a-columns > :last-child {
     grid-column: 1 / -1;
@@ -96,19 +96,13 @@
     overflow-y: auto;
     overscroll-behavior: contain;
   }
-  /* Except the errand, which is a form: it is read top to bottom and filled in,
-     and a form that scrolls inside a box on a page that also scrolls is two
-     scrollbars for one column. It takes the height it needs and the page
-     carries it — which also puts the send button back under the last field
-     rather than at the bottom of a card that is no longer stretched. */
+  /* Except the errand, which never scrolls at any size: it is read top to
+     bottom and filled in, and a field under a fold is a field that gets missed.
+     Uncapped, it takes the height it needs and the page carries it — so the
+     footer's button follows the last field down the page instead of holding an
+     edge the card no longer has. */
   .a2a-columns .a2a-panel-errand {
     max-height: none;
-  }
-  .a2a-columns .a2a-panel-errand > .fk-panel-body {
-    overflow: visible;
-  }
-  .a2a-panel-errand .a2a-form {
-    min-height: 0;
   }
   /* The outcome gives its scroll back — with the page scrolling, a card that
      capped its own height would be capping it twice. */
@@ -193,53 +187,149 @@
  * The errand form
  * -------------------------------------------------------------------------- */
 
-/* A plain stack. The shared `.fk-fields` is the errand console's two-up money
-   row — coupon beside cash — and this form is three fields, a warning and a
-   button, none of which pair off. Its own class rather than an override, so
-   neither page has to know about the other's form. */
-.a2a-form {
+/* The one panel on this page that does not scroll.
+ *
+ * It used to: the body was a scroll box, three fields stacked down it with a
+ * wrapped paragraph of help under each, and everything below the examples —
+ * including the coupon picker — sat under the fold. The fix is not a taller
+ * card but a shorter form, the same one the errand console made: the two money
+ * fields share a row, each carries one line of help instead of a paragraph, and
+ * what those paragraphs explained is now a caption on the section heading. What
+ * is left fits, and the order box absorbs whatever height the screen has spare,
+ * so there is no gap where the scroll used to be.
+ *
+ * `fill="flex"` is what makes the body a flex column; these rules say which of
+ * its children may take the slack. */
+.a2a-panel-errand > .fk-panel-body {
+  gap: 0;
+}
+/* Nothing is squeezed by a tall neighbour except the order box, below. */
+.a2a-panel-errand > .fk-panel-body > * {
+  flex: 0 0 auto;
+}
+
+/* A section heading and its aside on one row: the eyebrow reads left, the
+   caption that used to be a wrapped paragraph in the body reads right, and the
+   pair costs the one line the eyebrow already took. */
+.a2a-section {
   display: flex;
-  flex-direction: column;
-  gap: 18px;
-  /* The card is given the column's full height, so the form is given the
-     card's: without this the fields sit in a short block at the top of a tall
-     sheet of paper, which is what a stretched card looks like when nothing
-     inside it knows it was stretched. */
-  min-height: 100%;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 10px;
 }
 
-.a2a-form .fk-field {
+.a2a-section .fk-eyebrow {
+  margin: 0;
+}
+
+/* Held to one line — it is an aside, and an aside that wraps starts competing
+   with the heading it hangs off. */
+.a2a-section-note {
+  flex: 0 1 auto;
   min-width: 0;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--fk-text-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
+/* The only element that takes the spare height. Capped, because a box eight
+   lines tall for a sentence like "Order one Big Mac" is not a better box — past
+   the cap the money block takes the remainder instead.
+
+   Two selectors: antd hands the className to the textarea itself here, but adds
+   a wrapper around it the moment the field grows a count or a clear button, and
+   a rule that quietly stops applying is not worth the one it saves. */
+.a2a-panel-errand > .fk-panel-body > textarea.a2a-errand-box,
+.a2a-panel-errand > .fk-panel-body > .ant-input-textarea {
+  flex: 1 1 auto;
+  /* Two rows — what the box asks for unaided. Any floor above that is height
+     the money block cannot borrow back on a short screen, and the fields at the
+     bottom of the card are the ones that must not be pushed off it. */
+  min-height: 56px;
+  max-height: 220px;
+}
+.a2a-panel-errand > .fk-panel-body > .ant-input-textarea > textarea.a2a-errand-box {
+  height: 100%;
+}
 /* The errand is written, not typed into a slot — a hand-resized box that leaves
    the button hanging in mid-air is worse than one that is simply tall enough. */
-.a2a-form textarea {
+textarea.a2a-errand-box {
   resize: none;
 }
 
-.a2a-form .fk-hint {
-  margin-top: 7px;
-  font-size: 12px;
+/* The examples sit under the errand's hint, inside the field rather than
+   between fields — so they read as belonging to the box they fill. */
+.a2a-chips {
+  margin-top: 10px;
+}
+
+/* Settled against the footer: on a tall screen the errand and the money sit at
+   the two ends of the card, and on a short one the auto margin resolves to
+   nothing and the padding is all that separates them. */
+.a2a-money {
+  margin-top: auto;
+  padding-top: 16px;
+}
+
+/* Coupon and cash limit on one row — two stacked fields were most of the height
+   this card was scrolling to recover. The coupon takes what is going and the
+   cash box needs only room for a figure; the picked coupon shows its code alone
+   (`.a2a-coupon-picked`), which is what makes the narrower box enough. */
+.a2a-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 128px);
+  gap: 12px;
+  align-items: start;
+}
+
+.a2a-fields .fk-field {
+  min-width: 0;
+}
+
+/* The column this form sits in is 345–400px wide at every size that keeps it,
+   so the row is only ever dropped when the layout has already stacked and the
+   panel has the page's full width to play with. */
+@media (max-width: 900px) {
+  .a2a-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Mono, like every other coupon code on the page: it is read character by
+   character when a figure looks wrong. */
+.a2a-coupon-picked {
+  font-family: var(--fk-font-mono);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.a2a-cash-prefix {
+  font-weight: 600;
+  color: var(--fk-text-faint);
+}
+
+/* The send control, in the panel's footer rather than at the end of the form:
+   `.fk-panel-foot` is pinned under the body, so the button sits on the bottom
+   edge of the card whatever the fields above it are doing.
+
+   The reason is part of the same block — it is why the button is off, and the
+   two are no use to anyone at opposite ends of the card. */
+.a2a-send {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.a2a-why {
+  margin: 0;
+  font-size: 12.5px;
   line-height: 1.5;
-}
-
-/* The spare height goes here, between the last field and the button, so the
-   send control settles against the bottom of the card the way the negotiation's
-   own footer does. The fields stay where they are and the button stays where it
-   is, whatever the screen is tall enough for.
-
-   Two rules, because the warning is part of the same block: it explains why the
-   button is off, so when it is there it takes the auto margin and the button
-   follows it down rather than being separated from its own reason. */
-.a2a-form > .fk-actions {
-  margin-top: auto;
-}
-.a2a-form > .ant-alert {
-  margin-top: auto;
-}
-.a2a-form > .ant-alert ~ .fk-actions {
-  margin-top: 0;
+  color: var(--fk-flame-ink);
 }
 
 /* --------------------------------------------------------------------------
