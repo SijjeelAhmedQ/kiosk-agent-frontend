@@ -79,7 +79,7 @@ export default function App({ scheme, onToggleScheme }: Props) {
         // so it words this — the UI shouldn't assume Anthropic.
         (health.credentialProblem ?? 'The agent has no usable model credentials.')
       : !health.restaurantApi
-        ? 'Friends Kitchen is not answering on port 8000 — start the kiosk backend.'
+        ? 'Friends Kitchen is not answering on port 8000 — start the Friends Kitchen backend.'
         : null;
 
   const dark = scheme === 'dark';
@@ -88,7 +88,7 @@ export default function App({ scheme, onToggleScheme }: Props) {
     <div className="fk-shell">
       <header className="fk-header">
         <div className="fk-header-inner">
-          {/* The kiosk's own header, mark and all — this app is Friends
+          {/* Friends Kitchen's own header, mark and all — this app is Friends
               Kitchen's agent, so it wears Friends Kitchen's name first and
               says what it is underneath. */}
           <div className="fk-brand">
@@ -109,7 +109,7 @@ export default function App({ scheme, onToggleScheme }: Props) {
           </div>
 
           <div className="fk-header-actions">
-            {/* The capsule the kiosk header carries on the right, saying which
+            {/* The capsule the Friends Kitchen header carries on the right, saying which
                 of the family's screens you are on. */}
             <span className="fk-tag">
               <span aria-hidden>🤖</span>

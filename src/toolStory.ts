@@ -90,7 +90,7 @@ const fact = (label: string, value: unknown, tone?: Fact['tone']): Fact | null =
   return shown === null ? null : { label, value: shown, tone };
 };
 
-/** A product card, from either the API or a scrape of the kiosk's screen. */
+/** A product card, from either the API or a scrape of Friends Kitchen's screen. */
 const product = (item: Bag): Thing => ({
   name: text(item.name) ?? text(item.productId) ?? 'Something on the menu',
   value: figure(item.price) ?? undefined,
@@ -118,7 +118,7 @@ const cartFacts = (detail: Bag): Fact[] => {
   ]);
 };
 
-/** Which screen the kiosk is showing, as somewhere you would say you are. */
+/** Which screen Friends Kitchen is showing, as somewhere you would say you are. */
 const screenName = (detail: Bag): string | null => {
   const screen = text(detail.screen);
   return screen ? (screen === 'splash' ? 'the welcome screen' : `the ${screen} screen`) : null;
@@ -233,13 +233,13 @@ const WRITERS: Record<string, (detail: Bag) => Partial<ToolStory>> = {
   },
 
   apply_coupon: (detail) => {
-    // Browser mode says whether the kiosk took it; API mode says how much it took.
+    // Browser mode says whether Friends Kitchen took it; API mode says how much it took.
     if ('applied' in detail) {
       return {
         headline:
           detail.applied === true
-            ? 'The kiosk accepted the coupon'
-            : 'The kiosk would not take the coupon',
+            ? 'Friends Kitchen accepted the coupon'
+            : 'Friends Kitchen would not take the coupon',
         note: text(detail.detail) ?? text(detail.problem) ?? undefined,
         facts: factsOf([fact('Left to pay', detail.amountDue, 'amber')]),
       };
@@ -299,14 +299,14 @@ const WRITERS: Record<string, (detail: Bag) => Partial<ToolStory>> = {
     };
   },
 
-  // ---- The kiosk itself, in browser mode ---------------------------------
-  open_kiosk: (detail) => ({
-    headline: `At ${screenName(detail) ?? 'the kiosk'}, ready to order`,
+  // ---- Friends Kitchen itself, in browser mode ---------------------------------
+  open_friends_kitchen: (detail) => ({
+    headline: `At ${screenName(detail) ?? 'Friends Kitchen'}, ready to order`,
     things: rows(detail.products).map(product),
   }),
 
   read_screen: (detail) => ({
-    headline: `Looking at ${screenName(detail) ?? 'the kiosk'}`,
+    headline: `Looking at ${screenName(detail) ?? 'Friends Kitchen'}`,
     note: text(detail.couponProblem) ?? text(detail.couponApplied) ?? undefined,
     facts: factsOf([
       fact('Order so far', detail.basketTotal, 'amber'),
@@ -336,7 +336,7 @@ const WRITERS: Record<string, (detail: Bag) => Partial<ToolStory>> = {
     return {
       headline: charged
         ? `Paid ${charged} for order #${text(detail.orderNumber) ?? '—'}`
-        : 'The kiosk completed the payment',
+        : 'Friends Kitchen completed the payment',
       facts: factsOf([
         fact('Charged', detail.charged, 'amber'),
         spent(figure(purse.couponRedeemed)) ? fact('Coupon covered', purse.couponRedeemed, 'leaf') : null,

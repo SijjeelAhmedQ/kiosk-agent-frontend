@@ -3,13 +3,13 @@ import { theme as antdAlgorithm, type ThemeConfig } from 'antd';
 /**
  * The design system: one palette, two schemes, three consumers.
  *
- * This app is a sibling of the kiosk, not part of it, so it cannot import the
- * kiosk's Tailwind config — but it should still look like the same product.
+ * This app is a sibling of Friends Kitchen, not part of it, so it cannot import the
+ * Friends Kitchen's Tailwind config — but it should still look like the same product.
  * Every value in `C` and in the light scheme below is copied from
- * `kiosk-frontend/tailwind.config.js` and `kiosk-frontend/src/theme/antdTheme.ts`;
+ * `friends-kitchen-frontend/tailwind.config.js` and `friends-kitchen-frontend/src/theme/antdTheme.ts`;
  * if a colour moves there, move it here too.
  *
- * The kiosk's *back office* is the right reference, not its customer screens:
+ * Friends Kitchen's *back office* is the right reference, not its customer screens:
  * both are desk tools driven with a keyboard, so the surfaces here are the
  * admin's — paper cards on cream, no borders, a hairline ring and a soft
  * shadow, filled fields, pill buttons.
@@ -45,7 +45,7 @@ export const C = {
   leafSoft: '#E4F7EC',
 } as const;
 
-/** The kiosk's two families, in the same two roles. */
+/** Friends Kitchen's two families, in the same two roles. */
 export const FONT = {
   display: "'Plus Jakarta Sans', Inter, system-ui, sans-serif",
   sans: "Inter, system-ui, -apple-system, sans-serif",
@@ -72,9 +72,9 @@ interface Palette {
    */
   field: string;
   fieldHover: string;
-  /** The near-invisible edge the kiosk's cards carry: `ring-1 ring-ink/[0.04]`. */
+  /** The near-invisible edge Friends Kitchen's cards carry: `ring-1 ring-ink/[0.04]`. */
   ring: string;
-  /** Headings. The kiosk sets these a shade darker than its body text. */
+  /** Headings. Friends Kitchen sets these a shade darker than its body text. */
   ink: string;
   text: string;
   textSoft: string;
@@ -100,7 +100,7 @@ interface Palette {
 }
 
 const PALETTE: Record<ColorScheme, Palette> = {
-  // Straight from the kiosk. Nothing here is an approximation.
+  // Straight from Friends Kitchen. Nothing here is an approximation.
   light: {
     bg: C.cream,
     surface: C.paper,
@@ -133,7 +133,7 @@ const PALETTE: Record<ColorScheme, Palette> = {
     shadowBrandLg: '0 8px 26px rgba(255,199,44,0.60)',
     glass: 'rgba(255,255,255,0.85)',
   },
-  // The kiosk has no dark mode, so this is the same palette read in the dark:
+  // Friends Kitchen has no dark mode, so this is the same palette read in the dark:
   // the same brand hues, the same relationships, inverted surfaces.
   dark: {
     bg: '#0B0B0E',
@@ -226,17 +226,17 @@ export const V = {
 /** rounded-2xl on the controls, rounded-xl3 on the surfaces they open. */
 const RADIUS = 16;
 
-/** antd, wearing the palette — the same overrides the kiosk's back office uses. */
+/** antd, wearing the palette — the same overrides Friends Kitchen's back office uses. */
 export function makeTheme(scheme: ColorScheme): ThemeConfig {
   const p = PALETTE[scheme];
 
   /**
-   * Every field renders as antd's `filled` variant, which is what the kiosk's
+   * Every field renders as antd's `filled` variant, which is what Friends Kitchen's
    * controls look like: a filled box, no border. These are the tokens that
    * variant reads for its backgrounds.
    *
-   * Two departures from the kiosk, both because of where these fields sit. The
-   * kiosk fills a field with cream and repaints it white on focus — it can,
+   * Two departures from Friends Kitchen, both because of where these fields sit. The
+   * Friends Kitchen fills a field with cream and repaints it white on focus — it can,
    * because its fields sit on a cream page. Every field here sits inside a white
    * card, so cream barely reads as a box at all and white on focus is a field
    * that vanishes the moment it is clicked. So the fill is a shade deeper than
@@ -283,7 +283,7 @@ export function makeTheme(scheme: ColorScheme): ThemeConfig {
       colorBgBase: p.bg,
       colorBgContainer: p.surface,
       colorBgElevated: p.surfaceRaised,
-      // The kiosk draws no borders on its controls; what separates a field from
+      // Friends Kitchen draws no borders on its controls; what separates a field from
       // the card behind it is its fill, not an outline.
       colorBorder: 'transparent',
       colorBorderSecondary: 'transparent',
@@ -293,7 +293,7 @@ export function makeTheme(scheme: ColorScheme): ThemeConfig {
       fontFamilyCode: FONT.mono,
       fontSize: 14,
       lineHeight: 1.6,
-      controlHeight: 44, // the kiosk admin's field height
+      controlHeight: 44, // Friends Kitchen admin's field height
       borderRadius: RADIUS,
       borderRadiusLG: RADIUS,
       borderRadiusSM: 12,
@@ -308,7 +308,7 @@ export function makeTheme(scheme: ColorScheme): ThemeConfig {
     },
 
     components: {
-      // Pills at every size — the single strongest "same app" signal the kiosk
+      // Pills at every size — the single strongest "same app" signal Friends Kitchen
       // has. Amber is a light colour, so the label is ink rather than antd's
       // default white, in both schemes: the amber itself does not change.
       Button: {
@@ -357,7 +357,7 @@ export function makeTheme(scheme: ColorScheme): ThemeConfig {
         paddingSM: 8,
       },
       Switch: {
-        // The kiosk's toggle, to the pixel: 48×28 track, 24px knob, 2px inset.
+        // Friends Kitchen's toggle, to the pixel: 48×28 track, 24px knob, 2px inset.
         trackHeight: 28,
         trackMinWidth: 48,
         trackPadding: 2,

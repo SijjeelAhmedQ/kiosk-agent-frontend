@@ -14,14 +14,14 @@ npm run dev          # http://localhost:5174
 
 ## Why it is its own app
 
-It is a different product for a different person. The kiosk is a full-screen
+It is a different product for a different person. Friends Kitchen is a full-screen
 touch flow for a customer standing at a panel; this is a desk tool for whoever
 is sending the agent out. Keeping them apart means the customer's bundle never
 carries the agent console, and this app can be deployed, restarted and demoed
 without touching the till.
 
-It also has no dependency on the kiosk's front end at all — only on the agent's
-HTTP API. The kiosk can be rebuilt or replaced and this keeps working.
+It also has no dependency on Friends Kitchen's front end at all — only on the agent's
+HTTP API. Friends Kitchen can be rebuilt or replaced and this keeps working.
 
 ---
 
@@ -31,11 +31,11 @@ Three services, in this order:
 
 | Service | Where | Port |
 |---|---|---|
-| Kiosk backend | `kiosk-backend` | 8000 |
-| Agent server | `kiosk-agent` — `.venv\Scripts\python -m uvicorn server:app --port 8100` | 8100 |
+| Friends Kitchen backend | `friends-kitchen-backend` | 8000 |
+| Agent server | `friends-kitchen-agent-backend` — `.venv\Scripts\python -m uvicorn server:app --port 8100` | 8100 |
 | This app | `npm run dev` | 5174 |
 
-For **browser mode** the kiosk front end (`kiosk-frontend`, port 5173) must be
+For **browser mode** the Friends Kitchen front end (`friends-kitchen-frontend`, port 5173) must be
 running too — that is the website the agent drives.
 
 The strip at the top of the page reports all of this — one pill per service,
@@ -86,10 +86,10 @@ call turned out, and what it is saying. [`useAgentRun`](src/hooks/useAgentRun.ts
 folds those into the two shapes the page renders.
 
 Coupons are read through the agent server too (`GET /api/agent/coupons`) rather
-than from the kiosk API directly. The kiosk only allows its own origin, and
+than from the Friends Kitchen API directly. Friends Kitchen only allows its own origin, and
 forwarding one read from the agent — which already knows the restaurant's
-address — is a smaller change than widening the kiosk's CORS for a second app.
-That read returns every status the kiosk computes — `unused`,
+address — is a smaller change than widening Friends Kitchen's CORS for a second app.
+That read returns every status Friends Kitchen computes — `unused`,
 `partially_redeemed`, `fully_redeemed`, `expired`, `cancelled` — and the picker
 decides which of them can be selected.
 
@@ -118,7 +118,7 @@ src/
     RunReport.tsx          The agent's report and what it spent
 ```
 
-`theme.ts` copies its brand hexes from `kiosk-frontend/tailwind.config.js`. The
+`theme.ts` copies its brand hexes from `friends-kitchen-frontend/tailwind.config.js`. The
 two apps cannot share a config, so if a colour moves there, move it here too.
 
 Everything else in the palette is scheme-dependent and reaches the page three
@@ -135,11 +135,11 @@ background before React loads, so a dark session never flashes white.
 
 ## Notes
 
-- **The agent needs its own Anthropic API key**, set in `kiosk-agent/.env`. This
+- **The agent needs its own Anthropic API key**, set in `friends-kitchen-agent-backend/.env`. This
   app never sees it — it only reports whether the agent has one.
 - **Runs are serialised.** The agent's wallet, cart and browser are one per
   process, so a second run waits for the first. The banner says when it is busy.
 - **Stop** cancels the run, but anything already paid for stands. The panel says
   so rather than implying a clean rollback.
-"# kiosk-agent-frontend" 
-"# kiosk-agent-frontend" 
+"# friends-kitchen-agent-frontend" 
+"# friends-kitchen-agent-frontend" 

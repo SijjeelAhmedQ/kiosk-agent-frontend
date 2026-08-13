@@ -2,7 +2,7 @@
    antd ships its own reset; this is the layer on top of it — the page shell,
    the panels, and the handful of custom controls antd has no equivalent for.
 
-   The look is the kiosk's, deliberately: paper cards on cream, no borders, a
+   The look is Friends Kitchen's, deliberately: paper cards on cream, no borders, a
    hairline ring and a soft shadow, Plus Jakarta Sans on every heading and
    button, pills everywhere. Every colour comes from a --fk-* variable set by
    main.tsx, so both schemes are one stylesheet rather than two.
@@ -56,7 +56,7 @@ body {
   color: var(--fk-ink);
 }
 
-/* Slim, neutral scrollbars — chrome should disappear, same as the kiosk's.
+/* Slim, neutral scrollbars — chrome should disappear, same as Friends Kitchen's.
    `border-strong` rather than `border`: three boxes on this page carry their own
    scroll, and a mist-coloured thumb on paper is invisible, so the only cue that
    a panel scrolls was the fade at its edge. Quiet is the goal, not absent. */
@@ -99,7 +99,7 @@ body {
 
 /* Touch: no grey flash on tap, no text selected by a long press on a control,
    and no 300ms wait for a second tap that is not coming. Applied to the custom
-   controls and to antd's, since both are driven by finger on a kiosk desk. */
+   controls and to antd's, since both are driven by finger on a Friends Kitchen terminal desk. */
 button,
 [role='button'],
 .ant-btn,
@@ -122,7 +122,7 @@ button,
 
 /* ── The page shell ─────────────────────────────────────────────────────── */
 
-/* Flat cream, like every kiosk screen. The depth on this page comes from the
+/* Flat cream, like every Friends Kitchen screen. The depth on this page comes from the
    cards sitting on it, never from the background itself.
 
    A fixed column: a header that cannot move and a content region that takes
@@ -140,7 +140,7 @@ button,
 
 /* ── Header ─────────────────────────────────────────────────────────────── */
 
-/* The kiosk's own header: solid paper, one mist hairline, 80px tall. It sits at
+/* Friends Kitchen's own header: solid paper, one mist hairline, 80px tall. It sits at
    the top of the shell's column, so it stays put without needing to be sticky. */
 .fk-header {
   position: relative;
@@ -221,7 +221,7 @@ button,
   gap: 10px;
 }
 
-/* The cream capsule the kiosk header carries on the right. */
+/* The cream capsule the Friends Kitchen header carries on the right. */
 .fk-tag {
   display: inline-flex;
   align-items: center;
@@ -412,7 +412,7 @@ button,
 
 /* ── Panel ──────────────────────────────────────────────────────────────── */
 
-/* The kiosk's card, to the pixel: rounded-xl3, paper, shadow-soft, and a
+/* Friends Kitchen's card, to the pixel: rounded-xl3, paper, shadow-soft, and a
    ring so faint it only stops the card dissolving into the cream. No border —
    a 1px grey outline is the thing that makes a card look like a 2010s panel. */
 .fk-panel {
@@ -867,7 +867,7 @@ textarea.fk-order-box {
 
 /* ── Chips (the example errands) ────────────────────────────────────────── */
 
-/* The kiosk's FilterChips, at desk scale: mist pill, ink when picked. */
+/* Friends Kitchen's FilterChips, at desk scale: mist pill, ink when picked. */
 .fk-chips {
   display: flex;
   flex-wrap: wrap;
@@ -1539,7 +1539,7 @@ html[data-theme='dark'] .fk-chip[aria-pressed='true']:hover:not(:disabled) {
 /* ── The result as it arrived ────────────────────────────────────────────── */
 
 /* Folded away, because the sentence above it is the answer nearly every time —
-   but kept, because when the *kiosk* is what is in question, the fields are.
+   but kept, because when the *Friends Kitchen* is what is in question, the fields are.
    `list-style: none` on both selectors: Safari uses the second. */
 .fk-raw {
   margin-top: 8px;
@@ -1601,7 +1601,7 @@ html[data-theme='dark'] .fk-chip[aria-pressed='true']:hover:not(:disabled) {
   font-size: 10.5px;
 }
 
-/* The kiosk's status pill: display face, sentence case, soft tone, no edge. */
+/* Friends Kitchen's status pill: display face, sentence case, soft tone, no edge. */
 .fk-badge {
   display: inline-flex;
   align-items: center;
@@ -1661,7 +1661,7 @@ html[data-theme='dark'] .fk-chip[aria-pressed='true']:hover:not(:disabled) {
 
 /* ── Empty state ────────────────────────────────────────────────────────── */
 
-/* The kiosk's EmptyPanel: a cream tile, a display-face title, a line of ash. */
+/* Friends Kitchen's EmptyPanel: a cream tile, a display-face title, a line of ash. */
 .fk-empty {
   display: flex;
   flex: 1 1 auto;
@@ -1929,7 +1929,7 @@ html[data-theme='dark'] .fk-chip[aria-pressed='true']:hover:not(:disabled) {
 
 /* ── antd, nudged into the same language ────────────────────────────────── */
 
-/* Every button wears the display face, like every button in the kiosk. */
+/* Every button wears the display face, like every button in Friends Kitchen. */
 .ant-btn {
   font-family: var(--fk-font-display) !important;
   letter-spacing: -0.01em;
@@ -1940,7 +1940,7 @@ html[data-theme='dark'] .fk-chip[aria-pressed='true']:hover:not(:disabled) {
   background: var(--fk-amber-hover) !important;
   box-shadow: var(--fk-shadow-brand-lg) !important;
 }
-/* `press` — the kiosk's touch feedback, on every control that takes a click. */
+/* `press` — Friends Kitchen's touch feedback, on every control that takes a click. */
 .ant-btn:not(:disabled):active {
   transform: scale(0.97);
 }
@@ -2000,7 +2000,7 @@ html[data-theme='dark'] .fk-chip[aria-pressed='true']:hover:not(:disabled) {
   font-weight: 700;
 }
 
-/* Fade the panels in on first paint, top-down — the kiosk's `slide-up`. */
+/* Fade the panels in on first paint, top-down — Friends Kitchen's `slide-up`. */
 .fk-rise {
   animation: fk-rise 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
 }

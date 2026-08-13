@@ -1,7 +1,7 @@
 /**
  * Wire types for the A2A service on 8101.
  *
- * Mirrors `kiosk-agent-backend/agent/a2a/protocol.py`. Kept separate from
+ * Mirrors `friends-kitchen-agent-backend/agent/a2a/protocol.py`. Kept separate from
  * `src/types.ts` on purpose: that file describes the errand service on 8100,
  * the two protocols are free to diverge, and a shared file would make every
  * change to one a risk to the other.
@@ -17,7 +17,7 @@ export interface AgentSide {
   model: string;
   ready: boolean;
   problem: string | null;
-  /** Merchant only: 'api' drives the REST API, 'browser' drives the kiosk. */
+  /** Merchant only: 'api' drives the REST API, 'browser' drives Friends Kitchen. */
   hands?: string;
 }
 

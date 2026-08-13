@@ -2,10 +2,10 @@
  * Reading the restaurant's coupons, so the operator can pick one from a list
  * instead of copying a code out of another tab.
  *
- * This goes through the *agent* service rather than straight to the kiosk API.
- * The kiosk only allows its own origin, and forwarding one read from the agent
+ * This goes through the *agent* service rather than straight to the Friends Kitchen API.
+ * Friends Kitchen only allows its own origin, and forwarding one read from the agent
  * — which already knows the restaurant's address — is a smaller change than
- * widening the kiosk's CORS for a second app.
+ * widening Friends Kitchen's CORS for a second app.
  */
 
 import type { CouponOption } from '@/types';

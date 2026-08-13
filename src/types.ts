@@ -1,8 +1,8 @@
 /**
  * Wire types for the two services this app talks to.
  *
- * The agent types mirror `kiosk-agent/server.py`; the coupon types are the
- * subset of the kiosk API's coupon schema this app actually reads. Keep them in
+ * The agent types mirror `friends-kitchen-agent-backend/server.py`; the coupon types are the
+ * subset of the Friends Kitchen API's coupon schema this app actually reads. Keep them in
  * step with those services — nothing here is generated.
  */
 
@@ -24,7 +24,7 @@ export interface AgentHealth {
   /** anthropic | gemini | openai | groq | ollama */
   provider: string;
   model: string;
-  kioskWeb: string;
+  friendsKitchenWeb: string;
   /** An errand is already in flight — the agent serialises runs. */
   busy: boolean;
 }
@@ -91,7 +91,7 @@ export interface AgentToolCall {
 }
 
 /**
- * Where a coupon stands. The kiosk computes this at read time — `expired` is
+ * Where a coupon stands. Friends Kitchen computes this at read time — `expired` is
  * never stored — and the five are mutually exclusive.
  */
 export type CouponStatus =
@@ -101,7 +101,7 @@ export type CouponStatus =
   | 'expired'
   | 'cancelled';
 
-/** The slice of the kiosk's coupon record this app shows in its picker. */
+/** The slice of Friends Kitchen's coupon record this app shows in its picker. */
 export interface CouponOption {
   couponCode: string;
   couponType: 'product' | 'value';

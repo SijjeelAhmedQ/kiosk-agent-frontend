@@ -15,7 +15,7 @@ export const A2A_BASE =
   (import.meta.env.VITE_A2A_BASE_URL as string | undefined) ?? 'http://localhost:8101';
 
 export const A2A_OFFLINE =
-  'The A2A service is not running. Start it in kiosk-agent-backend with: ' +
+  'The A2A service is not running. Start it in friends-kitchen-agent-backend with: ' +
   '.venv\\Scripts\\python -m uvicorn a2a_server:app --port 8101';
 
 interface Envelope<T> {

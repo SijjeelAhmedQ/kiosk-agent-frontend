@@ -111,7 +111,7 @@ export function RunReport({ status, narration, finalText, wallet, error }: Props
           type="warning"
           showIcon
           message="Stopped part-way"
-          description="Anything already paid for still stands — check the kiosk's order list before re-running."
+          description="Anything already paid for still stands — check Friends Kitchen's order list before re-running."
           style={{ marginBottom: 14 }}
         />
       )}

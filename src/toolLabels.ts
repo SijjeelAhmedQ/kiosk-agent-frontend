@@ -31,7 +31,7 @@ const LABELS: Record<string, ToolLabel> = {
   get_order: { icon: '✅', label: 'Confirmed the order' },
 
   // Browser mode
-  open_kiosk: { icon: '🖥️', label: 'Walked up to the kiosk' },
+  open_friends_kitchen: { icon: '🖥️', label: 'Walked up to Friends Kitchen' },
   read_screen: { icon: '👀', label: 'Read the screen' },
   open_category: { icon: '🗂️', label: 'Opened a category' },
   search_menu: { icon: '🔎', label: 'Searched the menu' },

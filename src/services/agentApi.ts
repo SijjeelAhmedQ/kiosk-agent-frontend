@@ -14,7 +14,7 @@ export const AGENT_BASE =
   (import.meta.env.VITE_AGENT_BASE_URL as string | undefined) ?? 'http://localhost:8100';
 
 export const AGENT_OFFLINE =
-  'The agent service is not running. Start it in kiosk-agent with: ' +
+  'The agent service is not running. Start it in friends-kitchen-agent-backend with: ' +
   '.venv\\Scripts\\python -m uvicorn server:app --port 8100';
 
 /** Every agent endpoint answers `{success, data}`, or `{detail}` on a refusal. */

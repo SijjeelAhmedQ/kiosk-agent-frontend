@@ -14,7 +14,7 @@ import '@/styles.css';
 function Root() {
   const { scheme, toggle } = useColorScheme();
 
-  // `filled` is the variant that matches the kiosk's fields: a cream fill, no
+  // `filled` is the variant that matches Friends Kitchen's fields: a cream fill, no
   // border, white and lifted on focus. Set once here rather than on every
   // control, the way the back office does it.
   return (

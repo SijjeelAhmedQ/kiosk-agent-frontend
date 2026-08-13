@@ -107,7 +107,7 @@ export default function App() {
       : !health.merchant.ready
         ? (health.merchant.problem ?? 'The ordering desk has no usable model credentials.')
         : !health.restaurantApi
-          ? 'Friends Kitchen is not answering on port 8000 — start the kiosk backend.'
+          ? 'Friends Kitchen is not answering on port 8000 — start the Friends Kitchen backend.'
           : null;
 
   return (

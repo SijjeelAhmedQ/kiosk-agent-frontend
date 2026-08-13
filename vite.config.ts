@@ -20,7 +20,7 @@ export default defineConfig({
     },
   },
   server: {
-    // 5173 belongs to the kiosk itself. The agent drives that in browser mode,
+    // 5173 belongs to Friends Kitchen itself. The agent drives that in browser mode,
     // so the two must be able to run side by side.
     port: 5174,
     strictPort: true,
