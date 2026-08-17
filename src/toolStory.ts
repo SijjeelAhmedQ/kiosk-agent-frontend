@@ -299,6 +299,88 @@ const WRITERS: Record<string, (detail: Bag) => Partial<ToolStory>> = {
     };
   },
 
+  // ---- Delivery ----------------------------------------------------------
+  check_delivery_location: (detail) => {
+    const restaurant = bag(detail.restaurant) ?? {};
+    const branch = text(restaurant.name);
+
+    if (detail.haveLocation !== true) {
+      return {
+        headline: 'No delivery address — this is a counter order',
+        note: text(detail.note) ?? undefined,
+        facts: [],
+      };
+    }
+
+    return {
+      headline: branch
+        ? `Ordering from ${branch}, the nearest branch`
+        : 'Found where the customer is',
+      note: text(detail.note) ?? undefined,
+      facts: factsOf([
+        text(detail.customerLocationText)
+          ? { label: 'Customer', value: text(detail.customerLocationText)! }
+          : null,
+        text(restaurant.address)
+          ? { label: 'Collect from', value: text(restaurant.address)! }
+          : null,
+        // The only number here that is not money, so it is spelled with its
+        // unit — `figure()` would render a bare 6.3 and invite "Rs 6.3".
+        count(detail.distanceKm) === null
+          ? null
+          : { label: 'Apart', value: `${(count(detail.distanceKm) ?? 0).toFixed(1)} km` },
+      ]),
+    };
+  },
+
+  /**
+   * The handover, and the one story in this file with a rule of its own: a
+   * successful dispatch is *not* an arrival. The headline says the courier has
+   * it, never that the customer does, unless the courier's own `delivered`
+   * says otherwise.
+   */
+  arrange_delivery: (detail) => {
+    const service = text(detail.deliveryService) ?? 'the courier';
+    const order = text(detail.orderNumber);
+    return {
+      headline:
+        detail.delivered === true
+          ? `${service} has delivered order #${order ?? '—'}`
+          : `${service} is collecting order #${order ?? '—'} — not delivered yet`,
+      note: text(detail.message) ?? undefined,
+      facts: factsOf([
+        text(detail.status)
+          ? { label: 'Status', value: text(detail.status)!.replace(/_/g, ' ') }
+          : null,
+        text(detail.deliveringTo) ? { label: 'To', value: text(detail.deliveringTo)! } : null,
+        text(detail.courier) ? { label: 'Rider', value: text(detail.courier)! } : null,
+        count(detail.etaMinutes) === null
+          ? null
+          : { label: 'ETA', value: `~${count(detail.etaMinutes)} min`, tone: 'amber' },
+        fact('Delivery fee', detail.fee, 'amber'),
+        text(detail.jobId) ? { label: 'Job', value: text(detail.jobId)! } : null,
+      ]),
+    };
+  },
+
+  check_delivery: (detail) => {
+    const status = text(detail.status)?.replace(/_/g, ' ');
+    return {
+      headline:
+        detail.delivered === true
+          ? 'Delivered to the customer'
+          : `Still on its way — ${status ?? 'in progress'}`,
+      note: text(detail.message) ?? undefined,
+      facts: factsOf([
+        status ? { label: 'Status', value: status } : null,
+        text(detail.courier) ? { label: 'Rider', value: text(detail.courier)! } : null,
+        count(detail.etaMinutes) === null
+          ? null
+          : { label: 'ETA', value: `~${count(detail.etaMinutes)} min`, tone: 'amber' },
+      ]),
+    };
+  },
+
   // ---- Friends Kitchen itself, in browser mode ---------------------------------
   open_friends_kitchen: (detail) => ({
     headline: `At ${screenName(detail) ?? 'Friends Kitchen'}, ready to order`,

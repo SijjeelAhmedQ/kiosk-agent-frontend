@@ -14,7 +14,11 @@ import type {
   AgentRunStatus,
   AgentToolCall,
   AgentWalletSummary,
+  DeliveryContext,
+  DeliveryJob,
+  DeliveryStatus,
   StartAgentRunInput,
+  ToolDetail,
 } from '@/types';
 
 interface AgentRunState {
@@ -27,6 +31,10 @@ interface AgentRunState {
   wallet: AgentWalletSummary | null;
   error: string | null;
   browserOpen: boolean;
+  /** Where this errand is going — null for a counter order. */
+  delivery: DeliveryContext | null;
+  /** The courier's job, once one has been arranged. */
+  deliveryJob: DeliveryJob | null;
 }
 
 const EMPTY: AgentRunState = {
@@ -38,7 +46,44 @@ const EMPTY: AgentRunState = {
   wallet: null,
   error: null,
   browserOpen: false,
+  delivery: null,
+  deliveryJob: null,
 };
+
+/** The tools whose results say where a delivery has got to. */
+const DELIVERY_TOOLS = new Set(['arrange_delivery', 'check_delivery']);
+
+/**
+ * A delivery job read off a tool result, or null if that is not what this was.
+ *
+ * Every field is checked rather than trusted: this shape is the agent's, not
+ * this app's, and a tool that answered with a refusal has none of it. `delivered`
+ * in particular is only ever taken from the courier's own boolean — never
+ * inferred from a successful call, which is exactly the mistake that would have
+ * the page announce an arrival that has not happened.
+ */
+function readDeliveryJob(detail: ToolDetail | null): DeliveryJob | null {
+  if (!detail) return null;
+  const jobId = detail.jobId;
+  const status = detail.status;
+  if (typeof jobId !== 'string' || !jobId || typeof status !== 'string') return null;
+
+  const string = (value: unknown): string | null =>
+    typeof value === 'string' && value.trim() ? value : null;
+
+  return {
+    jobId,
+    status: status as DeliveryStatus,
+    delivered: detail.delivered === true,
+    deliveryService: string(detail.deliveryService),
+    courier: string(detail.courier),
+    etaMinutes: typeof detail.etaMinutes === 'number' ? detail.etaMinutes : null,
+    fee: string(detail.fee),
+    trackingUrl: string(detail.trackingUrl),
+    message: string(detail.message),
+    orderNumber: string(detail.orderNumber),
+  };
+}
 
 export function useAgentRun() {
   const [state, setState] = useState<AgentRunState>(EMPTY);
@@ -75,14 +120,34 @@ export function useAgentRun() {
             ],
           };
 
-        case 'tool_result':
+        case 'tool_result': {
+          const toolCalls = prev.toolCalls.map((call) =>
+            call.toolUseId === event.toolUseId
+              ? { ...call, ok: event.ok, summary: event.summary, detail: event.detail ?? null }
+              : call,
+          );
+
+          // A delivery tool that succeeded carries the courier's latest word on
+          // the job. A refused one carries a reason instead, and must not
+          // overwrite what the last good answer said.
+          const source = toolCalls.find((call) => call.toolUseId === event.toolUseId);
+          const job =
+            event.ok && source && DELIVERY_TOOLS.has(source.name)
+              ? readDeliveryJob(event.detail ?? null)
+              : null;
+
+          return { ...prev, toolCalls, deliveryJob: job ?? prev.deliveryJob };
+        }
+
+        case 'location':
           return {
             ...prev,
-            toolCalls: prev.toolCalls.map((call) =>
-              call.toolUseId === event.toolUseId
-                ? { ...call, ok: event.ok, summary: event.summary, detail: event.detail ?? null }
-                : call,
-            ),
+            delivery: {
+              userLocation: event.userLocation,
+              restaurant: event.restaurant,
+              distanceKm: event.distanceKm,
+              deliveryService: event.deliveryService,
+            },
           };
 
         case 'text':

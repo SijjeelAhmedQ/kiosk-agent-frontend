@@ -35,6 +35,11 @@ Three services, in this order:
 | Agent server | `friends-kitchen-agent-backend` — `.venv\Scripts\python -m uvicorn server:app --port 8100` | 8100 |
 | This app | `npm run dev` | 5174 |
 
+A fourth, only if you want deliveries — the agent orders at the counter without
+it, and the status strip says it is missing rather than failing at the handover:
+
+| Delivery agent | `friends-kitchen-agent-backend` — `.venv\Scripts\python -m uvicorn delivery_server:app --port 8102` | 8102 |
+
 For **browser mode** the Friends Kitchen front end (`friends-kitchen-frontend`, port 5173) must be
 running too — that is the website the agent drives.
 
@@ -53,9 +58,21 @@ code that will not work says so before the errand starts. A cash limit for
 whatever the coupon does not cover. And whether the agent should order through the API or
 by driving the real website.
 
+**Where it goes.** A switch under the examples, off by default. Off is the
+counter order this form has always sent. On, the browser is asked for a fix —
+and if it refuses, the coordinates can be typed instead, because a desk machine
+declining to share a location is the common case rather than the exception. The
+place can be named ("Flat 3, second floor"); that is what the rider reads.
+
 **Right — what happened.** A live timeline of every step the agent took, ticked
 green or flagged red as each one lands, and then the agent's own report of how
 it went with the money it actually spent.
+
+**The delivery**, on a delivery errand only: the route, and how far along the
+courier is. It sits above the report because it is the part still moving after
+the agent has stopped talking — and it says *not delivered yet* until the
+courier itself says otherwise, which is the one thing a paid, finished-looking
+order must not be allowed to imply.
 
 Steps that move money are tagged in the timeline. That is deliberate: in a run
 with a dozen tool calls, the one that spends is the one worth finding.
@@ -106,6 +123,7 @@ src/
   toolLabels.ts            Tool names → what an operator would call them
   hooks/
     useAgentRun.ts         One errand's worth of state, fed by SSE
+    useUserLocation.ts     Where the customer is — permission, refusal, fallback
     useColorScheme.ts      Light or dark, remembered
   services/
     agentApi.ts            Start, follow, cancel
@@ -114,9 +132,21 @@ src/
     Panel.tsx              The surface every section sits on
     ServiceStatus.tsx      What is and is not ready
     ErrandForm.tsx         The errand and the money
+    DeliveryField.tsx      Where it goes, and how that was found out
     RunTrace.tsx           Timeline of steps
+    DeliveryTrack.tsx      The route, and how far along the courier is
     RunReport.tsx          The agent's report and what it spent
 ```
+
+**Location never leaves this app as a claim.** The browser gives coordinates and
+the operator gives a name; both go to the agent server, which validates them and
+decides which branch serves them. Nothing here works out a branch, a distance or
+an address — those come back from the server, so the panel and the courier
+cannot disagree about where the customer is.
+
+**No keys here either.** The courier's credentials live in the agent server's
+`.env`, and this app only ever learns *whether* delivery is configured. That is
+the one field the health endpoint exposes about it.
 
 `theme.ts` copies its brand hexes from `friends-kitchen-frontend/tailwind.config.js`. The
 two apps cannot share a config, so if a colour moves there, move it here too.
