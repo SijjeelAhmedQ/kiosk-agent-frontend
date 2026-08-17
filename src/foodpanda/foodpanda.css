@@ -823,39 +823,6 @@
 }
 
 /* --------------------------------------------------------------------------
- * The test form
- * -------------------------------------------------------------------------- */
-.fp-form {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.fp-field {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  min-width: 0;
-}
-
-.fp-field .fk-hint {
-  margin: 0;
-}
-
-.fp-field-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 96px;
-  gap: 10px;
-}
-
-/* The one hint that changes what the run will do, so the one hint allowed to
-   change colour. */
-.fp-hint-warn {
-  color: var(--fk-flame-ink);
-  font-weight: 600;
-}
-
-/* --------------------------------------------------------------------------
  * The agent card
  * -------------------------------------------------------------------------- */
 .fp-card-desc {

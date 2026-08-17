@@ -9,7 +9,6 @@ import { Outcome } from './components/Outcome';
 import { RequestActions } from './components/RequestActions';
 import { RequestCard } from './components/RequestCard';
 import { StatusPill } from './components/StatusPill';
-import { TestRequestForm } from './components/TestRequestForm';
 import { useDeliveryBoard } from './useDeliveryBoard';
 import type { AgentCard, FoodpandaHealth } from './types';
 
@@ -90,11 +89,6 @@ export default function App() {
   }, [board.live, refreshHealth]);
 
   const job = board.selected;
-  const blocked = !health
-    ? 'The delivery agent is not running on port 8103.'
-    : !health.dispatcher.ready
-      ? (health.dispatcher.problem ?? 'The dispatcher has no usable model credentials.')
-      : null;
 
   return (
     <div className="fk-shell">
@@ -179,8 +173,7 @@ export default function App() {
               fill="scroll"
               className="fp-share-3"
               // Folds away when the operator is watching one delivery rather
-              // than triaging the queue — the log and the journey then take the
-              // height the list was using.
+              // than triaging the queue.
               //
               // No refresh button beside the chevron: the board re-reads itself
               // every couple of seconds, so the control would only ever do what
@@ -193,23 +186,6 @@ export default function App() {
                 selectedId={board.selectedId}
                 onSelect={board.select}
               />
-            </Panel>
-
-            <Panel
-              icon={<span aria-hidden>🧪</span>}
-              title="Send a test request"
-              note="The same message, typed by hand instead of by an agent"
-              collapsible
-              defaultOpen={board.jobs.length === 0}
-              fill="scroll"
-              className="fp-share-2"
-            >
-              <TestRequestForm
-                onSend={(input) => void board.send(input)}
-                disabled={blocked !== null}
-                radiusKm={health?.radiusKm ?? null}
-              />
-              {blocked && <p className="fp-fault fp-gap">{blocked}</p>}
             </Panel>
           </div>
 

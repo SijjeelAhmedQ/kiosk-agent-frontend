@@ -21,7 +21,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { foodpandaApi } from './api';
-import type { FoodpandaEvent, Job, LogRow, TestRequestInput } from './types';
+import type { FoodpandaEvent, Job, LogRow } from './types';
 
 /** How often the board re-reads the list. Fast enough that a handover from the
  *  ordering agent appears while the operator is still looking at the screen. */
@@ -36,7 +36,6 @@ interface Board {
   live: boolean;
   error: string | null;
   select: (jobId: string) => void;
-  send: (input: TestRequestInput) => Promise<void>;
   /** Ask for a rider on the selected job. */
   findRider: () => Promise<void>;
   /** Ask for the selected job to be taken out to the customer. */
@@ -199,20 +198,6 @@ export function useDeliveryBoard(): Board {
   // reload, so closing on unmount matters more here than on a normal page.
   useEffect(() => () => unsubscribe.current?.(), []);
 
-  const send = useCallback(
-    async (input: TestRequestInput) => {
-      setError(null);
-      try {
-        const job = await foodpandaApi.sendTestRequest(input);
-        setJobs((list) => [job, ...list]);
-        setSelectedId(job.jobId);
-      } catch (exc) {
-        setError(exc instanceof Error ? exc.message : String(exc));
-      }
-    },
-    [],
-  );
-
   // -- the two requests -------------------------------------------------- //
   // Nothing is patched into the job here on success. The dispatcher is waiting
   // inside a tool call for exactly this, and what it does next — assign a named
@@ -255,7 +240,6 @@ export function useDeliveryBoard(): Board {
     live: selected !== null && !selected.done,
     error,
     select: setSelectedId,
-    send,
     findRider,
     deliver,
     asking,

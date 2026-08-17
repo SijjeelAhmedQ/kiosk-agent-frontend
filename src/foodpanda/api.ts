@@ -6,21 +6,16 @@
  * can only GET, which is exactly why the split is worth keeping — the stream can
  * be reopened after a refresh and the server replays what was missed.
  *
- * Note what this file cannot do: start a delivery for an order that exists. The
- * only way a real job gets here is the Friends Kitchen ordering agent handing
- * one over. `sendTestRequest` sends the same message by hand, for looking at
- * this agent on its own, and it is labelled as a test everywhere it appears.
+ * Note what this file cannot do: start a delivery at all. The only way a job
+ * gets here is the Friends Kitchen ordering agent handing one over — this
+ * console reads the board and works the two gates, and nothing more.
  */
 
-import type { AgentCard, FoodpandaEvent, FoodpandaHealth, Job, TestRequestInput } from './types';
+import type { AgentCard, FoodpandaEvent, FoodpandaHealth, Job } from './types';
 
 /** Where the delivery agent listens. Override with VITE_FOODPANDA_BASE_URL. */
 export const FOODPANDA_BASE =
   (import.meta.env.VITE_FOODPANDA_BASE_URL as string | undefined) ?? 'http://localhost:8103';
-
-export const FOODPANDA_OFFLINE =
-  'The Foodpanda delivery agent is not running. Start it in friends-kitchen-agent-backend with: ' +
-  '.venv\\Scripts\\python -m uvicorn foodpanda_server:app --port 8103';
 
 interface Envelope<T> {
   success?: boolean;
@@ -39,51 +34,6 @@ async function unwrap<T>(response: Response): Promise<T> {
     throw new Error(payload.detail ?? `The delivery agent returned ${response.status}.`);
   }
   return payload.data as T;
-}
-
-/**
- * A test request in the shape the ordering agent sends.
- *
- * Built here rather than in the form so that the wire format lives with the
- * rest of the wire format. The coordinates are the Saddar branch and a Westridge
- * address — a real pair of places, because a request with a nonsense fix would
- * exercise the validation rather than the dispatcher.
- */
-function testMessage(input: TestRequestInput) {
-  const pickup = { latitude: 33.598827, longitude: 73.05381 };
-  // Westridge, about 5.6 km south-west of Saddar. A fixed point rather than one
-  // derived from `distanceKm`, so the pair is always somewhere a rider could
-  // actually ride; the distance the dispatcher measures against its service
-  // radius is carried explicitly in `distanceKm` anyway.
-  const dropoff = { latitude: 33.5875, longitude: 72.995 };
-
-  return {
-    order: {
-      orderId: null,
-      orderNumber: input.orderNumber,
-      status: 'paid',
-      paid: true,
-      itemCount: input.quantity,
-      items: [{ name: input.itemName, quantity: input.quantity, note: null }],
-    },
-    pickup: {
-      ...pickup,
-      address: 'Shop 4, Bank Road, Saddar, Rawalpindi',
-      name: 'Friends Kitchen Saddar',
-      phone: '+92 51 5583 0001',
-      note: `Collect order ${input.orderNumber}`,
-    },
-    dropoff: {
-      ...dropoff,
-      address: input.dropoffAddress,
-      name: null,
-      phone: null,
-      note: null,
-    },
-    branchId: 'fk-saddar',
-    distanceKm: input.distanceKm,
-    notes: input.notes.trim() || null,
-  };
 }
 
 export const foodpandaApi = {
@@ -130,21 +80,6 @@ export const foodpandaApi = {
     } catch {
       return null;
     }
-  },
-
-  /** Send a delivery request by hand, as the ordering agent would. */
-  sendTestRequest: async (input: TestRequestInput): Promise<Job> => {
-    let response: Response;
-    try {
-      response = await fetch(`${FOODPANDA_BASE}/api/foodpanda/jobs`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(testMessage(input)),
-      });
-    } catch {
-      throw new Error(FOODPANDA_OFFLINE);
-    }
-    return unwrap<Job>(response);
   },
 
   /**

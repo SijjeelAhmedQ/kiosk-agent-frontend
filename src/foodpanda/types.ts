@@ -165,13 +165,3 @@ export type LogRow =
   /** Waiting on a request, or released by one. `step` null means released. */
   | { kind: 'waiting'; step: AwaitingStep; message: string }
   | { kind: 'error'; message: string };
-
-/** What the test form sends — the same message the ordering agent sends. */
-export interface TestRequestInput {
-  orderNumber: string;
-  itemName: string;
-  quantity: number;
-  distanceKm: number;
-  dropoffAddress: string;
-  notes: string;
-}
