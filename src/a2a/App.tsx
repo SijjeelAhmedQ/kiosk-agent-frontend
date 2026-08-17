@@ -2,11 +2,12 @@ import { useCallback, useEffect, useState } from 'react';
 import { Button } from 'antd';
 import { Panel } from '@/components/Panel';
 import { a2aApi } from './api';
+import { Delivery } from './components/Delivery';
 import { ErrandForm } from './components/ErrandForm';
 import { Outcome } from './components/Outcome';
 import { Transcript } from './components/Transcript';
 import { useNegotiation } from './useNegotiation';
-import type { A2AHealth, StartA2ARunInput } from './types';
+import type { A2AHealth, DeliveryHealth, StartA2ARunInput } from './types';
 
 /**
  * The A2A console.
@@ -39,7 +40,13 @@ function StatusPill({ status, busy }: { status: string; busy: boolean }) {
 }
 
 /** Both sides' readiness, said separately — they are configured separately. */
-function Services({ health }: { health: A2AHealth | null }) {
+function Services({
+  health,
+  delivery,
+}: {
+  health: A2AHealth | null;
+  delivery: DeliveryHealth | null;
+}) {
   if (!health) {
     return (
       <div className="fk-status a2a-services-down">
@@ -70,6 +77,30 @@ function Services({ health }: { health: A2AHealth | null }) {
           </span>
         </span>
       ))}
+
+      {/* The third service. A paid take-away order is handed straight to it, so
+          "there is no courier" is worth knowing before the money moves rather
+          than from a tool result afterwards. It gates nothing — a negotiation
+          runs and pays either way, and the A2A service is explicit that a failed
+          handover leaves a bought order without a rider. */}
+      <span
+        className="fk-status"
+        title={
+          delivery
+            ? (delivery.dispatcher.problem ??
+              `${delivery.activeJobs} job${delivery.activeJobs === 1 ? '' : 's'} on the board`)
+            : 'The delivery agent is not answering on port 8103. A paid order would have no rider.'
+        }
+      >
+        <span
+          className={`fk-dot ${
+            delivery?.dispatcher.ready ? 'fk-dot-ok' : delivery ? 'fk-dot-busy' : 'fk-dot-bad'
+          }`}
+          aria-hidden
+        />
+        Delivery
+        <span className="fk-pill-mono">{delivery?.service ?? 'offline'}</span>
+      </span>
     </div>
   );
 }
@@ -77,10 +108,15 @@ function Services({ health }: { health: A2AHealth | null }) {
 export default function App() {
   const run = useNegotiation();
   const [health, setHealth] = useState<A2AHealth | null>(null);
+  const [delivery, setDelivery] = useState<DeliveryHealth | null>(null);
   const [couponsKey, setCouponsKey] = useState(0);
 
+  // Two services, asked at once: neither answer depends on the other and the
+  // strip has nothing useful to say until it has both.
   const refreshHealth = useCallback(async () => {
-    setHealth(await a2aApi.health());
+    const [a2a, courier] = await Promise.all([a2aApi.health(), a2aApi.deliveryHealth()]);
+    setHealth(a2a);
+    setDelivery(courier);
   }, []);
 
   useEffect(() => {
@@ -160,7 +196,7 @@ export default function App() {
 
       <main className="fk-content">
         <div className="fk-status-bar fk-rise">
-          <Services health={health} />
+          <Services health={health} delivery={delivery} />
         </div>
 
         <div className="a2a-columns">
@@ -213,6 +249,18 @@ export default function App() {
                 status={run.status}
               />
             </Panel>
+
+            {/* Under the wallet, not inside it. That panel answers "what did
+                this cost", which is settled the moment the charge goes through;
+                this one answers "where is the food", which is still moving after
+                both agents have stopped talking. Absent until something has been
+                run — there is nothing to report before then. */}
+            <Delivery
+              delivery={run.delivery}
+              busy={run.busy}
+              status={run.status}
+              service={delivery?.service ?? null}
+            />
           </div>
         </div>
       </main>

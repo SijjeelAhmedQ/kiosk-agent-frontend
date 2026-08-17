@@ -106,6 +106,7 @@ button,
 .ant-select-selector,
 .fk-chip,
 .fk-choice,
+.fk-source,
 .fk-things-more,
 .fk-raw > summary {
   -webkit-tap-highlight-color: transparent;
@@ -115,6 +116,7 @@ button,
 .ant-btn,
 .fk-chip,
 .fk-choice,
+.fk-source,
 .fk-raw > summary {
   -webkit-user-select: none;
   user-select: none;
@@ -795,9 +797,35 @@ button,
   /* Nothing here may be squeezed by a tall neighbour except the order box,
      which asks for it below. */
   gap: 0;
+
+  /* …and a safety net under all of that, because the form is no longer a fixed
+     set of fields. Turning "Where it goes" on adds a whole band of controls to a
+     card that was sized without them; with every child `flex: 0 0 auto` the
+     extra height had nowhere to go, and `.fk-panel { overflow: hidden }` then
+     cut it off — the coupon and the cash limit disappeared out of the bottom of
+     the card, still focusable, no longer on screen. A scroll that only exists
+     when the body is genuinely overrun costs nothing when it is not, and it is
+     the difference between a form that grows and a form that loses fields.
+
+     No `scrollbar-gutter`: reserving the track would narrow the form by ten
+     pixels on the right in the case that is nearly always true — nothing to
+     scroll — to spare a reflow in the case that is not. And when the bar does
+     arrive it arrives with a whole band of new fields, which is not a moment
+     anyone notices ten pixels in. */
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .fk-panel-errand > .fk-panel-body > * {
   flex: 0 0 auto;
+}
+
+/* With the delivery band open, the order box stops taking the spare height and
+   hands it to the fields that just appeared. A six-line box for "Order one Big
+   Mac" was never worth a scrollbar under it. */
+.fk-panel-errand:has(.fk-where-on) > .fk-panel-body > textarea.fk-order-box,
+.fk-panel-errand:has(.fk-where-on) > .fk-panel-body > .ant-input-textarea {
+  flex: 0 0 auto;
+  max-height: none;
 }
 
 .fk-panel-errand .fk-eyebrow {
@@ -2252,50 +2280,351 @@ html[data-theme='dark'] .fk-chip[aria-pressed='true']:hover:not(:disabled) {
  * operator turns on rather than as three more fields in the form above it. That
  * matters more than it sounds: switching it on changes what the errand *is* —
  * from an order placed at a counter to one that has to reach somebody — and a
- * control that changes the shape of a run should not look like the cash box. */
-.fk-delivery {
+ * control that changes the shape of a run should not look like the cash box.
+ *
+ * Switched on it also picks up an amber edge and a tint. The block is the one
+ * control on this form that changes what the run *does*, and "is delivery on?"
+ * should be answerable from across a desk rather than by finding a 48px toggle
+ * and reading which end the knob is at. */
+.fk-where {
+  position: relative;
   margin-top: 16px;
   padding: 13px 15px;
-  border-radius: 18px;
+  border-radius: 20px;
   background: var(--fk-surface-sunken);
+  box-shadow: inset 0 0 0 1px transparent;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+.fk-where-on {
+  background: var(--fk-amber-surface);
+  box-shadow: inset 0 0 0 1px var(--fk-amber-edge);
 }
 
-.fk-delivery-head {
+.fk-where-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 14px;
+  gap: 12px;
 }
 
-.fk-delivery-head .fk-eyebrow {
-  margin-top: 0;
+/* The glyph tile, at two thirds of the panel header's. It carries the state as
+   well as the subject: cream and quiet for a counter order, amber for one that
+   has to reach somebody. */
+.fk-where-glyph {
+  display: inline-flex;
+  flex: none;
+  height: 34px;
+  width: 34px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: var(--fk-surface);
+  color: var(--fk-text-faint);
+  box-shadow: 0 0 0 1px var(--fk-ring);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+.fk-where-glyph > svg {
+  height: 18px;
+  width: 18px;
+}
+.fk-where-on .fk-where-glyph {
+  background: var(--fk-amber);
+  color: var(--fk-ink);
+  box-shadow: none;
 }
 
-.fk-delivery-body {
+.fk-where-said {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.fk-where-said .fk-eyebrow {
+  margin: 0 0 2px;
+}
+
+/* Two lines at the very most, and the sentence is written to fit one. The
+   address is on the card below; this line says who carries it. */
+.fk-where-line {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--fk-text-faint);
+}
+
+/* The body slides in rather than appearing. The block doubles in height when it
+   opens, and a form that changes shape between one frame and the next is a form
+   whose fields are somewhere else by the time the eye gets there. */
+.fk-where-body {
   display: flex;
   flex-direction: column;
-  gap: 11px;
+  gap: 10px;
   margin-top: 13px;
+  animation: fk-where-open 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes fk-where-open {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
 }
 
-/* The fix itself: where the rider is being sent. Given its own row on paper —
-   this is the one line on the form that, wrong, sends food to a stranger. */
-.fk-delivery-fix {
+/* The drop. The largest thing in the block on purpose — it is the one line on
+   this form that, wrong, sends somebody else's dinner to a stranger. */
+.fk-where-drop {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 13px;
+  border-radius: 15px;
+  background: var(--fk-surface);
+  box-shadow: 0 0 0 1px var(--fk-ring), var(--fk-shadow-sm);
+}
+
+.fk-where-pin {
+  display: inline-flex;
+  flex: none;
+  height: 32px;
+  width: 32px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--fk-leaf-surface);
+  color: var(--fk-leaf-ink);
+}
+.fk-where-pin > svg {
+  height: 17px;
+  width: 17px;
+}
+
+.fk-where-drop-main {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.fk-where-drop-name {
+  font-family: var(--fk-font-display);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--fk-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* A drop with no name is not a fault — the coordinates are enough to deliver
+   against — so it is said in the faint voice rather than the flame one. */
+.fk-where-drop-unnamed {
+  font-weight: 600;
+  color: var(--fk-text-faint);
+  font-style: italic;
+}
+
+.fk-where-drop-fix {
   display: flex;
   flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 2px;
+  font-family: var(--fk-font-mono);
+  font-size: 11.5px;
+  color: var(--fk-text-faint);
+}
+.fk-where-drop-acc::before {
+  content: '·';
+  margin-right: 8px;
+}
+
+/* No drop yet: said, not left blank. A block that opens onto three pills and
+   nothing else looks like it is still loading. */
+.fk-where-empty {
+  display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 9px 12px;
-  border-radius: 13px;
+  gap: 8px;
+  margin: 0;
+  padding: 11px 13px;
+  border-radius: 15px;
+  background: var(--fk-surface);
+  box-shadow: 0 0 0 1px var(--fk-ring);
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--fk-text-faint);
+}
+
+/* ── The three sources ──────────────────────────────────────────────────── */
+
+/* One row, three equal pills, the live one marked. They used to be buttons that
+   came and went with the state — "Use my saved address" vanished the moment it
+   was in use — so the row of choices moved under the cursor and never showed
+   which one you were on. Fixed positions, and `aria-pressed` doing the saying. */
+.fk-where-sources {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.fk-source {
+  appearance: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 62px;
+  padding: 9px 6px;
+  border: 0;
+  border-radius: 15px;
+  background: var(--fk-surface);
+  box-shadow: 0 0 0 1px var(--fk-ring);
+  color: var(--fk-text-soft);
+  font-family: var(--fk-font-sans);
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.25;
+  text-align: center;
+  cursor: pointer;
+  transition: background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease,
+    transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@media (hover: hover) {
+  .fk-source:not(:disabled):hover {
+    color: var(--fk-ink);
+    box-shadow: 0 0 0 1px var(--fk-border-strong);
+    transform: translateY(-1px);
+  }
+}
+.fk-source:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* Picked. Ink on amber, the same "this one is selected" the chips use — the row
+   has to answer "which of the three am I on" without being read word by word. */
+.fk-source[aria-pressed='true'] {
+  background: var(--fk-amber);
+  color: var(--fk-ink);
+  box-shadow: none;
+}
+.fk-source[aria-pressed='true'] .fk-source-glyph {
+  color: var(--fk-ink);
+}
+
+.fk-source:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.fk-source-glyph {
+  display: inline-flex;
+  color: var(--fk-text-faint);
+  transition: color 0.18s ease;
+}
+.fk-source-glyph > svg {
+  height: 18px;
+  width: 18px;
+}
+@media (hover: hover) {
+  .fk-source:not(:disabled):hover .fk-source-glyph {
+    color: var(--fk-ink);
+  }
+}
+
+.fk-source-label {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Typed coordinates, in a well of their own so the two number boxes and the
+   button that commits them read as one act rather than as three more fields. */
+.fk-where-typed {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 13px;
+  border-radius: 15px;
   background: var(--fk-surface);
   box-shadow: 0 0 0 1px var(--fk-ring);
 }
+/* Latitude and longitude are the same kind of number and take the same room —
+   the shared rule sizes a coupon picker against a cash box, which is not this. */
+.fk-where-typed .fk-fields {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
 
-.fk-delivery-actions {
+/* A warning the operator has to act on — the device refused, the courier is not
+   configured. Flame, on a tinted strip, with the bar down the left edge that
+   this design reserves for "read this one". */
+.fk-where-warn {
+  margin: 0;
+  padding: 10px 13px;
+  border-radius: 13px;
+  background: var(--fk-flame-surface);
+  box-shadow: inset 3px 0 0 var(--fk-flame);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--fk-flame-ink);
+}
+
+/* Who would actually carry it. A footer to the block rather than a field in it:
+   nothing here is chosen, it is reported. */
+.fk-where-courier {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  padding: 9px 13px;
+  border-radius: 15px;
+  background: var(--fk-surface);
+  box-shadow: 0 0 0 1px var(--fk-ring);
+}
+.fk-where-courier-out {
+  background: var(--fk-flame-surface);
+  box-shadow: inset 3px 0 0 var(--fk-flame);
+}
+
+.fk-where-courier-glyph {
+  display: inline-flex;
+  flex: none;
+  color: var(--fk-text-faint);
+}
+.fk-where-courier-glyph > svg {
+  height: 18px;
+  width: 18px;
+}
+.fk-where-courier-out .fk-where-courier-glyph {
+  color: var(--fk-flame-ink);
+}
+
+.fk-where-courier-said {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.fk-where-courier-name {
+  font-family: var(--fk-font-display);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--fk-ink);
+}
+.fk-where-courier-out .fk-where-courier-name {
+  color: var(--fk-flame-ink);
+}
+
+.fk-where-courier-note {
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--fk-text-faint);
+}
+.fk-where-courier-out .fk-where-courier-note {
+  color: var(--fk-flame-ink);
+}
+
+/* Below this the three pills are narrower than the words on them, and an
+   ellipsis in the middle of "Saved address" is worse than a second row. */
+@media (max-width: 420px) {
+  .fk-where-sources {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .fk-where-sources > :last-child {
+    grid-column: span 2;
+  }
 }
 
 /* Anyone who has asked the OS for less movement gets none of it. */

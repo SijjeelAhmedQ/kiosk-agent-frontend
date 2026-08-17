@@ -13,9 +13,32 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { a2aApi } from './api';
-import type { A2AEvent, A2ARunStatus, Entry, StartA2ARunInput, WalletSummary } from './types';
+import type {
+  A2ADelivery,
+  A2AEvent,
+  A2ARunStatus,
+  Entry,
+  StartA2ARunInput,
+  WalletSummary,
+} from './types';
 
 const BUSY: A2ARunStatus[] = ['queued', 'running'];
+
+/**
+ * The delivery out of a tool result, or null when that result was not about one.
+ *
+ * Checked field by field rather than cast: `detail` is whatever a tool happened
+ * to return, it is reshaped on the way here (see `agent/a2a/trace.py`), and a
+ * cast would have this hook hand the delivery panel an object that only claims
+ * to be a delivery. `ok` is the one field the service always sets on it, so it
+ * is the one field worth testing for.
+ */
+function deliveryIn(detail: Record<string, unknown> | null | undefined): A2ADelivery | null {
+  const handed = detail?.delivery;
+  if (typeof handed !== 'object' || handed === null) return null;
+  const { ok } = handed as { ok?: unknown };
+  return typeof ok === 'boolean' ? (handed as A2ADelivery) : null;
+}
 
 interface Negotiation {
   status: A2ARunStatus;
@@ -28,6 +51,11 @@ interface Negotiation {
   paid: boolean;
   orderNumber: string | null;
   merchantTaskId: string | null;
+  /**
+   * Where the order went once it was paid for, or null for a negotiation that
+   * never got that far — and for a dine-in one, which has nowhere to go.
+   */
+  delivery: A2ADelivery | null;
   error: string | null;
   start: (input: StartA2ARunInput) => Promise<void>;
   cancel: () => Promise<void>;
@@ -43,6 +71,7 @@ export function useNegotiation(): Negotiation {
   const [paid, setPaid] = useState(false);
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
   const [merchantTaskId, setMerchantTaskId] = useState<string | null>(null);
+  const [delivery, setDelivery] = useState<A2ADelivery | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const runId = useRef<string | null>(null);
@@ -87,7 +116,14 @@ export function useNegotiation(): Negotiation {
         });
         break;
 
-      case 'tool_result':
+      case 'tool_result': {
+        // The handover rides in on the payment. Read before the rows are folded
+        // so a tool result that carries one is not just a line in a strip: the
+        // merchant pays, the delivery agent takes the order, and the only place
+        // that shows on the wire is right here.
+        const handed = deliveryIn(event.detail);
+        if (handed) setDelivery(handed);
+
         setEntries((rows) =>
           rows.map((row) =>
             row.kind === 'tools' && row.calls.some((c) => c.toolUseId === event.toolUseId)
@@ -103,6 +139,7 @@ export function useNegotiation(): Negotiation {
           ),
         );
         break;
+      }
 
       case 'message':
         if (!event.text.trim()) break;
@@ -154,6 +191,7 @@ export function useNegotiation(): Negotiation {
     setPaid(false);
     setOrderNumber(null);
     setMerchantTaskId(null);
+    setDelivery(null);
     setError(null);
   }, []);
 
@@ -190,6 +228,7 @@ export function useNegotiation(): Negotiation {
     paid,
     orderNumber,
     merchantTaskId,
+    delivery,
     error,
     start,
     cancel,

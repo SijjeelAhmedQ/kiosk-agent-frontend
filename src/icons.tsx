@@ -136,3 +136,33 @@ export function QuestionCircle(props: Props) {
     </Glyph>
   );
 }
+
+/**
+ * Asking the device where it is.
+ *
+ * The three ways of naming a drop each carry an icon, and they have to be
+ * distinguishable at 16px in a row of pills — which rules out three variations
+ * on a map pin. So: a house for the saved address, a sight for the device's own
+ * fix, a keyboard for the pair of numbers typed by hand.
+ */
+export function Crosshair(props: Props) {
+  return (
+    <Glyph {...props}>
+      <circle cx="12" cy="12" r="7.2" />
+      <circle cx="12" cy="12" r="2.4" />
+      <path d="M12 2.2v2.6M12 19.2v2.6M2.2 12h2.6M19.2 12h2.6" />
+    </Glyph>
+  );
+}
+
+/** Coordinates typed by hand, when the device will not say. */
+export function Keyboard(props: Props) {
+  return (
+    <Glyph {...props}>
+      <rect x="2.6" y="6" width="18.8" height="12" rx="2.6" />
+      <path d="M6.4 9.6h.01M9.8 9.6h.01M13.2 9.6h.01M16.6 9.6h.01" />
+      <path d="M6.4 13h.01M9.8 13h.01M13.2 13h.01M16.6 13h.01" />
+      <path d="M8.4 15.9h7.2" />
+    </Glyph>
+  );
+}

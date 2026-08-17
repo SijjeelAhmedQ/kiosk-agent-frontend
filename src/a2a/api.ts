@@ -8,11 +8,23 @@
  */
 
 import type { CouponOption } from '@/types';
-import type { A2AEvent, A2AHealth, StartA2ARunInput } from './types';
+import type { A2AEvent, A2AHealth, DeliveryHealth, StartA2ARunInput } from './types';
 
 /** Where the A2A service listens. Override with VITE_A2A_BASE_URL. */
 export const A2A_BASE =
   (import.meta.env.VITE_A2A_BASE_URL as string | undefined) ?? 'http://localhost:8101';
+
+/**
+ * Where the delivery agent listens. Override with VITE_FOODPANDA_BASE_URL.
+ *
+ * Declared here rather than imported from `src/foodpanda/api.ts`, for the same
+ * reason this whole folder exists: the three consoles are separate entries and a
+ * change to one must not be able to reach another. What is shared is the design
+ * system and the URL of a public health endpoint, which is a fact about the
+ * deployment, not code. Same environment variable, so a moved port moves once.
+ */
+export const DELIVERY_BASE =
+  (import.meta.env.VITE_FOODPANDA_BASE_URL as string | undefined) ?? 'http://localhost:8103';
 
 export const A2A_OFFLINE =
   'The A2A service is not running. Start it in friends-kitchen-agent-backend with: ' +
@@ -47,6 +59,26 @@ export const a2aApi = {
   health: async (): Promise<A2AHealth | null> => {
     try {
       return await unwrap<A2AHealth>(await fetch(`${A2A_BASE}/api/a2a/health`));
+    } catch {
+      return null;
+    }
+  },
+
+  /**
+   * Is there a courier to hand a paid order to?
+   *
+   * Its own call rather than a field on `health`, because it is its own service:
+   * the A2A server does not know whether the delivery agent is up, and asking it
+   * to find out would put a second network hop inside the health check that this
+   * page polls. Null is "not answering", which the strip renders — it is never
+   * a reason not to run a negotiation.
+   */
+  deliveryHealth: async (): Promise<DeliveryHealth | null> => {
+    try {
+      const response = await fetch(`${DELIVERY_BASE}/api/foodpanda/health`);
+      if (!response.ok) return null;
+      const payload = (await response.json()) as Envelope<DeliveryHealth>;
+      return payload.data ?? null;
     } catch {
       return null;
     }

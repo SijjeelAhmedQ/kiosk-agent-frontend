@@ -29,11 +29,63 @@ export interface A2AHealth {
   busy: boolean;
 }
 
+/**
+ * The delivery agent, as this console needs to know it.
+ *
+ * A third service on a third port, reported beside the other two because a
+ * negotiation that ends in a paid take-away order hands it straight over — and
+ * finding out the courier was never running is worth knowing before the money
+ * moves rather than after. Read as a status, never as a gate: a dead courier
+ * does not stop two agents agreeing a price, and the A2A service is explicit
+ * that a failed handover leaves a paid order rather than undoing one.
+ *
+ * The slice is deliberately small. `src/foodpanda/types.ts` describes the whole
+ * of that service for the board that drives it; this is the strip's four words.
+ */
+export interface DeliveryHealth {
+  service: string;
+  dispatcher: { ready: boolean; problem: string | null };
+  activeJobs: number;
+}
+
 export interface StartA2ARunInput {
   instruction: string;
   couponCode?: string | null;
   cashLimit: number;
   customerId?: string | null;
+}
+
+/**
+ * The delivery a paid negotiation was handed over to.
+ *
+ * Not a top-level event: it arrives inside the `detail` of the merchant's
+ * payment tool result, because on this service the handover *is* part of paying.
+ * `agent/a2a/merchant_tools.py` calls `agent/a2a/delivery.py` the moment the
+ * charge goes through and puts what came back under `delivery`, so the console
+ * reads it from there rather than asking the delivery board a second time.
+ *
+ * Every field but `ok` is optional, and deliberately so: a failed handover
+ * carries `error` and nothing else, and a dine-in order carries no delivery at
+ * all. See `agent/a2a/delivery.py` for the two shapes.
+ */
+export interface A2ADelivery {
+  ok: boolean;
+  /** Why there is no rider, when `ok` is false. The order is still paid for. */
+  error?: string;
+  deliveryService?: string;
+  jobId?: string;
+  /** The courier's own word — `requested`, `courier_assigned`, `delivered`… */
+  status?: string;
+  /** The only field allowed to mean "the customer has it". */
+  delivered?: boolean;
+  deliveringTo?: string;
+  pickupFrom?: string;
+  /** Straight-line km between the two — a ranking, not a driving distance. */
+  distanceKm?: number | null;
+  etaMinutes?: number | null;
+  fee?: string | null;
+  /** The service's own sentence about what has and has not happened yet. */
+  note?: string;
 }
 
 export interface WalletSummary {

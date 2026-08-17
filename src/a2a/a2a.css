@@ -51,6 +51,19 @@
   overscroll-behavior: contain;
 }
 
+/* The column holds two cards once a run has handed an order over. They do not
+   split it evenly: the wallet is the taller read and takes the slack, the
+   delivery sizes to the six steps of its journey and gives the rest back. Both
+   may still shrink — the shared `min-height: 0` above is what lets them — so a
+   long report scrolls inside its own card rather than pushing the delivery off
+   the bottom of a page that has no scroll. */
+.a2a-columns > .fk-col-stack > .fk-panel {
+  flex: 1 1 auto;
+}
+.a2a-columns > .fk-col-stack > .a2a-panel-delivery {
+  flex: 0 1 auto;
+}
+
 /* Below a laptop the third column has nowhere to go, so the outcome moves under
    the conversation rather than being squeezed into a strip. */
 @media (max-width: 1280px) {
@@ -940,6 +953,88 @@ textarea.a2a-errand-box {
   content: '!';
   background: var(--fk-flame);
   color: #ffffff;
+}
+
+/* --------------------------------------------------------------------------
+ * The delivery
+ * -------------------------------------------------------------------------- */
+
+/* The route and the journey are drawn by the shared sheet — the courier is the
+   same courier on both consoles and its steps should not be two designs. What
+   is here is only what this column needs on top: it is 300–340px wide, where the
+   errand console's delivery card is half a page.
+
+   The panel is the third card in a stack that already scrolls, so its own body
+   is left alone and the rules below are all type and spacing. */
+
+/* The service's own sentence about what has *not* happened yet. Amber, and
+   marked down the left edge, because it is the line that stops "a courier has
+   it" being read as "it arrived" — which is the single most likely
+   misunderstanding on this page. */
+.a2a-delivery-note {
+  margin: 14px 0 0;
+  padding: 10px 13px;
+  border-radius: 13px;
+  background: var(--fk-amber-surface);
+  box-shadow: inset 3px 0 0 var(--fk-amber);
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--fk-amber-ink);
+}
+
+/* Paid, and nobody came for it. The one outcome on this panel that carries the
+   flame, for the same reason the unpaid verdict does: it is the state somebody
+   has to do something about. */
+.a2a-delivery-fault {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--fk-flame-surface);
+  box-shadow: inset 3px 0 0 var(--fk-flame);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--fk-flame-ink);
+}
+
+/* The way to the board where a rider is actually asked for. A full-width row
+   rather than a link in a sentence: it is the only action this panel offers, and
+   an action that has to be found inside prose is one nobody takes. */
+.a2a-delivery-link {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 14px;
+  padding: 11px 15px;
+  border-radius: 999px;
+  background: var(--fk-surface-sunken);
+  font-family: var(--fk-font-display);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--fk-ink);
+  text-decoration: none;
+  transition: background-color 0.18s ease, transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.a2a-delivery-link .fk-nav-link-arrow {
+  margin-left: auto;
+}
+@media (hover: hover) {
+  .a2a-delivery-link:hover {
+    background: var(--fk-amber-surface);
+    transform: translateX(2px);
+  }
+}
+
+/* Why there is no address field anywhere on this console. Set as a footnote —
+   the smallest type on the panel, held off by a hairline — because it is read
+   once and never again, but the once matters: without it the missing field
+   reads as a missing feature. */
+.a2a-delivery-why {
+  margin: 16px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--fk-border);
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--fk-text-faint);
 }
 
 /* --------------------------------------------------------------------------
