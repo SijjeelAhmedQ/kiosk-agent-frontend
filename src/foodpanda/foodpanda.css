@@ -173,25 +173,6 @@
   font-weight: 600;
 }
 
-/* What is real and what is simulated, said before anybody reads a status. Quiet
-   but not hidden: a note somebody has to go looking for is a note that exists
-   for the author's conscience rather than for the reader. */
-.fp-disclosure {
-  flex: none;
-  margin: 0 0 16px;
-  padding: 11px 16px;
-  border-radius: 14px;
-  background: var(--fk-surface-sunken);
-  border-left: 3px solid var(--fk-amber);
-  font-size: 12.5px;
-  line-height: 1.65;
-  color: var(--fk-text-soft);
-}
-
-.fp-disclosure strong {
-  color: var(--fk-text);
-}
-
 /* --------------------------------------------------------------------------
  * The board
  * -------------------------------------------------------------------------- */

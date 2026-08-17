@@ -2,12 +2,14 @@ import { useEffect, useMemo, useState, type KeyboardEvent } from 'react';
 import { Button, Input, InputNumber, Select, Tooltip } from 'antd';
 import type { DefaultOptionType } from 'antd/es/select';
 import { Panel } from '@/components/Panel';
+import { useUserLocation } from '@/hooks/useUserLocation';
 import { a2aApi } from '../api';
-import type { StartA2ARunInput } from '../types';
+import { DeliveryField } from './DeliveryField';
+import type { DeliveryHealth, StartA2ARunInput, UserLocation } from '../types';
 import type { CouponOption, CouponStatus } from '@/types';
 
 /**
- * What the buyer is sent out with: an errand, a coupon, a ceiling.
+ * What the buyer is sent out with: an errand, a drop, a coupon, a ceiling.
  *
  * Deliberately the same three fields as the errand console's own form, minus
  * the mode switch. The operator is doing the same thing either way — writing an
@@ -54,6 +56,14 @@ interface Props {
   blockedReason: string | null;
   /** Bumped when a run settles, to re-read what is still spendable. */
   couponsKey: number;
+  /**
+   * The courier a paid take-away order would go to, and whether it could — so
+   * the operator finds out here, where the delivery is arranged, rather than at
+   * the handover after the money has moved.
+   */
+  delivery: DeliveryHealth | null;
+  /** The address the service delivers to when no drop is named. Null if none. */
+  savedAddress: UserLocation | null;
 }
 
 /* The coupon picker, drawn the way the errand console draws its own.
@@ -136,11 +146,26 @@ function couponLabel(coupon: CouponOption): string {
   return `${coupon.couponCode} — ${worthOf(coupon)} · ${STATUS_LABEL[coupon.status]}`;
 }
 
-export function ErrandForm({ onRun, onCancel, busy, blockedReason, couponsKey }: Props) {
+export function ErrandForm({
+  onRun,
+  onCancel,
+  busy,
+  blockedReason,
+  couponsKey,
+  delivery,
+  savedAddress,
+}: Props) {
   const [instruction, setInstruction] = useState('Order one Big Mac®');
   const [cashLimit, setCashLimit] = useState<number | null>(2500);
   const [couponCode, setCouponCode] = useState<string | null>(null);
   const [coupons, setCoupons] = useState<CouponOption[]>([]);
+
+  // Where it goes. Held here rather than inside `DeliveryField` because the send
+  // button needs it: a delivery that was asked for and never given a drop must
+  // stop the errand rather than quietly become the default one. The fix itself
+  // lives in the hook, which owns the browser's three answers.
+  const [deliverTo, setDeliverTo] = useState(false);
+  const where = useUserLocation();
 
   useEffect(() => {
     let live = true;
@@ -189,13 +214,23 @@ export function ErrandForm({ onRun, onCancel, busy, blockedReason, couponsKey }:
       ? 'Say what the buyer should order.'
       : !couponCode && cash <= 0
         ? 'Give the buyer a coupon, a cash limit, or both.'
-        : null);
+        : deliverTo && !where.location
+          ? 'Say where the delivery goes, or switch it off to use the saved address.'
+          : null);
 
   const canRun = reason === null;
 
   const submit = () => {
     if (!canRun || busy) return;
-    onRun({ instruction: instruction.trim(), cashLimit: cash, couponCode });
+    onRun({
+      instruction: instruction.trim(),
+      cashLimit: cash,
+      couponCode,
+      // Null is not "no delivery" on this service — a paid take-away order goes
+      // to the customer's saved address either way. It is "nobody named another
+      // drop", and the switch being off is exactly that.
+      userLocation: deliverTo ? where.location : null,
+    });
   };
 
   // Ctrl/⌘+Enter from the errand box sends it. Whoever runs a dozen of these in
@@ -251,7 +286,11 @@ export function ErrandForm({ onRun, onCancel, busy, blockedReason, couponsKey }:
                   loading={busy}
                   block
                 >
-                  {busy ? 'Negotiating…' : 'Send the buyer out →'}
+                  {busy
+                    ? 'Negotiating…'
+                    : deliverTo
+                      ? 'Send it out for delivery →'
+                      : 'Send the buyer out →'}
                 </Button>
               </span>
             </Tooltip>
@@ -322,6 +361,24 @@ export function ErrandForm({ onRun, onCancel, busy, blockedReason, couponsKey }:
           </button>
         ))}
       </div>
+
+      {/* Between the errand and the money, which is the order the three
+          questions are actually asked in: what to buy, where it goes, what it
+          may spend. Same place it sits on the errand console's form. */}
+      <DeliveryField
+        wanted={deliverTo}
+        onWanted={setDeliverTo}
+        location={where.location}
+        status={where.status}
+        problem={where.problem}
+        courier={delivery}
+        saved={savedAddress}
+        busy={busy}
+        onDetect={where.detect}
+        onManual={where.setManual}
+        onLabel={where.setLabel}
+        onClear={where.clear}
+      />
 
       {/* Settled against the footer rather than following the chips: the two
           halves of the form then sit at the two ends of the card on a tall

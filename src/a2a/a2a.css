@@ -956,85 +956,166 @@ textarea.a2a-errand-box {
 }
 
 /* --------------------------------------------------------------------------
- * The delivery
+ * Where it goes
  * -------------------------------------------------------------------------- */
 
-/* The route and the journey are drawn by the shared sheet — the courier is the
-   same courier on both consoles and its steps should not be two designs. What
-   is here is only what this column needs on top: it is 300–340px wide, where the
-   errand console's delivery card is half a page.
+/* The delivery block on the errand form. The skeleton is the shared sheet's
+   `.fk-where` — the same head, the same drop card, the same courier footer as the
+   errand console, because it is the same question and an operator should not have
+   to learn it twice. What is here is only what this column needs on top: it is
+   345–400px wide and it never scrolls, so the parts that cost height are drawn
+   shorter than they are over there.
 
-   The panel is the third card in a stack that already scrolls, so its own body
-   is left alone and the rules below are all type and spacing. */
+   Two of the rules below are not decoration. The band appears out of nowhere in a
+   card that was sized without it, and both the body and the errand box have to
+   give way — see the pair marked "safety net". */
 
-/* The service's own sentence about what has *not* happened yet. Amber, and
-   marked down the left edge, because it is the line that stops "a courier has
-   it" being read as "it arrived" — which is the single most likely
-   misunderstanding on this page. */
-.a2a-delivery-note {
-  margin: 14px 0 0;
-  padding: 10px 13px;
-  border-radius: 13px;
+/* Slightly tighter than the shared block: the column is narrower, and 15px of
+   side padding inside a 20px radius inside a panel's own padding starts to read
+   as three nested boxes. */
+.a2a-where {
+  margin-top: 16px;
+  padding: 12px 13px;
+}
+
+/* Where the drop came from, on the card itself. The segmented row below marks
+   the same thing, but the card is what gets read — and "is this the address on
+   file or something I typed" is a question about the address, not about the row
+   of buttons. */
+.a2a-where-from {
+  flex: none;
+  background: var(--fk-surface-sunken);
+  color: var(--fk-text-faint);
+  font-size: 10.5px;
+  letter-spacing: 0.02em;
+}
+.fk-where-on .a2a-where-from {
   background: var(--fk-amber-surface);
-  box-shadow: inset 3px 0 0 var(--fk-amber);
-  font-size: 12.5px;
-  line-height: 1.55;
   color: var(--fk-amber-ink);
 }
 
-/* Paid, and nobody came for it. The one outcome on this panel that carries the
-   flame, for the same reason the unpaid verdict does: it is the state somebody
-   has to do something about. */
-.a2a-delivery-fault {
-  margin: 0;
-  padding: 12px 14px;
+/* ── The three sources, as one segmented row ─────────────────────────────── */
+
+/* The errand console draws these as three 62px cards. Here they are one 36px
+   row: this form has a coupon picker and a cash limit below it and no scroll to
+   hide them in, so the height the taller pills spend on a second line is height
+   the fields at the bottom of the card cannot spare. Nothing is lost with it —
+   the line under the row says what the marked source is, which the cards could
+   only imply. */
+.a2a-where-sources {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 3px;
+  padding: 3px;
   border-radius: 14px;
-  background: var(--fk-flame-surface);
-  box-shadow: inset 3px 0 0 var(--fk-flame);
-  font-size: 13px;
-  line-height: 1.6;
-  color: var(--fk-flame-ink);
+  background: var(--fk-surface);
+  box-shadow: 0 0 0 1px var(--fk-ring);
 }
 
-/* The way to the board where a rider is actually asked for. A full-width row
-   rather than a link in a sentence: it is the only action this panel offers, and
-   an action that has to be found inside prose is one nobody takes. */
-.a2a-delivery-link {
+.a2a-source {
+  appearance: none;
   display: flex;
   align-items: center;
-  gap: 9px;
-  margin-top: 14px;
-  padding: 11px 15px;
-  border-radius: 999px;
-  background: var(--fk-surface-sunken);
+  justify-content: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 6px 4px;
+  border: 0;
+  border-radius: 11px;
+  background: transparent;
+  color: var(--fk-text-soft);
   font-family: var(--fk-font-display);
-  font-size: 12.5px;
+  font-size: 11.5px;
   font-weight: 700;
-  color: var(--fk-ink);
-  text-decoration: none;
-  transition: background-color 0.18s ease, transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
-}
-.a2a-delivery-link .fk-nav-link-arrow {
-  margin-left: auto;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: background-color 0.18s ease, color 0.18s ease;
 }
 @media (hover: hover) {
-  .a2a-delivery-link:hover {
-    background: var(--fk-amber-surface);
-    transform: translateX(2px);
+  .a2a-source:not(:disabled):hover {
+    background: var(--fk-surface-sunken);
+    color: var(--fk-ink);
   }
 }
 
-/* Why there is no address field anywhere on this console. Set as a footnote —
-   the smallest type on the panel, held off by a hairline — because it is read
-   once and never again, but the once matters: without it the missing field
-   reads as a missing feature. */
-.a2a-delivery-why {
-  margin: 16px 0 0;
-  padding-top: 12px;
-  border-top: 1px solid var(--fk-border);
-  font-size: 11.5px;
-  line-height: 1.5;
+/* Picked. Ink on amber, the same "this one is selected" the chips and the errand
+   console's own pills use — the row has to answer "which of the three am I on"
+   without being read word by word. */
+.a2a-source[aria-pressed='true'] {
+  background: var(--fk-amber);
+  color: var(--fk-ink);
+}
+.a2a-source[aria-pressed='true'] .a2a-source-glyph {
+  color: var(--fk-ink);
+}
+
+.a2a-source:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.a2a-source-glyph {
+  display: inline-flex;
+  flex: none;
   color: var(--fk-text-faint);
+  transition: color 0.18s ease;
+}
+.a2a-source-glyph > svg {
+  height: 15px;
+  width: 15px;
+}
+@media (hover: hover) {
+  .a2a-source:not(:disabled):hover .a2a-source-glyph {
+    color: var(--fk-ink);
+  }
+}
+
+/* One line, and it wraps rather than clipping: it is the sentence that says what
+   the marked segment means, and half of that is worse than none. */
+.a2a-source-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.a2a-where-source-note {
+  margin: -3px 0 0;
+  padding: 0 3px;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--fk-text-faint);
+}
+
+/* The two coordinate boxes stay side by side however narrow the column gets: the
+   shared rule drops `.fk-fields` to one column below 560px, which is a sensible
+   default for a coupon picker beside a cash box and wrong for a pair of numbers
+   that are read together. */
+.a2a-where .fk-where-typed .fk-fields {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* ── Safety nets, for a form that now changes shape ──────────────────────── */
+
+/* The errand panel is the one card on this page that does not scroll, and every
+   child of its body is `flex: 0 0 auto`. Turning the delivery band on adds a
+   whole stack of controls to a card that was sized without them, the extra
+   height has nowhere to go, and `.fk-panel { overflow: hidden }` then cuts it
+   off — the coupon and the cash limit leave the bottom of the card, still
+   focusable, no longer on screen.
+
+   So: the box that was taking the spare height gives it back, and a scroll that
+   only exists when the body is genuinely overrun sits under the lot. Neither
+   costs anything in the case that is nearly always true — nothing to scroll and
+   an errand of one line. */
+.a2a-panel-errand > .fk-panel-body {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.a2a-panel-errand:has(.fk-where-on) > .fk-panel-body > textarea.a2a-errand-box,
+.a2a-panel-errand:has(.fk-where-on) > .fk-panel-body > .ant-input-textarea {
+  flex: 0 0 auto;
+  max-height: none;
 }
 
 /* --------------------------------------------------------------------------

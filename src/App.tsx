@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Button } from 'antd';
-import { DeliveryTrack } from '@/components/DeliveryTrack';
 import { ErrandForm } from '@/components/ErrandForm';
 import { RunReport } from '@/components/RunReport';
 import { RunTrace } from '@/components/RunTrace';
@@ -200,16 +199,6 @@ export default function App(_props: Props) {
               finalText={run.finalText}
               wallet={run.wallet}
               error={run.error}
-            />
-            {/* Under the report, not inside it. The report answers "what did
-                this cost", which is settled the moment payment goes through;
-                this answers "where is the food", which is still moving after
-                the agent has stopped talking. Folded together, a paid order
-                would look complete. Absent entirely on a counter order. */}
-            <DeliveryTrack
-              context={run.delivery}
-              job={run.deliveryJob}
-              busy={run.busy}
             />
           </div>
         </div>

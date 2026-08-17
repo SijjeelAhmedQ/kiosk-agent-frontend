@@ -54,6 +54,12 @@ interface Negotiation {
   /**
    * Where the order went once it was paid for, or null for a negotiation that
    * never got that far — and for a dine-in one, which has nowhere to go.
+   *
+   * Nothing renders it at the moment: the panel that did was taken off the page,
+   * and where the order goes is now said on the form before it is sent rather
+   * than reported after. Kept because this is the only place the handover
+   * appears on the wire, and folding it back into a card is a `<Panel>` rather
+   * than a re-read of `agent/a2a/trace.py`.
    */
   delivery: A2ADelivery | null;
   error: string | null;

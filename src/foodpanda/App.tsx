@@ -10,7 +10,7 @@ import { RequestActions } from './components/RequestActions';
 import { RequestCard } from './components/RequestCard';
 import { StatusPill } from './components/StatusPill';
 import { useDeliveryBoard } from './useDeliveryBoard';
-import type { AgentCard, FoodpandaHealth } from './types';
+import type { FoodpandaHealth } from './types';
 
 /**
  * The delivery agent's own console.
@@ -71,7 +71,6 @@ function Services({ health }: { health: FoodpandaHealth | null }) {
 export default function App() {
   const board = useDeliveryBoard();
   const [health, setHealth] = useState<FoodpandaHealth | null>(null);
-  const [card, setCard] = useState<AgentCard | null>(null);
 
   const refreshHealth = useCallback(async () => {
     setHealth(await foodpandaApi.health());
@@ -79,7 +78,6 @@ export default function App() {
 
   useEffect(() => {
     void refreshHealth();
-    void foodpandaApi.card().then(setCard);
   }, [refreshHealth]);
 
   // Re-read when the followed job settles: that is when "on the road" changes,
@@ -139,31 +137,6 @@ export default function App() {
           <Services health={health} />
         </div>
 
-        {/* Said once, at the top, where anybody reading this page sees it before
-            they read a status. The dispatcher is a real agent; the motorbike is
-            not, and a console that let that be discovered later would be the
-            dishonest version of this whole exercise. */}
-        <p className="fp-disclosure fk-rise">
-          <strong>What is real here:</strong> the dispatcher is an AI agent making its
-          own decisions — it reads each request, judges whether it can be delivered,
-          and refuses the ones it cannot. <strong>What is simulated:</strong> the ride.
-          Each leg is compressed to seconds and waited out, never skipped, so a job
-          only reaches <em>delivered</em> after the whole journey has actually run.
-          This service is not connected to Foodpanda.
-        </p>
-
-        {/* Said only when it is true. The gate is configuration on the delivery
-            agent, and an instruction to press a button that never appears would
-            be worse than no instruction at all. */}
-        {health?.operatorSteps && (
-          <p className="fp-disclosure fk-rise">
-            <strong>Two steps are yours:</strong> the dispatcher decides whether it
-            will take a delivery, then waits — first to be asked for a rider, and
-            again to be asked to bring the order out. Both requests are on the
-            right, under <em>Where it has got to</em>.
-          </p>
-        )}
-
         <div className="fp-columns">
           <div className="fk-col fk-col-stack fk-rise fk-rise-1">
             <Panel
@@ -219,6 +192,11 @@ export default function App() {
               title="What the dispatcher did"
               note="Every tool call, in the order it made them"
               live={board.live}
+              // Folds away once the reasoning has been read and the request
+              // above it is what's being checked against. The live bar stays on
+              // the header either way, so a folded panel still shows a run
+              // going on underneath it.
+              collapsible
               fill="scroll"
               className="fp-share-3"
             >
@@ -261,35 +239,6 @@ export default function App() {
                 </p>
               )}
             </Panel>
-
-            {card && (
-              <Panel
-                icon={<span aria-hidden>🪪</span>}
-                title="Agent card"
-                note={
-                  <>
-                    served at <span className="fk-pill-mono">/.well-known/agent-card.json</span>
-                  </>
-                }
-                collapsible
-                defaultOpen={false}
-                fill="scroll"
-                className="fp-share-1"
-              >
-                <p className="fp-card-desc">{card.description}</p>
-                <ul className="fp-skills">
-                  {card.skills.map((skill) => (
-                    <li key={skill.id}>
-                      <span className="fp-skill-name">{skill.name}</span>
-                      <span className="fp-skill-id">{skill.id}</span>
-                    </li>
-                  ))}
-                </ul>
-                {card['x-service'] && (
-                  <p className="fk-hint fp-gap">{card['x-service'].simulation}</p>
-                )}
-              </Panel>
-            )}
           </div>
         </div>
 

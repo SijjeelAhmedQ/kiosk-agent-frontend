@@ -5,7 +5,16 @@
  * `src/types.ts` on purpose: that file describes the errand service on 8100,
  * the two protocols are free to diverge, and a shared file would make every
  * change to one a risk to the other.
+ *
+ * `UserLocation` is the one exception, imported rather than redeclared. It is
+ * not either service's protocol: it is a latitude, a longitude and a name for
+ * the place, the shape the browser's geolocation hands back — and two copies of
+ * it would be two chances to disagree about which field holds the accuracy.
  */
+
+import type { UserLocation } from '@/types';
+
+export type { UserLocation };
 
 export type A2ARunStatus = 'idle' | 'queued' | 'running' | 'done' | 'failed' | 'cancelled';
 
@@ -27,6 +36,15 @@ export interface A2AHealth {
   buyer: AgentSide;
   merchant: AgentSide;
   busy: boolean;
+  /**
+   * The customer's saved address, as the A2A service holds it.
+   *
+   * Two jobs, and both matter to "Where it goes": it is the one-click drop the
+   * form offers instead of a permission prompt, and it is where a paid order
+   * goes when no drop is named — so showing it is showing the default rather
+   * than describing one. Optional, because an older service does not report it.
+   */
+  customer?: UserLocation;
 }
 
 /**
@@ -53,6 +71,15 @@ export interface StartA2ARunInput {
   couponCode?: string | null;
   cashLimit: number;
   customerId?: string | null;
+  /**
+   * Where a paid take-away order should be delivered.
+   *
+   * Absent is not an error and never was: this flow has always dispatched to the
+   * customer's saved address, and the service still does when the console sends
+   * none. What this field buys is the errand going somewhere else — which could
+   * not be asked for from this console at all before.
+   */
+  userLocation?: UserLocation | null;
 }
 
 /**

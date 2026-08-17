@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { Button } from 'antd';
 import { Panel } from '@/components/Panel';
 import { a2aApi } from './api';
-import { Delivery } from './components/Delivery';
 import { ErrandForm } from './components/ErrandForm';
 import { Outcome } from './components/Outcome';
 import { Transcript } from './components/Transcript';
@@ -210,6 +209,12 @@ export default function App() {
               busy={run.busy}
               blockedReason={blocked}
               couponsKey={couponsKey}
+              // The courier and the address it would deliver to, so "Where it
+              // goes" can name both. Null from a service that is not answering,
+              // and undefined from one too old to report an address — the form
+              // reads either as "there is nothing on file" rather than guessing.
+              delivery={delivery}
+              savedAddress={health?.customer ?? null}
             />
           </div>
 
@@ -234,10 +239,15 @@ export default function App() {
           </div>
 
           <div className="fk-col fk-col-stack fk-rise fk-rise-2">
+            {/* The only card in this column now that the delivery panel is gone,
+                so it takes the column's height rather than sitting as a short
+                card over empty paper. `scroll`, because a long report is the one
+                thing in it that can outgrow the viewport. */}
             <Panel
               icon={<span aria-hidden>💰</span>}
               title="What it came to"
               note="The wallet, from the ledger — not from the report"
+              fill="scroll"
             >
               <Outcome
                 wallet={run.wallet}
@@ -249,18 +259,6 @@ export default function App() {
                 status={run.status}
               />
             </Panel>
-
-            {/* Under the wallet, not inside it. That panel answers "what did
-                this cost", which is settled the moment the charge goes through;
-                this one answers "where is the food", which is still moving after
-                both agents have stopped talking. Absent until something has been
-                run — there is nothing to report before then. */}
-            <Delivery
-              delivery={run.delivery}
-              busy={run.busy}
-              status={run.status}
-              service={delivery?.service ?? null}
-            />
           </div>
         </div>
       </main>
