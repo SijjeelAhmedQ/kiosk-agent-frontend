@@ -35,7 +35,7 @@ export function TestRequestForm({ onSend, disabled, radiusKm }: Props) {
   const [quantity, setQuantity] = useState(2);
   const [distanceKm, setDistanceKm] = useState(3.2);
   const [dropoffAddress, setDropoffAddress] = useState(
-    'Flat 7B, Sea Breeze Plaza, Shahrah-e-Faisal, Karachi',
+    'Flat 7B, Gulberg Greens, Islamabad',
   );
   const [notes, setNotes] = useState('Gate code 4417. Leave at reception if no answer.');
 

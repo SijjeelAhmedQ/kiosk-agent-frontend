@@ -45,12 +45,12 @@ async function unwrap<T>(response: Response): Promise<T> {
  * A test request in the shape the ordering agent sends.
  *
  * Built here rather than in the form so that the wire format lives with the
- * rest of the wire format. The coordinates are Friends Kitchen Clifton and a
+ * rest of the wire format. The coordinates are Friends Kitchen Islamabad and a
  * point the given distance away — a real pair of places, because a request with
  * a nonsense fix would exercise the validation rather than the dispatcher.
  */
 function testMessage(input: TestRequestInput) {
-  const pickup = { latitude: 24.8607, longitude: 67.0011 };
+  const pickup = { latitude: 33.598827, longitude: 73.05381 };
   // Roughly a degree of latitude per 111 km, pushed due north. Close enough for
   // a request whose distance is carried explicitly in `distanceKm` anyway.
   const dropLat = pickup.latitude + input.distanceKm / 111;

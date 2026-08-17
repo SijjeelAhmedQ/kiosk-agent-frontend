@@ -214,7 +214,7 @@ export function DeliveryField({
                   max={90}
                   step={0.0001}
                   style={{ width: '100%' }}
-                  placeholder="24.8607"
+                  placeholder="33.598827"
                 />
               </div>
               <div className="fk-field">
