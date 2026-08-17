@@ -8,14 +8,16 @@ export default defineConfig({
     alias: { '@': path.resolve(__dirname, './src') },
   },
   build: {
-    // Two entries, two apps. The errand console on /, the A2A console on
-    // /a2a.html — separate pages rather than routes, because they talk to
-    // different services and neither should be able to break the other.
-    // The dev server finds both on its own; only the build needs telling.
+    // Three entries, three apps. The errand console on /, the A2A console on
+    // /a2a.html, the delivery agent's board on /foodpanda.html — separate pages
+    // rather than routes, because they talk to different services and none
+    // should be able to break the others. The dev server finds them on its own;
+    // only the build needs telling.
     rollupOptions: {
       input: {
         main: path.resolve(__dirname, 'index.html'),
         a2a: path.resolve(__dirname, 'a2a.html'),
+        foodpanda: path.resolve(__dirname, 'foodpanda.html'),
       },
     },
   },

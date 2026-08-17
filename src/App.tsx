@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Button, Tooltip } from 'antd';
+import { Button } from 'antd';
+import { DeliveryTrack } from '@/components/DeliveryTrack';
 import { ErrandForm } from '@/components/ErrandForm';
 import { RunReport } from '@/components/RunReport';
 import { RunTrace } from '@/components/RunTrace';
@@ -34,7 +35,10 @@ function RunPill({ status, busy }: { status: string; busy: boolean }) {
   );
 }
 
-export default function App({ scheme, onToggleScheme }: Props) {
+// The scheme toggle is parked — see the commented block in the header below.
+// Its props stay on `Props` so main.tsx keeps supplying them, and bringing the
+// button back is uncommenting that block plus the two bindings it names.
+export default function App(_props: Props) {
   const run = useAgentRun();
   const [health, setHealth] = useState<AgentHealth | null>(null);
   const [checking, setChecking] = useState(true);
@@ -82,8 +86,6 @@ export default function App({ scheme, onToggleScheme }: Props) {
         ? 'Friends Kitchen is not answering on port 8000 — start the Friends Kitchen backend.'
         : null;
 
-  const dark = scheme === 'dark';
-
   return (
     <div className="fk-shell">
       <header className="fk-header">
@@ -128,13 +130,30 @@ export default function App({ scheme, onToggleScheme }: Props) {
               </span>
             </a>
 
+            {/* And over to the delivery agent's own board — the other half of
+                `order → deliver`, run by a different agent on a different port. */}
+            <a
+              className="fk-nav-link"
+              href="/foodpanda.html"
+              title="Open the delivery agent's board"
+            >
+              <span aria-hidden>🛵</span>
+              <span className="fk-nav-link-label">Delivery</span>
+              <span className="fk-nav-link-arrow" aria-hidden>
+                →
+              </span>
+            </a>
+
             <RunPill status={run.status} busy={run.busy} />
 
             {run.status !== 'idle' && !run.busy && (
               <Button onClick={newErrand}>New errand</Button>
             )}
 
-            {/* <Tooltip title={dark ? 'Switch to light' : 'Switch to dark'}>
+            {/* Needs `Tooltip` back in the antd import, and these two bindings
+                back at the top: `const { scheme, onToggleScheme } = _props`
+                and `const dark = scheme === 'dark'`.
+            <Tooltip title={dark ? 'Switch to light' : 'Switch to dark'}>
               <button
                 type="button"
                 className="fk-icon-btn"
@@ -161,6 +180,10 @@ export default function App({ scheme, onToggleScheme }: Props) {
               busy={run.busy}
               blockedReason={blockedReason}
               couponsRefreshKey={couponsRefreshKey}
+              delivery={health?.delivery}
+              // Undefined from an agent server too old to report one, which the
+              // form reads as "there is no saved address" rather than guessing.
+              savedAddress={health?.customer ?? null}
             />
           </div>
 
@@ -177,6 +200,16 @@ export default function App({ scheme, onToggleScheme }: Props) {
               finalText={run.finalText}
               wallet={run.wallet}
               error={run.error}
+            />
+            {/* Under the report, not inside it. The report answers "what did
+                this cost", which is settled the moment payment goes through;
+                this answers "where is the food", which is still moving after
+                the agent has stopped talking. Folded together, a paid order
+                would look complete. Absent entirely on a counter order. */}
+            <DeliveryTrack
+              context={run.delivery}
+              job={run.deliveryJob}
+              busy={run.busy}
             />
           </div>
         </div>

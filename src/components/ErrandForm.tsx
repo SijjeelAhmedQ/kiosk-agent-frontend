@@ -1,9 +1,17 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { Button, Input, InputNumber, Select, Tooltip, Typography } from 'antd';
 import type { DefaultOptionType } from 'antd/es/select';
+import { DeliveryField } from '@/components/DeliveryField';
 import { Panel } from '@/components/Panel';
+import { useUserLocation } from '@/hooks/useUserLocation';
 import { couponApi } from '@/services/couponApi';
-import type { CouponOption, CouponStatus, StartAgentRunInput } from '@/types';
+import type {
+  CouponOption,
+  CouponStatus,
+  DeliveryHealth,
+  StartAgentRunInput,
+  UserLocation,
+} from '@/types';
 import { V } from '@/theme';
 
 const { Text } = Typography;
@@ -46,6 +54,13 @@ interface Props {
    * whoever starts the next errand says here that the list is stale.
    */
   couponsRefreshKey: number;
+  /**
+   * Which courier a delivery would go to, and whether it could — so the operator
+   * finds out before sending an errand rather than at the handover.
+   */
+  delivery?: DeliveryHealth;
+  /** The customer's saved address, offered as one click. Null if unknown. */
+  savedAddress: UserLocation | null;
 }
 
 /**
@@ -142,7 +157,15 @@ export function ErrandForm({
   busy,
   blockedReason,
   couponsRefreshKey,
+  delivery,
+  savedAddress,
 }: Props) {
+  // Where it goes. Held here rather than in App because it belongs to the form
+  // being filled in: clearing the errand clears the address with it, and an
+  // address left over from the last run is exactly how yesterday's customer
+  // receives today's order.
+  const where = useUserLocation();
+
   const [instruction, setInstruction] = useState(EXAMPLES[0].order);
   const [couponCode, setCouponCode] = useState<string | null>(null);
   /** Empty means "nothing beyond the coupon" — not the same as never set. */
@@ -207,6 +230,10 @@ export function ErrandForm({
       mode: 'api',
       headless: true,
       customerId: null,
+      // Null is a counter order — the agent places it and stops there. An
+      // address turns the same errand into a delivery, and the server reads the
+      // difference off exactly this field.
+      userLocation: where.location,
     });
   };
 
@@ -345,6 +372,21 @@ export function ErrandForm({
           </button>
         ))}
       </div>
+
+      {/* Between the order and the money, which is the order the three questions
+          are actually asked in: what to buy, where it goes, what it may spend. */}
+      <DeliveryField
+        location={where.location}
+        status={where.status}
+        problem={where.problem}
+        delivery={delivery}
+        saved={savedAddress}
+        busy={busy}
+        onDetect={where.detect}
+        onManual={where.setManual}
+        onLabel={where.setLabel}
+        onClear={where.clear}
+      />
 
       {/* Settled against the button rather than following the chips: the two
           halves of the form then sit at the two ends of the card on a tall

@@ -3,6 +3,15 @@ import { useId, useState, type ReactNode } from 'react';
 interface Props {
   icon: ReactNode;
   title: string;
+  /**
+   * Colours the icon tile when the panel's *state* has a colour.
+   *
+   * Only for panels whose headline changes with a run — the delivery panel goes
+   * amber while an order is riding and green when it lands. A panel that always
+   * looks the same has no tone, because a tile that never changes is decoration
+   * and teaches the eye to stop reading it.
+   */
+  tone?: 'amber' | 'leaf' | 'flame';
   /** A line under the title. Room for what the panel is for, not decoration. */
   note?: ReactNode;
   extra?: ReactNode;
@@ -59,6 +68,7 @@ function Chevron() {
 export function Panel({
   icon,
   title,
+  tone,
   note,
   extra,
   live,
@@ -89,7 +99,10 @@ export function Panel({
 
   const heading = (
     <>
-      <span className="fk-panel-icon" aria-hidden>
+      <span
+        className={`fk-panel-icon${tone ? ` fk-panel-icon-${tone}` : ''}`}
+        aria-hidden
+      >
         {icon}
       </span>
       <div style={{ minWidth: 0 }}>

@@ -116,6 +116,15 @@ export interface AgentHealth {
   delivery?: DeliveryHealth;
   /** How many branches the agent can choose between. */
   branches?: number;
+  /**
+   * The customer's saved address, as the agent server holds it.
+   *
+   * Offered by the form as one click, so the common case — "deliver it to my
+   * own address" — is not a geolocation prompt. It arrives as an ordinary
+   * `UserLocation` because that is what it is: the same shape a device fix
+   * takes, with `source: 'manual'` and the street in `label`.
+   */
+  customer?: UserLocation;
 }
 
 export interface StartAgentRunInput {

@@ -107,6 +107,41 @@ const line = (item: Bag): Thing => {
   };
 };
 
+/**
+ * The courier half of a payment.
+ *
+ * A paid take-away order on a delivery errand is handed over in the same call
+ * that charges for it, so the payment's story has to carry the handover —
+ * otherwise the timeline shows the money leaving and nothing collecting the
+ * food. `note` says who has it and, as everywhere else in this file, refuses to
+ * round a rider on its way up into an arrival.
+ */
+const handover = (detail: Bag): { note?: string; facts: Fact[] } => {
+  const delivery = bag(detail.delivery);
+  if (!delivery) return { facts: [] };
+
+  if (delivery.ok === false) {
+    return {
+      note: `No rider: ${text(delivery.error) ?? 'the delivery service would not take the job.'}`,
+      facts: [{ label: 'Delivery', value: 'not arranged', tone: 'flame' }],
+    };
+  }
+
+  const service = text(delivery.deliveryService) ?? 'the courier';
+  return {
+    note: `Handed to ${service} — with a rider, not with the customer.`,
+    facts: factsOf([
+      { label: 'Delivery', value: service },
+      text(delivery.status)
+        ? { label: 'Job', value: text(delivery.status)!.replace(/_/g, ' ') }
+        : null,
+      count(delivery.etaMinutes) === null
+        ? null
+        : { label: 'ETA', value: `~${count(delivery.etaMinutes)} min`, tone: 'amber' },
+    ]),
+  };
+};
+
 /** The two figures every cart-shaped result carries. */
 const cartFacts = (detail: Bag): Fact[] => {
   const cart = bag(detail.cart) ?? {};
@@ -273,16 +308,18 @@ const WRITERS: Record<string, (detail: Bag) => Partial<ToolStory>> = {
   authorize_payment: (detail) => {
     const charged = figure(detail.charged);
     const purse = bag(detail.wallet) ?? {};
+    const courier = handover(detail);
     return {
       headline: charged
         ? `Paid ${charged} for order #${text(detail.orderNumber) ?? '—'}`
         : 'The payment went through',
+      note: courier.note,
       facts: factsOf([
         fact('Charged', detail.charged, 'amber'),
         spent(figure(purse.couponRedeemed)) ? fact('Coupon covered', purse.couponRedeemed, 'leaf') : null,
         fact('Cash left', purse.cashRemaining),
         text(detail.transactionRef) ? { label: 'Reference', value: text(detail.transactionRef)! } : null,
-      ]),
+      ]).concat(courier.facts),
     };
   },
 
@@ -415,15 +452,17 @@ const WRITERS: Record<string, (detail: Bag) => Partial<ToolStory>> = {
   pay: (detail) => {
     const charged = figure(detail.charged);
     const purse = bag(detail.wallet) ?? {};
+    const courier = handover(detail);
     return {
       headline: charged
         ? `Paid ${charged} for order #${text(detail.orderNumber) ?? '—'}`
         : 'Friends Kitchen completed the payment',
+      note: courier.note,
       facts: factsOf([
         fact('Charged', detail.charged, 'amber'),
         spent(figure(purse.couponRedeemed)) ? fact('Coupon covered', purse.couponRedeemed, 'leaf') : null,
         fact('Cash left', purse.cashRemaining),
-      ]),
+      ]).concat(courier.facts),
     };
   },
 };

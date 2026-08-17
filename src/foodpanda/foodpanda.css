@@ -1,0 +1,965 @@
+/*
+ * The delivery console's own rules, on top of the shared stylesheet.
+ *
+ * Everything here is either the three-column layout the errand console does not
+ * have, or one of the three things only this page shows: a board of jobs, a
+ * journey with steps still to come, and a log of what an agent did between
+ * them.
+ *
+ * This file is imported by `src/foodpanda/main.tsx` and by nothing else, so
+ * every rule in it is already scoped to this page — the other two consoles
+ * cannot be changed by editing it. That is what lets the handful of rules below
+ * reach back into a shared class (`.fk-status`, `.fk-panel-scrolls`): each one
+ * is either repainting a shared part for this page only, or undoing a shared
+ * rule that assumes a two-column layout.
+ *
+ * One colour rule runs through the whole sheet and is worth stating once: green
+ * belongs to `delivered` and to nothing else. Every other status on the way
+ * there is amber, however close it is, because a green pill on an order still
+ * riding around Karachi is a person told their food has arrived.
+ */
+
+/* --------------------------------------------------------------------------
+ * Layout — board, dispatcher, journey
+ * -------------------------------------------------------------------------- */
+
+/* Three columns, exactly the height on offer. `grid-template-rows` is what caps
+   the row: without it the row sizes itself to its tallest child, the log panel
+   never learns it is capped, and a long job grows the page past a viewport that
+   `html { overflow: hidden }` then quietly clips. The panels own the scrolling,
+   not the page. */
+.fp-columns {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(320px, 380px) minmax(0, 1fr) minmax(300px, 360px);
+  grid-template-rows: minmax(0, 1fr);
+  gap: 18px;
+}
+
+/* Stacked panels in a column have to be told they may shrink, or the two in the
+   middle column each demand their natural height and the pair overflows. */
+.fp-columns > .fk-col-stack > .fk-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* How a column is split between the panels stacked in it.
+ *
+ * A basis of **0**, not `auto`, and that is the whole point: with `auto` the
+ * basis is the content's own height, so the panel with the most in it quietly
+ * takes more than its share and the column overflows a page that cannot scroll.
+ * At 0 the ratio holds whatever is inside, every panel gets a definite height,
+ * and each one scrolls its own body. The shared sheet splits the errand
+ * console's right-hand column the same way and for the same reason.
+ *
+ * These have to out-rank `.fk-panel-fill` (`flex: 1 1 auto`), which they do by
+ * being the same specificity in a stylesheet imported after it. */
+.fp-share-1 {
+  flex: 1 1 0;
+}
+.fp-share-2 {
+  flex: 2 1 0;
+}
+.fp-share-3 {
+  flex: 3 1 0;
+}
+
+/* Folded, a collapsible panel is its header and nothing else — it has to stop
+   claiming a share or it leaves a paper-coloured gap under the card. Two
+   classes, so this out-ranks the share above it. */
+.fk-panel-folded.fp-share-1,
+.fk-panel-folded.fp-share-2,
+.fk-panel-folded.fp-share-3 {
+  flex: 0 0 auto;
+  min-height: 0;
+}
+
+@media (max-width: 1280px) {
+  .fp-columns {
+    grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+  }
+  .fp-columns > :last-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 900px) {
+  .fp-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .fp-columns > :last-child {
+    grid-column: auto;
+  }
+}
+
+/* Stacked, or too short to hold three full-height panels: the content region
+   takes the scroll — the page itself still does not. The log keeps a scroll of
+   its own even here, capped to a band, because a job with a talkative
+   dispatcher should not push the journey off the bottom. */
+@media (max-width: 1280px), (max-height: 760px) {
+  .fk-content {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .fp-columns {
+    flex: none;
+    grid-template-rows: none;
+  }
+  .fp-columns .fk-panel-fill {
+    flex: none;
+    max-height: clamp(320px, 55vh, 640px);
+  }
+  .fp-columns .fk-panel-scrolls > .fk-panel-body {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
+/* The header mark. The other two consoles wear the Friends Kitchen logo; this
+   page is the courier's, not the restaurant's, so it wears its own glyph on the
+   same 44px tile rather than borrowing a brand it does not belong to. */
+.fp-mark {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border-radius: 14px;
+  background: var(--fk-amber-surface);
+  font-size: 23px;
+  line-height: 1;
+}
+
+/* --------------------------------------------------------------------------
+ * The status bar
+ * -------------------------------------------------------------------------- */
+.fp-services {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.fp-services .fk-status {
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--fk-surface-sunken);
+  transition: background-color 0.2s ease;
+}
+
+@media (hover: hover) {
+  .fp-services .fk-status:hover {
+    background: var(--fk-border);
+  }
+}
+
+/* The model and the counts hang off the label, so they read as a caption to it
+   rather than as a second label. */
+.fp-services .fk-pill-mono {
+  padding-left: 9px;
+  border-left: 1px solid var(--fk-border);
+}
+
+/* Nothing answering at all. The one state that stops the page working, so the
+   one state that does not look like the others. */
+.fp-services-down {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: var(--fk-flame-surface);
+  border-left: 3px solid var(--fk-flame);
+  color: var(--fk-flame-ink);
+  font-weight: 600;
+}
+
+/* What is real and what is simulated, said before anybody reads a status. Quiet
+   but not hidden: a note somebody has to go looking for is a note that exists
+   for the author's conscience rather than for the reader. */
+.fp-disclosure {
+  flex: none;
+  margin: 0 0 16px;
+  padding: 11px 16px;
+  border-radius: 14px;
+  background: var(--fk-surface-sunken);
+  border-left: 3px solid var(--fk-amber);
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: var(--fk-text-soft);
+}
+
+.fp-disclosure strong {
+  color: var(--fk-text);
+}
+
+/* --------------------------------------------------------------------------
+ * The board
+ * -------------------------------------------------------------------------- */
+.fp-board {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fp-job {
+  display: block;
+  width: 100%;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--fk-surface-sunken);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+@media (hover: hover) {
+  .fp-job:hover {
+    background: var(--fk-border);
+  }
+}
+
+/* The selected job, marked with a ring rather than a fill: the fill is already
+   doing hover, and two states painted the same way are one state. */
+.fp-job-on {
+  background: var(--fk-surface-raised);
+  box-shadow: var(--fk-shadow-sm), 0 0 0 2px var(--fk-amber-edge);
+}
+
+.fp-job-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.fp-job-order {
+  font-family: var(--fk-font-display);
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--fk-text);
+}
+
+.fp-job-line {
+  font-size: 12.5px;
+  color: var(--fk-text-soft);
+}
+
+.fp-job-foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.fp-job-time,
+.fp-job-id {
+  font-family: var(--fk-font-mono);
+  font-size: 10.5px;
+  color: var(--fk-text-faint);
+}
+
+/* --------------------------------------------------------------------------
+ * Status pills
+ * -------------------------------------------------------------------------- */
+.fp-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  background: var(--fk-surface-sunken);
+  font-family: var(--fk-font-display);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  color: var(--fk-text-soft);
+}
+
+.fp-pill-dot {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+/* Only what is still moving pulses. A finished job that kept blinking would
+   keep asking to be looked at after there is nothing left to see. */
+.fp-pill-dot-live {
+  animation: fp-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes fp-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fp-pill-dot-live {
+    animation: none;
+  }
+}
+
+.fp-pill-amber {
+  background: var(--fk-amber-surface);
+  color: var(--fk-amber-ink);
+}
+.fp-pill-leaf {
+  background: var(--fk-leaf-surface);
+  color: var(--fk-leaf-ink);
+}
+.fp-pill-flame {
+  background: var(--fk-flame-surface);
+  color: var(--fk-flame-ink);
+}
+
+/* --------------------------------------------------------------------------
+ * The request, as it arrived
+ * -------------------------------------------------------------------------- */
+.fp-route {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fp-route-leg {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.fp-route-pin {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex: none;
+  border-radius: 12px;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.fp-route-pin-from {
+  background: var(--fk-surface-sunken);
+}
+.fp-route-pin-to {
+  background: var(--fk-amber-surface);
+}
+
+.fp-route-text {
+  min-width: 0;
+}
+
+.fp-route-text .fk-eyebrow {
+  margin: 0 0 3px;
+}
+
+.fp-route-name {
+  font-family: var(--fk-font-display);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--fk-text);
+  word-break: break-word;
+}
+
+.fp-route-sub {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--fk-text-soft);
+  word-break: break-word;
+}
+
+/* The two numbers that decide where a rider ends up, printed in full and in
+   mono. A delivery agent's most consequential input is a pair of coordinates
+   nobody reads until they are wrong. */
+.fp-coords {
+  display: inline-block;
+  margin-top: 3px;
+  font-family: var(--fk-font-mono);
+  font-size: 11px;
+  color: var(--fk-text-faint);
+}
+
+/* The leg between the two ends, carrying the distance on it. */
+.fp-route-rule {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 4px 0 4px 16px;
+  padding-left: 17px;
+  border-left: 2px dashed var(--fk-border-strong);
+  min-height: 26px;
+}
+
+.fp-route-arrow {
+  font-size: 13px;
+  color: var(--fk-text-faint);
+}
+
+.fp-route-distance {
+  font-family: var(--fk-font-mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--fk-text-soft);
+}
+
+.fp-items {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fp-items li {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  font-size: 13.5px;
+  color: var(--fk-text);
+}
+
+.fp-item-qty {
+  font-family: var(--fk-font-mono);
+  font-weight: 600;
+  color: var(--fk-text-soft);
+}
+
+.fp-item-name {
+  font-weight: 500;
+}
+
+.fp-item-note,
+.fp-notes {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--fk-text-soft);
+  margin: 0;
+}
+
+.fp-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 16px;
+}
+
+/* One spacing helper, because "a gap above this" turns up in six places and six
+   inline styles would be six numbers to keep in step. */
+.fp-gap {
+  margin-top: 12px;
+}
+
+/* --------------------------------------------------------------------------
+ * The journey
+ * -------------------------------------------------------------------------- */
+.fp-journey {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fp-step {
+  display: flex;
+  gap: 13px;
+  padding-bottom: 14px;
+  position: relative;
+}
+
+/* The rail joining the dots, drawn off each step but the last. Sits behind the
+   dot, which paints over it. */
+.fp-step:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 14px;
+  bottom: 0;
+  width: 2px;
+  background: var(--fk-border);
+}
+
+.fp-step-dot {
+  width: 12px;
+  height: 12px;
+  flex: none;
+  margin-top: 3px;
+  border-radius: 999px;
+  background: var(--fk-border-strong);
+  position: relative;
+  z-index: 1;
+}
+
+.fp-step-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.fp-step-label {
+  font-family: var(--fk-font-display);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--fk-text);
+}
+
+.fp-step-note {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--fk-text-soft);
+  word-break: break-word;
+}
+
+/* Behind the job: done, and quietly so. */
+.fp-step-done .fp-step-dot {
+  background: var(--fk-leaf);
+}
+
+/* Where the job is now. The only step that is emphasised, because "which line
+   do I read" is the question the panel is answering. */
+.fp-step-now .fp-step-dot {
+  background: var(--fk-amber);
+  box-shadow: 0 0 0 4px var(--fk-amber-surface);
+}
+
+.fp-step-now .fp-step-label {
+  color: var(--fk-amber-ink);
+}
+
+/* Still to come. Faded rather than hidden — the steps left are the point of
+   showing the list whole. */
+.fp-step-todo .fp-step-label,
+.fp-step-todo .fp-step-note {
+  color: var(--fk-text-faint);
+}
+
+/* The last step, once it is the delivered one, is the only green label here. */
+.fp-step:last-child.fp-step-done .fp-step-label {
+  color: var(--fk-leaf-ink);
+}
+
+.fp-halt {
+  margin: 4px 0 0;
+  padding: 11px 14px;
+  border-radius: 14px;
+  background: var(--fk-flame-surface);
+  border-left: 3px solid var(--fk-flame);
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--fk-flame-ink);
+}
+
+/* --------------------------------------------------------------------------
+ * The outcome
+ * -------------------------------------------------------------------------- */
+.fp-decision {
+  margin-top: 16px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--fk-surface-sunken);
+  border-left: 3px solid var(--fk-leaf);
+}
+
+.fp-decision-no {
+  background: var(--fk-flame-surface);
+  border-left-color: var(--fk-flame);
+}
+
+.fp-decision .fk-eyebrow {
+  margin: 0 0 5px;
+}
+
+.fp-decision p,
+.fp-final p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.62;
+  color: var(--fk-text);
+  word-break: break-word;
+}
+
+.fp-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.fp-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--fk-surface-sunken);
+  min-width: 0;
+}
+
+.fp-tile-label {
+  font-family: var(--fk-font-display);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--fk-text-faint);
+}
+
+.fp-tile-value {
+  font-family: var(--fk-font-display);
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--fk-text);
+  overflow-wrap: anywhere;
+}
+
+.fp-final {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--fk-surface-sunken);
+}
+
+.fp-final .fk-eyebrow {
+  margin: 0 0 5px;
+}
+
+/* --------------------------------------------------------------------------
+ * The dispatcher's log
+ * -------------------------------------------------------------------------- */
+.fp-log {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* The machinery: what the agent actually did. Boxed and quiet — it is a log and
+   should not read as speech. */
+.fp-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 0;
+  padding: 9px 13px;
+  border-radius: 14px;
+  background: var(--fk-surface-sunken);
+  list-style: none;
+}
+
+.fp-tools li {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  font-size: 12.5px;
+  color: var(--fk-text-soft);
+}
+
+.fp-tool-dot {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: 999px;
+  background: var(--fk-border-strong);
+  align-self: center;
+}
+
+.fp-tool-dot-ok {
+  background: var(--fk-leaf);
+}
+.fp-tool-dot-bad {
+  background: var(--fk-flame);
+}
+
+/* A call still running. Same pulse as a live status dot, so "in progress" looks
+   like one thing across the page. */
+.fp-tool-dot-run {
+  background: var(--fk-amber);
+  animation: fp-pulse 1.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fp-tool-dot-run {
+    animation: none;
+  }
+}
+
+.fp-tool-name {
+  font-weight: 600;
+  color: var(--fk-text);
+}
+
+.fp-tool-failed .fp-tool-name {
+  color: var(--fk-flame-ink);
+}
+
+.fp-tool-why {
+  font-size: 12px;
+  color: var(--fk-flame-ink);
+  word-break: break-word;
+}
+
+/* A status the job reached. The spine of the log: everything else on the page
+   is derived from these, so they are the rows that carry a timestamp. */
+.fp-entry {
+  padding: 11px 14px;
+  border-radius: 16px;
+  background: var(--fk-surface-raised);
+  box-shadow: var(--fk-shadow-sm), 0 0 0 1px var(--fk-ring);
+  animation: fp-arrive 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes fp-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fp-entry {
+    animation: none;
+  }
+}
+
+.fp-entry-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+/* Seconds since the request landed. The whole point of showing it: a job that
+   reached `delivered` in under a second would mean the legs were skipped, and
+   this is where that would be visible. */
+.fp-entry-clock {
+  font-family: var(--fk-font-mono);
+  font-size: 10.5px;
+  color: var(--fk-text-faint);
+}
+
+.fp-entry-said {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--fk-text);
+  word-break: break-word;
+}
+
+/* The agent's own words, at the end. Set apart from the statuses because it is
+   the one thing on this page the model wrote freely rather than chose. */
+.fp-report {
+  padding: 13px 16px;
+  border-radius: 20px;
+  border-bottom-left-radius: 7px;
+  background: var(--fk-amber-surface);
+  box-shadow: var(--fk-shadow-sm), 0 0 0 1px var(--fk-ring);
+}
+
+.fp-report-who {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 6px;
+  font-family: var(--fk-font-display);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--fk-amber-ink);
+}
+
+.fp-report-who::before {
+  content: '🛵';
+}
+
+.fp-report-text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.62;
+  color: var(--fk-text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.fp-fault {
+  margin: 0;
+  padding: 11px 14px;
+  border-radius: 14px;
+  background: var(--fk-flame-surface);
+  border-left: 3px solid var(--fk-flame);
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--fk-flame-ink);
+}
+
+.fp-thinking {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--fk-font-display);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fk-text-faint);
+}
+
+/* --------------------------------------------------------------------------
+ * The test form
+ * -------------------------------------------------------------------------- */
+.fp-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.fp-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.fp-field .fk-hint {
+  margin: 0;
+}
+
+.fp-field-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 96px;
+  gap: 10px;
+}
+
+/* The one hint that changes what the run will do, so the one hint allowed to
+   change colour. */
+.fp-hint-warn {
+  color: var(--fk-flame-ink);
+  font-weight: 600;
+}
+
+/* --------------------------------------------------------------------------
+ * The agent card
+ * -------------------------------------------------------------------------- */
+.fp-card-desc {
+  margin: 0 0 12px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--fk-text-soft);
+}
+
+.fp-skills {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fp-skills li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--fk-surface-sunken);
+}
+
+.fp-skill-name {
+  font-family: var(--fk-font-display);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--fk-text);
+}
+
+.fp-skill-id {
+  font-family: var(--fk-font-mono);
+  font-size: 10.5px;
+  color: var(--fk-text-faint);
+}
+
+/* --------------------------------------------------------------------------
+ * The two requests
+ *
+ * The only controls on this page that change a delivery, so they are drawn as
+ * the loudest thing in their panel — and only ever one at a time. The pause
+ * rows in the log are the quiet half of the same idea: something is waiting,
+ * and nothing has moved.
+ * -------------------------------------------------------------------------- */
+.fp-asks {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-bottom: 14px;
+  padding: 13px 14px;
+  border-radius: 18px;
+  background: var(--fk-amber-surface);
+  box-shadow: var(--fk-shadow-sm), 0 0 0 1px var(--fk-amber-edge);
+}
+
+.fp-asks-note {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--fk-text);
+}
+
+.fp-asks .fk-hint {
+  margin: 0;
+}
+
+/* A pause, and its release. Left rule rather than a card: these interleave with
+   statuses and tool strips, and a second card shape at the same weight would
+   compete with the entries that actually carry the delivery's progress. */
+.fp-hold {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  border-left: 3px solid var(--fk-amber);
+  background: var(--fk-surface-sunken);
+}
+
+.fp-hold-freed {
+  border-left-color: var(--fk-leaf);
+}
+
+.fp-hold-mark {
+  font-size: 10.5px;
+  color: var(--fk-text-faint);
+}
+
+.fp-hold-text {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--fk-text-soft);
+}
+
+/* On the board row, so a job that needs somebody is visible without opening it. */
+.fp-job-waiting {
+  margin-top: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--fk-amber-ink);
+}

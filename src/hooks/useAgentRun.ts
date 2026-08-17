@@ -54,6 +54,22 @@ const EMPTY: AgentRunState = {
 const DELIVERY_TOOLS = new Set(['arrange_delivery', 'check_delivery']);
 
 /**
+ * The tools that hand an order to a courier as part of paying for it.
+ *
+ * Their result is not a job — it is a payment that happens to carry one, under
+ * `delivery`. Read separately for that reason: the handover being automatic is
+ * what stops a delivery going missing on the run where the agent forgets to ask
+ * for one, and this is the panel finding out about it.
+ */
+const PAYMENT_TOOLS = new Set(['authorize_payment', 'pay']);
+
+/** `detail.delivery`, if the payment tool put a job there. */
+function nestedDelivery(detail: ToolDetail | null): ToolDetail | null {
+  const nested = detail?.delivery;
+  return typeof nested === 'object' && nested !== null ? (nested as ToolDetail) : null;
+}
+
+/**
  * A delivery job read off a tool result, or null if that is not what this was.
  *
  * Every field is checked rather than trusted: this shape is the agent's, not
@@ -131,10 +147,15 @@ export function useAgentRun() {
           // the job. A refused one carries a reason instead, and must not
           // overwrite what the last good answer said.
           const source = toolCalls.find((call) => call.toolUseId === event.toolUseId);
-          const job =
-            event.ok && source && DELIVERY_TOOLS.has(source.name)
-              ? readDeliveryJob(event.detail ?? null)
-              : null;
+          const detail = event.detail ?? null;
+          let job: DeliveryJob | null = null;
+          if (event.ok && source) {
+            if (DELIVERY_TOOLS.has(source.name)) job = readDeliveryJob(detail);
+            // A payment that failed to hand the order over leaves `delivery`
+            // holding a refusal rather than a job, and readDeliveryJob returns
+            // null for it — which is right: no rider is not a rider.
+            else if (PAYMENT_TOOLS.has(source.name)) job = readDeliveryJob(nestedDelivery(detail));
+          }
 
           return { ...prev, toolCalls, deliveryJob: job ?? prev.deliveryJob };
         }

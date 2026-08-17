@@ -2062,6 +2062,242 @@ html[data-theme='dark'] .fk-chip[aria-pressed='true']:hover:not(:disabled) {
   }
 }
 
+/* A panel whose glyph tile carries the state of a run. Only the delivery panel
+   uses these, and only `leaf` is allowed on an order that actually arrived. */
+.fk-panel-icon-amber {
+  background: var(--fk-amber-surface);
+  color: var(--fk-amber-ink);
+}
+.fk-panel-icon-leaf {
+  background: var(--fk-leaf-surface);
+  color: var(--fk-leaf-ink);
+}
+.fk-panel-icon-flame {
+  background: var(--fk-flame-surface);
+  color: var(--fk-flame-ink);
+}
+
+/* ── The delivery, once the ordering is done ────────────────────────────── */
+
+/* The two ends of the journey, with the leg between them. Shown once at the top
+   of the delivery panel because every status underneath is read against it:
+   "collected" means nothing until you know collected from where. */
+.fk-route {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fk-route-leg {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.fk-route-pin {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border-radius: 12px;
+}
+
+.fk-route-pin-from {
+  background: var(--fk-surface-sunken);
+  color: var(--fk-text-soft);
+}
+.fk-route-pin-to {
+  background: var(--fk-amber-surface);
+  color: var(--fk-amber-ink);
+}
+
+.fk-route-label {
+  font-family: var(--fk-font-display);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fk-text-faint);
+}
+
+.fk-route-value {
+  font-family: var(--fk-font-display);
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--fk-text);
+  word-break: break-word;
+}
+
+.fk-route-sub {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--fk-text-soft);
+  word-break: break-word;
+}
+
+.fk-route-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 3px 0 3px 15px;
+  padding-left: 17px;
+  border-left: 2px dashed var(--fk-border-strong);
+  min-height: 24px;
+}
+
+.fk-route-arrow {
+  font-size: 13px;
+  color: var(--fk-text-faint);
+}
+
+.fk-route-distance {
+  font-family: var(--fk-font-mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--fk-text-soft);
+}
+
+/* The courier's journey, listed in full from the start — the steps still to
+   come are the point, because three ticks and nothing else reads as finished. */
+.fk-journey {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fk-journey-step {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding-bottom: 11px;
+  position: relative;
+}
+
+.fk-journey-step:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 12px;
+  bottom: 0;
+  width: 2px;
+  background: var(--fk-border);
+}
+
+.fk-journey-dot {
+  width: 10px;
+  height: 10px;
+  flex: none;
+  border-radius: 999px;
+  background: var(--fk-border-strong);
+  position: relative;
+  z-index: 1;
+}
+
+.fk-journey-label {
+  font-size: 13px;
+  color: var(--fk-text-faint);
+}
+
+.fk-journey-note {
+  font-size: 12px;
+  color: var(--fk-text-soft);
+  word-break: break-word;
+}
+
+.fk-journey-done .fk-journey-dot {
+  background: var(--fk-leaf);
+}
+.fk-journey-done .fk-journey-label {
+  color: var(--fk-text-soft);
+}
+
+/* Where it is now — the one emphasised row, because "which line do I read" is
+   the question this list answers. */
+.fk-journey-now .fk-journey-dot {
+  background: var(--fk-amber);
+  box-shadow: 0 0 0 4px var(--fk-amber-surface);
+}
+.fk-journey-now .fk-journey-label {
+  font-weight: 700;
+  color: var(--fk-amber-ink);
+}
+
+/* Arrived. The last step is the only one this stylesheet paints green, and it
+   is painted green only once the courier itself says so. */
+.fk-journey-step:last-child.fk-journey-done .fk-journey-label {
+  font-weight: 700;
+  color: var(--fk-leaf-ink);
+}
+
+.fk-delivery-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 14px;
+}
+
+.fk-badge-mono {
+  font-family: var(--fk-font-mono);
+  font-size: 10.5px;
+}
+
+/* ── Where the order goes ───────────────────────────────────────────────── */
+
+/* The delivery block at the foot of the errand form.
+ *
+ * Set on the sunken surface rather than on paper, so it reads as one thing the
+ * operator turns on rather than as three more fields in the form above it. That
+ * matters more than it sounds: switching it on changes what the errand *is* —
+ * from an order placed at a counter to one that has to reach somebody — and a
+ * control that changes the shape of a run should not look like the cash box. */
+.fk-delivery {
+  margin-top: 16px;
+  padding: 13px 15px;
+  border-radius: 18px;
+  background: var(--fk-surface-sunken);
+}
+
+.fk-delivery-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.fk-delivery-head .fk-eyebrow {
+  margin-top: 0;
+}
+
+.fk-delivery-body {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  margin-top: 13px;
+}
+
+/* The fix itself: where the rider is being sent. Given its own row on paper —
+   this is the one line on the form that, wrong, sends food to a stranger. */
+.fk-delivery-fix {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 12px;
+  border-radius: 13px;
+  background: var(--fk-surface);
+  box-shadow: 0 0 0 1px var(--fk-ring);
+}
+
+.fk-delivery-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
 /* Anyone who has asked the OS for less movement gets none of it. */
 @media (prefers-reduced-motion: reduce) {
   *,

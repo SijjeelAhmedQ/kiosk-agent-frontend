@@ -135,6 +135,19 @@ export default function App() {
               <span className="fk-nav-link-label">Ordering agent</span>
             </a>
 
+            {/* The delivery agent's board, the third console in the family. */}
+            <a
+              className="fk-nav-link"
+              href="/foodpanda.html"
+              title="Open the delivery agent's board"
+            >
+              <span aria-hidden>🛵</span>
+              <span className="fk-nav-link-label">Delivery</span>
+              <span className="fk-nav-link-arrow" aria-hidden>
+                →
+              </span>
+            </a>
+
             <span className="fk-tag">
               <span aria-hidden>🤝</span>
               A2A

@@ -35,10 +35,20 @@ Three services, in this order:
 | Agent server | `friends-kitchen-agent-backend` — `.venv\Scripts\python -m uvicorn server:app --port 8100` | 8100 |
 | This app | `npm run dev` | 5174 |
 
-A fourth, only if you want deliveries — the agent orders at the counter without
-it, and the status strip says it is missing rather than failing at the handover:
+Then one per console you want to open. The agent orders at the counter without
+any of them, and the status strip says which is missing rather than failing at
+the first click:
 
-| Delivery agent | `friends-kitchen-agent-backend` — `.venv\Scripts\python -m uvicorn delivery_server:app --port 8102` | 8102 |
+| Service | Where (all in `friends-kitchen-agent-backend`) | Port | Console |
+|---|---|---|---|
+| A2A merchant | `.venv\Scripts\python -m uvicorn a2a_server:app --port 8101` | 8101 | `/a2a.html` |
+| In-house courier | `.venv\Scripts\python -m uvicorn delivery_server:app --port 8102` | 8102 | — |
+| Foodpanda dispatcher agent | `.venv\Scripts\python -m uvicorn foodpanda_server:app --port 8103` | 8103 | `/foodpanda.html` |
+
+The two couriers are an either/or: `DELIVERY_PROVIDER` in the agent's `.env` names
+one of them, and the other cannot answer its jobs. `mock_foodpanda` means 8103 —
+the board at `/foodpanda.html` — so that is the one to start if you want to watch
+a delivery happen.
 
 For **browser mode** the Friends Kitchen front end (`friends-kitchen-frontend`, port 5173) must be
 running too — that is the website the agent drives.
@@ -58,11 +68,14 @@ code that will not work says so before the errand starts. A cash limit for
 whatever the coupon does not cover. And whether the agent should order through the API or
 by driving the real website.
 
-**Where it goes.** A switch under the examples, off by default. Off is the
-counter order this form has always sent. On, the browser is asked for a fix —
-and if it refuses, the coordinates can be typed instead, because a desk machine
-declining to share a location is the common case rather than the exception. The
-place can be named ("Flat 3, second floor"); that is what the rider reads.
+**Where it goes.** A switch between the order and the money, off by default. Off
+is the counter order this form has always sent. On fills in the customer's saved
+address — `FK_CUSTOMER_ADDRESS` on the agent server, served through its health
+endpoint so there is one copy of it — because "my own place" is where nearly
+every delivery goes and it needs no permission prompt. *Detect location* asks the
+device for the errand going somewhere else, the coordinates can be typed when a
+desk machine refuses, and *Use my saved address* comes back. The place can be
+named ("Flat 3, second floor"); that is what the rider reads.
 
 **Right — what happened.** A live timeline of every step the agent took, ticked
 green or flagged red as each one lands, and then the agent's own report of how

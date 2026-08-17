@@ -11,9 +11,14 @@ interface Props {
   status: LocationStatus;
   problem: string | null;
   delivery: DeliveryHealth | undefined;
+  /**
+   * The customer's own address, as the agent server holds it — or null when it
+   * is not running or is too old to report one.
+   */
+  saved: UserLocation | null;
   busy: boolean;
   onDetect: () => void;
-  onManual: (latitude: number, longitude: number) => void;
+  onManual: (latitude: number, longitude: number, label?: string) => void;
   onLabel: (label: string) => void;
   onClear: () => void;
 }
@@ -35,12 +40,19 @@ function coordinates(location: UserLocation): string {
  * A browser that refuses to share a location is the common case on a desk
  * machine, and an operator who cannot type an address instead simply cannot
  * send a delivery at all.
+ *
+ * Turning the switch on fills in the saved address rather than asking the
+ * device, when the server has one. That ordering is deliberate: "my own place"
+ * is where nearly every delivery goes, it needs no permission prompt, and it is
+ * a street the rider can read instead of five decimal places. The device is
+ * still one button away for the errand that is going somewhere else.
  */
 export function DeliveryField({
   location,
   status,
   problem,
   delivery,
+  saved,
   busy,
   onDetect,
   onManual,
@@ -58,17 +70,34 @@ export function DeliveryField({
   const [typing, setTyping] = useState(false);
   const showManual = typing || (refused && !location);
 
+  const useSaved = () => {
+    if (saved) onManual(saved.latitude, saved.longitude, saved.label ?? undefined);
+    setTyping(false);
+  };
+
   const toggle = (on: boolean) => {
     setWanted(on);
     if (on) {
-      // Ask straight away. The switch *is* the request — a second "detect"
-      // click to make it do the thing it says it does is a click for nothing.
-      if (!location) onDetect();
+      // Somewhere straight away. The switch *is* the request — a second click to
+      // make it do the thing it says it does is a click for nothing. The saved
+      // address first, and the device only when there is nothing saved, because
+      // a permission prompt is the more disruptive of the two.
+      if (!location) {
+        if (saved) useSaved();
+        else onDetect();
+      }
     } else {
       onClear();
       setTyping(false);
     }
   };
+
+  /** Is the fix on screen the saved address, rather than something else? */
+  const onSaved =
+    location !== null &&
+    saved !== null &&
+    location.latitude === saved.latitude &&
+    location.longitude === saved.longitude;
 
   const useTyped = () => {
     if (manualLat === null || manualLon === null) return;
@@ -86,9 +115,14 @@ export function DeliveryField({
             Where it goes
           </div>
           <p className="fk-hint" style={{ margin: 0 }}>
-            {wanted
-              ? `Ordered from the nearest branch, then ${service} carries it.`
-              : 'Off — the agent orders at the counter, as it always has.'}
+            {!wanted
+              ? 'Off — the agent orders at the counter, as it always has.'
+              : location?.label
+                ? // The address itself, once there is one: this is the line that
+                  // answers "where is my food going", and it is the field the
+                  // rider actually reads.
+                  `To ${location.label} — ${service} collects from the nearest branch.`
+                : `Ordered from the nearest branch, then ${service} carries it.`}
           </p>
         </div>
 
@@ -121,7 +155,11 @@ export function DeliveryField({
             <>
               <div className="fk-delivery-fix">
                 <span className="fk-badge fk-badge-leaf">
-                  {location.source === 'browser' ? 'from the device' : 'typed in'}
+                  {location.source === 'browser'
+                    ? 'from the device'
+                    : onSaved
+                      ? 'your saved address'
+                      : 'typed in'}
                 </span>
                 <span style={{ fontFamily: V.fontMono, fontSize: 12 }}>
                   {coordinates(location)}
@@ -199,6 +237,15 @@ export function DeliveryField({
           )}
 
           <div className="fk-delivery-actions">
+            {/* Always offered, not only as a recovery: an operator who detected
+                the wrong place, or typed one, gets back to their own address in
+                one click. Hidden only when it is already the address in use. */}
+            {saved && !onSaved && (
+              <Button size="small" type="primary" ghost disabled={busy} onClick={useSaved}>
+                Use my saved address
+              </Button>
+            )}
+
             {showManual && (
               <Button
                 size="small"
