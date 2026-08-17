@@ -45,15 +45,17 @@ async function unwrap<T>(response: Response): Promise<T> {
  * A test request in the shape the ordering agent sends.
  *
  * Built here rather than in the form so that the wire format lives with the
- * rest of the wire format. The coordinates are Friends Kitchen Islamabad and a
- * point the given distance away — a real pair of places, because a request with
- * a nonsense fix would exercise the validation rather than the dispatcher.
+ * rest of the wire format. The coordinates are the Saddar branch and a Westridge
+ * address — a real pair of places, because a request with a nonsense fix would
+ * exercise the validation rather than the dispatcher.
  */
 function testMessage(input: TestRequestInput) {
   const pickup = { latitude: 33.598827, longitude: 73.05381 };
-  // Roughly a degree of latitude per 111 km, pushed due north. Close enough for
-  // a request whose distance is carried explicitly in `distanceKm` anyway.
-  const dropLat = pickup.latitude + input.distanceKm / 111;
+  // Westridge, about 5.6 km south-west of Saddar. A fixed point rather than one
+  // derived from `distanceKm`, so the pair is always somewhere a rider could
+  // actually ride; the distance the dispatcher measures against its service
+  // radius is carried explicitly in `distanceKm` anyway.
+  const dropoff = { latitude: 33.5875, longitude: 72.995 };
 
   return {
     order: {
@@ -66,20 +68,19 @@ function testMessage(input: TestRequestInput) {
     },
     pickup: {
       ...pickup,
-      address: 'Shop 4, Zamzama Boulevard, Clifton, Karachi',
-      name: 'Friends Kitchen Clifton',
-      phone: '+92 21 3583 0001',
+      address: 'Shop 4, Bank Road, Saddar, Rawalpindi',
+      name: 'Friends Kitchen Saddar',
+      phone: '+92 51 5583 0001',
       note: `Collect order ${input.orderNumber}`,
     },
     dropoff: {
-      latitude: dropLat,
-      longitude: pickup.longitude,
+      ...dropoff,
       address: input.dropoffAddress,
       name: null,
       phone: null,
       note: null,
     },
-    branchId: 'fk-clifton',
+    branchId: 'fk-saddar',
     distanceKm: input.distanceKm,
     notes: input.notes.trim() || null,
   };

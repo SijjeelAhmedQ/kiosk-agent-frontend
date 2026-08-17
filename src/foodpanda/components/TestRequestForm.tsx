@@ -33,9 +33,10 @@ export function TestRequestForm({ onSend, disabled, radiusKm }: Props) {
   const [orderNumber, setOrderNumber] = useState(freshOrderNumber);
   const [itemName, setItemName] = useState('Zinger Burger');
   const [quantity, setQuantity] = useState(2);
-  const [distanceKm, setDistanceKm] = useState(3.2);
+  // Saddar to Westridge, the pair of points the request actually carries.
+  const [distanceKm, setDistanceKm] = useState(5.6);
   const [dropoffAddress, setDropoffAddress] = useState(
-    'Flat 7B, Gulberg Greens, Islamabad',
+    'House 12, Westridge 1, Rawalpindi',
   );
   const [notes, setNotes] = useState('Gate code 4417. Leave at reception if no answer.');
 
