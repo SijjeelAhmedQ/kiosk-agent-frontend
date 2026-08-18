@@ -120,21 +120,44 @@ html[data-theme='dark'] {
   }
 }
 
-/* ── The toolbar ────────────────────────────────────────────────────────── */
+/* ── The status bar ─────────────────────────────────────────────────────── */
 
 /* One row, above everything it scopes. Not a control inside a chart card and
    not one per panel: every number on this page is counted from the same slice,
-   and two ranges on one screen is how two panels come to disagree. */
+   and two ranges on one screen is how two panels come to disagree.
+
+   It is also the one strip on this page with no fold of its own. Every section
+   below can be put away; the bar that says what those sections are counting
+   cannot, or the page loses the caption to its own numbers.
+
+   Three zones, left to right: what the page is scoped to, what that scope
+   contains, and the two switches. The middle zone is the readout, and it is
+   the reason the bar is taller than a row of pills — see below. */
 .fkd-toolbar {
   flex: none;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
+  gap: 12px 16px;
+  padding: 10px 12px 10px 14px;
+  border-radius: 22px;
+}
+
+/* The scope and what it holds, kept together: the range picker and the counts
+   are one sentence, and the switches on the right are not part of it. */
+.fkd-toolbar-lead {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 12px;
-  padding: 10px 14px;
-  border-radius: 24px;
-  background: var(--fk-surface);
-  box-shadow: var(--fk-shadow-sm), 0 0 0 1px var(--fk-ring);
+  min-width: 0;
+}
+
+.fkd-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
 }
 
 .fkd-seg {
@@ -167,20 +190,141 @@ html[data-theme='dark'] {
   box-shadow: var(--fk-shadow-sm);
 }
 
-.fkd-toolbar-read {
-  margin: 0;
-  font-size: 12.5px;
-  color: var(--fk-text-faint);
+/* ── The readout ────────────────────────────────────────────────────────── */
+
+/* Two counts that used to be one sentence — "3 jobs in range · 0 live" — and
+   are two questions: how much work everything below is counted from, and how
+   much of it is happening this second. A middle dot between them made them look
+   like one fact, and the numbers were set at body size inside it, so the bar's
+   loudest element was the range picker rather than the count it picks.
+
+   So: a label, a figure, and a line of context each, side by side in a sunken
+   well with a hairline between them. The well is what makes the pair read as a
+   readout rather than as two stray labels sharing a row. */
+.fkd-readout {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  padding: 5px;
+  border-radius: 18px;
+  background: var(--fk-surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--fk-ring);
 }
-.fkd-toolbar-read strong {
-  color: var(--fk-text);
+
+.fkd-readout-stat {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  min-width: 96px;
+  padding: 5px 14px 6px;
+  border-radius: 14px;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.fkd-readout-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-family: var(--fk-font-display);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--fk-text-faint);
+  white-space: nowrap;
+}
+
+/* Tabular figures, because this number changes under the reader every 2.5
+   seconds and a proportional 1 makes the whole bar twitch when it does. */
+.fkd-readout-value {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  margin: 1px 0 0;
+  font-family: var(--fk-font-display);
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  color: var(--fk-ink);
   font-variant-numeric: tabular-nums;
+}
+.fkd-readout-unit,
+.fkd-readout-hint {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fk-text-faint);
+  white-space: nowrap;
+}
+.fkd-readout-unit {
+  letter-spacing: 0;
+}
+.fkd-readout-hint {
+  margin-top: 1px;
+  font-weight: 500;
+}
+
+.fkd-readout-rule {
+  flex: none;
+  width: 1px;
+  margin: 8px 4px;
+  background: var(--fk-border-strong);
+  opacity: 0.55;
+}
+
+/* Live is the half people watch, so it is the half that lights — but only when
+   there is something to watch. A tile that is always amber is wallpaper. */
+.fkd-readout-stat-hot {
+  background: var(--fk-amber-surface);
+  box-shadow: inset 0 0 0 1px var(--fk-amber-edge);
+}
+.fkd-readout-stat-hot .fkd-readout-value {
+  color: var(--fk-amber-ink);
+}
+.fkd-readout-stat-hot .fkd-readout-label,
+.fkd-readout-stat-hot .fkd-readout-hint {
+  color: var(--fk-amber-ink);
+  opacity: 0.78;
+}
+
+/* ── The bar's two switches ─────────────────────────────────────────────── */
+
+/* Housekeeping, and it looks like housekeeping: outlined and faint next to the
+   live switch, because one of these changes what the page is doing and the
+   other only changes how much of it you are looking at. */
+.fkd-foldall {
+  appearance: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--fk-border);
+  background: transparent;
+  font-family: var(--fk-font-display);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--fk-text-faint);
+  white-space: nowrap;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease,
+    transform 0.15s ease;
+}
+.fkd-foldall:hover {
+  background: var(--fk-surface-sunken);
+  border-color: var(--fk-text-faint);
+  color: var(--fk-text);
+}
+.fkd-foldall:active {
+  transform: scale(0.97);
 }
 
 .fkd-live {
   appearance: none;
   cursor: pointer;
-  margin-left: auto;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -1128,5 +1272,408 @@ html[data-theme='dark'] {
   }
   .fkd-provenance dd {
     margin-bottom: 12px;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   The depth pass.
+
+   Everything above this line was written for a page read once, at a desk. This
+   block is for the other way this page gets used — left open on a second screen
+   all afternoon — and it changes presentation only: not one rule here moves an
+   element, changes what a panel contains, or alters a control's behaviour.
+
+   Three things it does, in order of how much they matter:
+
+     1. **The toolbar sticks.** The content region is the scroll box on this
+        page, and the range picker scrolled away with it — so reading the funnel
+        and then changing the range meant scrolling back up to a control you
+        could no longer see. It now pins to the top of the scroll box.
+     2. **The page gets a ground.** Flat cream under white cards is four points
+        of luminance; on a monitor at an angle the cards stop reading as objects
+        at all. A very slight ambient wash puts them back on a surface.
+     3. **Surfaces answer the pointer.** A tile that lifts a pixel under the
+        cursor tells you it is a thing rather than a printed panel. Kept to one
+        pixel and one shadow step: this is a status board, and anything that
+        moves more than that competes with the status lights that are supposed
+        to be the only moving things on it.
+--------------------------------------------------------------------------- */
+
+/* The ground. Two very soft pools behind everything, fixed to the shell rather
+   than to the scroll, so they do not travel up the page as content moves under
+   them. Both are centred well below the header: the sticky toolbar covers the
+   top strip with a flat colour (see its rule), and a gradient that was still
+   strong up there would show the seam. */
+.fkd-shell::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(1100px 620px at 12% 44%, rgba(255, 199, 44, 0.1), transparent 64%),
+    radial-gradient(900px 520px at 92% 56%, rgba(118, 118, 126, 0.08), transparent 62%);
+}
+html[data-theme='dark'] .fkd-shell::before {
+  background:
+    radial-gradient(1100px 620px at 12% 44%, rgba(255, 199, 44, 0.07), transparent 64%),
+    radial-gradient(900px 520px at 92% 56%, rgba(120, 130, 190, 0.09), transparent 62%);
+}
+/* The content region sits above the wash. The header already carries its own
+   `position: relative; z-index: 20` from the shared stylesheet and is left
+   exactly as it is — lowering it here would let a panel's shadow paint over the
+   header edge, which is the kind of thing a stacking rule does silently. */
+.fkd-shell .fk-content {
+  position: relative;
+  z-index: 1;
+}
+
+/* The header, lifted off the page it sits on rather than welded to it. */
+.fkd-shell .fk-header {
+  background: linear-gradient(
+    180deg,
+    var(--fk-surface),
+    var(--fk-surface) 62%,
+    var(--fk-surface-sunken)
+  );
+  box-shadow: 0 1px 0 var(--fk-border), 0 10px 30px -26px rgba(13, 13, 15, 0.5);
+}
+
+/* The mark gets the brand's own tint, so the page has one warm anchor at the
+   top left the way the three consoles do with their logo. */
+.fkd-mark {
+  background: linear-gradient(150deg, var(--fk-amber-surface), var(--fk-surface-sunken));
+  box-shadow: 0 0 0 1px var(--fk-amber-edge), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+/* The readout beside the nav: how many services are answering, at a glance.
+   Rendered by `App.tsx`; the rule is here because it is a header element. */
+.fkd-vitals {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--fk-surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--fk-ring);
+  font-size: 12px;
+  color: var(--fk-text-soft);
+  white-space: nowrap;
+}
+.fkd-vitals strong {
+  font-family: var(--fk-font-display);
+  font-weight: 800;
+  color: var(--fk-ink);
+  font-variant-numeric: tabular-nums;
+}
+.fkd-vitals-warn {
+  background: var(--viz-bad-wash);
+  box-shadow: inset 0 0 0 1px var(--viz-bad);
+}
+.fkd-vitals-warn strong {
+  color: var(--viz-bad);
+}
+.fkd-vitals-sep {
+  width: 1px;
+  height: 14px;
+  background: var(--fk-border-strong);
+  opacity: 0.7;
+}
+@media (max-width: 900px) {
+  /* The nav links already carry the same information one click away, and the
+     header wraps to three rows on a phone without this. */
+  .fkd-vitals {
+    display: none;
+  }
+}
+
+/* The status bar pins to the top of the scroll box.
+
+   The first shadow is doing real work and is not decoration: it is a solid,
+   unblurred rectangle 24px tall sitting directly above the bar, which covers
+   the content region's own top padding. Without it, panels scrolling upward
+   would be visible in that 20px gap *above* a bar that is supposed to be the
+   top of the page — the classic sticky-inside-a-padded-scroller artefact.
+   Drawn as a shadow rather than as a pseudo-element so it follows the bar's
+   rounded box and its width for free, at every breakpoint.
+
+   Opaque rather than the palette's glass, for the same reason: a translucent
+   bar over a solid cover strip would show the seam between the two. What it is
+   *not* any more is flat paper. A white slab under a white card row is the one
+   place on this page where two surfaces met with nothing between them, and the
+   bar read as a gap in the page rather than as an object on it. It now carries
+   the same top-lit gradient as the header above it, an inner highlight along
+   its top edge, and a shadow deep enough to sit visibly in front of whatever is
+   scrolling underneath — which is the whole job of a bar that does not move. */
+.fkd-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  background: linear-gradient(
+    180deg,
+    var(--fk-surface) 0%,
+    var(--fk-surface) 74%,
+    var(--fk-surface-sunken) 100%
+  );
+  box-shadow:
+    0 -24px 0 0 var(--fk-bg),
+    0 18px 34px -26px rgba(13, 13, 15, 0.55),
+    0 2px 10px -6px rgba(13, 13, 15, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    0 0 0 1px var(--fk-ring);
+}
+html[data-theme='dark'] .fkd-toolbar {
+  box-shadow:
+    0 -24px 0 0 var(--fk-bg),
+    0 18px 34px -24px rgba(0, 0, 0, 0.7),
+    0 2px 10px -6px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 0 0 1px var(--fk-ring);
+}
+
+/* The tiles. One pixel of lift and one shadow step — see the note above. */
+.fkd-kpi {
+  transition: transform 0.22s cubic-bezier(0.2, 0.7, 0.3, 1), box-shadow 0.22s ease;
+}
+.fkd-kpi:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--fk-shadow-md), 0 0 0 1px var(--fk-ring);
+}
+/* The lead tile carries the page's one gradient. It is the number somebody
+   glances at from across a desk, and it should be the thing the eye lands on
+   before it has read a word. */
+.fkd-kpi-hero {
+  background: linear-gradient(
+    155deg,
+    var(--fk-amber-surface) 0%,
+    var(--fk-surface) 46%,
+    var(--fk-surface) 100%
+  );
+}
+.fkd-kpi-hero:hover {
+  box-shadow: var(--fk-shadow-lg), 0 0 0 1px var(--fk-amber-edge);
+}
+
+/* Panels answer the pointer too, but more quietly than the tiles: they are
+   large surfaces, and a large surface that moves is a page that wobbles. */
+.fkd-shell .fk-panel {
+  transition: box-shadow 0.25s ease;
+}
+.fkd-shell .fk-panel:hover {
+  box-shadow: var(--fk-shadow-md), 0 0 0 1px var(--fk-ring);
+}
+
+/* The control centre is the tallest thing on the page and the one people are
+   actually watching, so it gets a little more presence than its neighbours. */
+.fkd-block-monitor .fk-panel {
+  box-shadow: var(--fk-shadow-md), 0 0 0 1px var(--fk-ring);
+}
+
+/* A last breath under the final panel: the content region scrolls, and a page
+   whose last card ends flush against the viewport edge reads as cut off. */
+.fkd-content > :last-child {
+  margin-bottom: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fkd-kpi,
+  .fkd-shell .fk-panel {
+    transition: none;
+  }
+  .fkd-kpi:hover {
+    transform: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Sections that fold
+   ---------------------------------------------------------------------------
+   Every block on this page is a disclosure now, which changes what a panel
+   header is for. It used to be a caption; it is now the thing that is left when
+   the panel is put away, so it has to hold up on its own — the icon tile, the
+   title and the note are the whole record of a folded section, and the chevron
+   has to be findable without hunting for it.
+
+   Three rules follow from that, and nothing here touches what a panel contains:
+
+     1. **The header answers the pointer.** The whole row is the control, so the
+        whole row lights, not just the 40px square at the end of it.
+     2. **A folded panel steps back.** It keeps its ring and loses its lift, so
+        a page with four sections away reads as four closed drawers rather than
+        as four empty cards.
+     3. **The fold is quick and the content fades with it.** 0.34s is already
+        the shared curve; what is added here is that a section folding away does
+        not drag the page under it, because the height is animated on the grid
+        row rather than on anything that reflows a sibling.
+--------------------------------------------------------------------------- */
+
+/* The click target is the row, so the row is what shows it is one. Kept to a
+   tint — a header that changes colour under the pointer on a board where four
+   status lights are already moving is one more moving thing. */
+@media (hover: hover) {
+  .fkd-shell .fk-panel-collapsible > .fk-panel-head:hover {
+    background-color: var(--fk-surface-sunken);
+  }
+  /* The tiles' header sits on the sheet rather than on paper, so there is no
+     card edge for a tint to stop at. The chevron carries it there instead. */
+  .fkd-shell .fk-panel-collapsible.fkd-panel-bare > .fk-panel-head:hover {
+    background-color: transparent;
+  }
+}
+.fkd-shell .fk-panel-collapsible > .fk-panel-head {
+  border-radius: 32px 32px 0 0;
+  transition: padding 0.34s cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 0.2s ease,
+    box-shadow 0.3s ease;
+}
+
+/* Folded: still an object, no longer a raised one. The chevron stays lit so the
+   way back in is visible without hovering. `:hover` is named explicitly because
+   the lift rule further up this file out-specifies the plain selector, and a
+   folded drawer that rises off the page under the pointer is exactly the cue
+   this state is trying not to give. */
+.fkd-shell .fk-panel-folded,
+.fkd-shell .fk-panel-folded:hover {
+  box-shadow: var(--fk-shadow-sm), 0 0 0 1px var(--fk-ring);
+  background: linear-gradient(180deg, var(--fk-surface), var(--fk-surface-sunken));
+}
+.fkd-shell .fk-panel-folded > .fk-panel-head {
+  border-radius: 32px;
+}
+.fkd-shell .fk-panel-folded .fk-panel-caret {
+  color: var(--fk-text);
+}
+
+/* The note under a folded title is the only description left of what is inside
+   it, so it stops truncating and is allowed the second line. */
+.fkd-shell .fk-panel-folded .fk-panel-note {
+  color: var(--fk-text-soft);
+}
+
+/* ── The headline tiles, as a section ───────────────────────────────────── */
+
+/* The five tiles were the one part of the page that could not be put away,
+   because they sat bare on the sheet with no header to hang a control from.
+   They get one — but not a card: the tiles already carry their own paper, and a
+   card around them would be a box drawn around five boxes. So the panel keeps
+   its head and its fold and gives up its surface. */
+.fkd-shell .fk-panel.fkd-panel-bare,
+.fkd-shell .fk-panel.fkd-panel-bare:hover {
+  background: none;
+  box-shadow: none;
+  border-radius: 0;
+  overflow: visible;
+}
+.fkd-panel-bare > .fk-panel-head,
+.fkd-shell .fk-panel-collapsible.fkd-panel-bare > .fk-panel-head {
+  padding: 2px 0 14px;
+  background: none;
+  border-radius: 0;
+}
+/* Folded, the tiles' header is the only thing left of the section, and a bare
+   row of text on the sheet beside seven closed cards reads as something that
+   fell out of one. It takes the card itself — on the header rather than on the
+   panel, so the surface is a flat colour that can actually cross-fade. */
+.fkd-shell .fk-panel-collapsible.fkd-panel-bare.fk-panel-folded > .fk-panel-head {
+  padding: 15px 18px;
+  border-radius: 26px;
+  background-color: var(--fk-surface);
+  box-shadow: var(--fk-shadow-sm), 0 0 0 1px var(--fk-ring);
+}
+.fkd-panel-bare .fk-panel-icon {
+  height: 38px;
+  width: 38px;
+  border-radius: 13px;
+  font-size: 18px;
+  box-shadow: 0 0 0 1px var(--fk-ring);
+}
+.fkd-panel-bare .fk-panel-heading {
+  font-size: 17px;
+}
+/* Padding the tiles' own shadows can live in, pulled straight back out again so
+   the row still lines up with the cards above and below it. Without it the
+   fold's clip — which is what makes the animation possible at all — would shave
+   the lift off the tile under the pointer. */
+.fkd-panel-bare > .fk-panel-fold > .fk-panel-body {
+  padding: 16px 18px 20px;
+  margin: -16px -18px -14px;
+}
+/* Out-specifies the shared fold rule, which cannot see this panel's margins. */
+.fkd-panel-bare.fk-panel-folded > .fk-panel-fold > .fk-panel-body {
+  padding-top: 0;
+  padding-bottom: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+/* ── Reading rhythm ─────────────────────────────────────────────────────── */
+
+/* A touch more air between sections than between the parts inside one. The page
+   is a stack of eight things now that the tiles have a header of their own, and
+   at 16px the folded headers ran together into a list. */
+.fkd-shell .fk-content {
+  gap: 18px;
+}
+
+/* ── The status bar on smaller screens ──────────────────────────────────── */
+
+@media (max-width: 1080px) {
+  /* The bar wraps to two rows: scope and counts on the first, switches on the
+     second, still right-aligned so the live switch stays where the eye left
+     it. */
+  .fkd-toolbar-lead {
+    flex: 1 1 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .fkd-toolbar {
+    padding: 10px;
+    border-radius: 20px;
+  }
+  .fkd-readout {
+    flex: 1 1 auto;
+  }
+  .fkd-readout-stat {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 5px 10px 6px;
+  }
+  .fkd-readout-value {
+    font-size: 19px;
+  }
+  /* The glyph carries it: two outlined pills with words in them is more
+     furniture than a phone-width bar has room for. */
+  .fkd-foldall-label {
+    display: none;
+  }
+  .fkd-foldall {
+    padding: 8px 12px;
+  }
+  .fkd-panel-bare > .fk-panel-fold > .fk-panel-body {
+    padding: 12px;
+    margin: -12px -12px -10px;
+  }
+}
+
+/* Long labels wrap rather than clipping — "Jobs in range" is the caption for
+   every number below it and it does not get to be half a word. */
+@media (max-width: 400px) {
+  .fkd-readout-label {
+    font-size: 9px;
+    letter-spacing: 0.06em;
+  }
+  .fkd-readout-hint {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fkd-shell .fk-panel-collapsible > .fk-panel-head,
+  .fkd-shell .fk-panel-fold,
+  .fkd-shell .fk-panel-fold > *,
+  .fkd-shell .fk-caret-glyph,
+  .fkd-readout-stat {
+    transition: none;
   }
 }

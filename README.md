@@ -116,6 +116,27 @@ work it is holding. An agent card that is *blocked* is running and missing a key
 one that is *offline* is not running at all. The two are kept apart because they
 send you to different terminals.
 
+**The control centre.** The panel at the top of the page, and the reason to keep
+this tab open on a second screen. It shows what the agents are *saying to each
+other* while they say it:
+
+- a **route ribbon** — the parties this particular request has passed through, in
+  the order it reached them, with the hop that is carrying right now lit up;
+- the **cast**, on the left: every worker with two separate readings on it —
+  reachable (from the health poll) and *doing* (from the wire). Up and silent is
+  a different morning from down, and one card shows both;
+- the **conversation**, on the right: a negotiation drawn as a negotiation, two
+  lanes with the machinery — tool calls, API answers, the handover to the
+  courier — running quietly down the middle;
+- the **event log** behind it: every event with both ends named, filterable by
+  agent messages, negotiation, API calls, tool calls, orders, delivery or errors,
+  searchable, and with the raw payload one click away;
+- **who is calling whom**: each directed wire with its traffic, its last message
+  and whether anything on it has failed.
+
+Pick any run from the chips along the top, or leave it alone and it follows
+whatever is live.
+
 **How work moves.** A diagram of the floor with live counts on it: what is
 waiting to be judged, what is on the dispatcher's desk, what is on the road, what
 arrived and what did not. Nodes tint with their state and edges crawl where work
@@ -147,6 +168,34 @@ chart has a table twin.
   busyness, so each strip is what this page has watched since it was opened,
   sampled once per poll. Reload and they start empty — which is why the stretch
   before you arrived is drawn as nothing rather than as idle time.
+- **It does not invent a conversation.** See below. With no console open, the two
+  ordering agents are silent on this screen and the panel says so, rather than
+  drawing you a plausible negotiation that never happened.
+
+### Where the conversation comes from
+
+The delivery dispatcher on 8103 publishes a per-job event stream anyone may
+subscribe to, so the dashboard reads it directly. The other two do not: the
+errand server on 8100 and the A2A desk on 8101 stream a run **only to whoever
+started it**, keyed by a run id that is handed back from the `POST` and never
+listed anywhere. A page that starts nothing therefore cannot hear them.
+
+Rather than add an endpoint or fake the content, the consoles that *do* receive
+those streams re-broadcast what they were told onto a shared bus — a
+`BroadcastChannel` for tabs that are open now, plus a `localStorage` ring of the
+last 400 events so a dashboard opened mid-run still has the first half of it.
+`src/shared/agentBus.ts` is the whole of it; `src/hooks/runBus.ts` and
+`src/a2a/negotiationBus.ts` are the two taps, and both are pure forwarders sitting
+on events that have already arrived from a real `EventSource`.
+
+What that buys, and what it costs:
+
+- the dashboard shows the genuine execution flow — every message, tool call,
+  quote, payment and handover, with real timestamps and real direction;
+- nothing in the ordering logic changed to make it work: the taps are called
+  beside the existing fold, never inside a `setState` updater;
+- and the two ordering agents only appear here while one of their consoles is
+  open somewhere. That is a real limit and it is stated on the panel itself.
 
 A collapsible panel at the bottom of the page names the endpoint behind every
 number on it, so none of this has to be taken on trust.
@@ -198,13 +247,18 @@ src/
   theme.ts                 The palette: brand hexes, both schemes, antd tokens
   types.ts                 Wire types for the agent server
   toolLabels.ts            Tool names → what an operator would call them
+  shared/
+    agentBus.ts            The cross-tab event log the dashboard listens on
   hooks/
     useAgentRun.ts         One errand's worth of state, fed by SSE
+    runBus.ts              That run, mirrored onto the bus — forwarding only
     useUserLocation.ts     Where the customer is — permission, refusal, fallback
     useColorScheme.ts      Light or dark, remembered
   services/
     agentApi.ts            Start, follow, cancel
     couponApi.ts           The coupon picker's options
+  a2a/                     The A2A console — /a2a.html
+    negotiationBus.ts      The buyer/merchant turns, mirrored onto the bus
   components/
     Panel.tsx              The surface every section sits on
     ServiceStatus.tsx      What is and is not ready
@@ -219,7 +273,10 @@ src/
     derive.ts              Every number on the page, as pure functions
     useFleet.ts            The poll, and the state history it keeps itself
     useLiveFeed.ts         Several jobs' streams at once
+    monitor.ts             Bus + feed in one shape, and what is derived from it
+    useMonitor.ts          The control centre's live wire
     dashboard.css          The chart palette and this page's own components
+    monitor.css            The control centre's own rules
     components/
       KpiRow.tsx           The headline numbers, hero first
       Pipeline.tsx         The floor as a diagram, with live counts
@@ -227,6 +284,12 @@ src/
       AssignmentTable.tsx  Every job and whose hands it is in
       LiveFeed.tsx         What the agents are saying, across jobs
       Charts.tsx           Columns, bars, sparkline, meter, table twin
+      monitor/
+        ControlCenter.tsx  The split screen, and what picks the run on it
+        FlowRibbon.tsx     The route one request took, live hop lit
+        AgentRail.tsx      Each party: reachable, and what it is doing
+        ConversationView.tsx  The negotiation, in two lanes
+        EventLog.tsx       Every event, filtered, searchable, expandable
 ```
 
 **Location never leaves this app as a claim.** The browser gives coordinates and

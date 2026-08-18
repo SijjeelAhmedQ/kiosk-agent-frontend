@@ -1,0 +1,1740 @@
+/* ---------------------------------------------------------------------------
+   The control centre's own rules.
+
+   Loaded after `dashboard.css`, which is loaded after the shared `styles.css`,
+   so everything here only ever adds. No `.fk-*` rule is overridden: four pages
+   share one design system and the point of that is that they still look like
+   one product, not that one of them gets to be special.
+
+   The look this panel is going for, and why it is different from the rest of
+   the page. Below the fold this dashboard is a *document* — charts, a table,
+   provenance — read at a desk, once. This panel is an *instrument*: it is what
+   is on the second screen while a run is happening, and it is read in glances
+   from four feet away. So it gets the things an instrument gets and a document
+   does not: a darker sunken ground so lit elements actually read as lit, motion
+   that means something (a hop pulses only while it is carrying), and a much
+   stronger contrast between "live" and "everything else".
+
+   What it deliberately does not get is decoration that moves on its own. Every
+   animation in this file is bound to a state — `fkm-hop-hot`, `fkm-card-hot`,
+   `fkm-beacon-live` — and stops when that state does. An always-on shimmer is
+   the fastest way to teach an operator to stop looking at a screen.
+
+   Every colour comes from the same `--fk-*` and `--viz-*` variables as the rest
+   of the app, so both schemes are one stylesheet.
+--------------------------------------------------------------------------- */
+
+.fkm {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+/* Local tokens. Only the two that genuinely have no equivalent in the shared
+   palette: the instrument's sunken ground, and the glow a live element wears. */
+/* Each `color-mix` is preceded by a plain value it can fall back to. A browser
+   that cannot resolve the mix drops that one declaration and keeps the one above
+   it — without the pair, the custom property would resolve to the guaranteed
+   invalid value and every surface using it would paint transparent. */
+.fkm {
+  --fkm-ground: var(--fk-surface-sunken);
+  --fkm-ground: color-mix(in srgb, var(--fk-surface-sunken) 84%, var(--fk-text) 4%);
+  --fkm-glow: 0 0 0 1px var(--fk-amber-edge), 0 6px 22px -8px rgba(255, 199, 44, 0.55);
+  --fkm-inset: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  --fkm-idle-soft: var(--viz-idle-wash);
+  --fkm-idle-soft: color-mix(in srgb, var(--viz-idle) 60%, transparent);
+  --fkm-bad-edge: var(--viz-bad);
+  --fkm-bad-edge: color-mix(in srgb, var(--viz-bad) 42%, transparent);
+  --fkm-work-line: var(--viz-work);
+  --fkm-work-line: color-mix(in srgb, var(--viz-work) 45%, var(--fk-border-strong));
+  --fkm-bad-line: var(--viz-bad);
+  --fkm-bad-line: color-mix(in srgb, var(--viz-bad) 55%, var(--fk-border-strong));
+  --fkm-beat-ring: var(--fk-amber-edge);
+  --fkm-beat-ring: color-mix(in srgb, var(--viz-work) 55%, transparent);
+}
+html[data-theme='dark'] .fkm {
+  --fkm-ground: #101015;
+  --fkm-inset: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+/* ── The pulse bar ──────────────────────────────────────────────────────── */
+
+/* Four numbers, and each one answers a different question: is anything running,
+   is it moving, how many parties are involved, is anything broken. Set as one
+   strip rather than as four cards — they are read together or not at all. */
+.fkm-pulsebar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+  padding: 14px 18px;
+  border-radius: 20px;
+  background: var(--fkm-ground);
+  /* The wash across the top-left corner, so the strip reads as lit from one
+     side rather than as a flat band. Its own declaration for the reason given
+     above the token block — a browser without `color-mix` keeps the plain
+     ground above and simply loses the wash. */
+  background:
+    linear-gradient(120deg, color-mix(in srgb, var(--fk-amber-surface) 60%, transparent), transparent 46%),
+    var(--fkm-ground);
+  box-shadow: 0 0 0 1px var(--fk-ring), var(--fkm-inset);
+}
+
+.fkm-stat {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.fkm-stat-body {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  min-width: 0;
+}
+.fkm-stat-value {
+  font-family: var(--fk-font-display);
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--fk-ink);
+  font-variant-numeric: tabular-nums;
+}
+.fkm-stat-lead .fkm-stat-value {
+  font-size: 30px;
+  letter-spacing: -0.02em;
+}
+.fkm-stat-label {
+  font-size: 12px;
+  color: var(--fk-text-faint);
+  white-space: nowrap;
+}
+.fkm-stat-bad .fkm-stat-value {
+  color: var(--viz-bad);
+}
+
+/* The beacon. Hollow and still when nothing is running, filled and breathing
+   when something is — two channels, so it is not colour alone. */
+.fkm-beacon {
+  width: 12px;
+  height: 12px;
+  flex: none;
+  border-radius: 999px;
+  border: 2px solid var(--fk-text-faint);
+  background: transparent;
+}
+.fkm-beacon-live {
+  border-color: var(--viz-work);
+  background: var(--viz-work);
+  box-shadow: 0 0 0 0 var(--fkm-beat-ring);
+  animation: fkm-beat 1.9s ease-out infinite;
+}
+@keyframes fkm-beat {
+  0% {
+    box-shadow: 0 0 0 0 var(--fkm-beat-ring);
+  }
+  70% {
+    box-shadow: 0 0 0 11px transparent;
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+.fkm-pulsebar-when {
+  margin: 0 0 0 auto;
+  font-size: 12px;
+  color: var(--fk-text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.fkm-wipe {
+  appearance: none;
+  cursor: pointer;
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--fk-border);
+  background: transparent;
+  font-family: var(--fk-font-display);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--fk-text-soft);
+  transition: border-color 0.18s ease, color 0.18s ease, background-color 0.18s ease;
+}
+.fkm-wipe:hover:not(:disabled) {
+  border-color: var(--viz-bad);
+  color: var(--viz-bad);
+  background: var(--viz-bad-wash);
+}
+.fkm-wipe:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ── The top band: run picker + route ───────────────────────────────────── */
+
+.fkm-top {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fkm-runs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+.fkm-runs::-webkit-scrollbar {
+  display: none;
+}
+
+.fkm-run {
+  appearance: none;
+  cursor: pointer;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 13px;
+  border-radius: 999px;
+  border: 1px solid var(--fk-border);
+  background: var(--fk-surface);
+  font-size: 12px;
+  color: var(--fk-text-soft);
+  transition: border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+.fkm-run:hover {
+  transform: translateY(-1px);
+  border-color: var(--fk-border-strong);
+}
+.fkm-run-ref {
+  font-family: var(--fk-font-mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--fk-ink);
+}
+.fkm-run-meta {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--fk-text-faint);
+}
+.fkm-run-on {
+  border-color: var(--fk-amber);
+  box-shadow: var(--fkm-glow);
+}
+.fkm-run-live .fkm-run-meta {
+  color: var(--viz-work);
+  font-weight: 700;
+}
+.fkm-run-bad .fkm-run-meta {
+  color: var(--viz-bad);
+  font-weight: 700;
+}
+
+/* The route: the parties this request passed through, in order. */
+.fkm-ribbon {
+  padding: 14px 16px;
+  border-radius: 20px;
+  background: var(--fkm-ground);
+  box-shadow: 0 0 0 1px var(--fk-ring);
+}
+.fkm-ribbon-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 92px;
+}
+.fkm-empty-line {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--fk-text-faint);
+}
+
+.fkm-ribbon-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.fkm-run-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  border: 1.5px solid var(--fk-text-faint);
+}
+.fkm-run-dot-live {
+  border-color: var(--viz-work);
+  background: var(--viz-work);
+  animation: fkm-beat 1.9s ease-out infinite;
+}
+.fkm-ribbon-ref {
+  font-family: var(--fk-font-mono);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--fk-ink);
+}
+.fkm-ribbon-sep {
+  color: var(--fk-text-faint);
+}
+.fkm-ribbon-sub {
+  font-size: 11.5px;
+  color: var(--fk-text-faint);
+}
+
+/* Pushed sideways rather than wrapped — a route is a sequence, and one that
+   wraps onto a second line stops reading as one. */
+.fkm-ribbon-scroll {
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+.fkm-chain {
+  list-style: none;
+  margin: 0;
+  padding: 0 2px 2px;
+  display: flex;
+  align-items: stretch;
+  min-width: min-content;
+}
+.fkm-chain-item {
+  display: flex;
+  align-items: center;
+  flex: none;
+}
+
+.fkm-station {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 16px;
+  background: var(--fk-surface);
+  box-shadow: 0 0 0 1px var(--fk-ring), var(--fk-shadow-sm);
+  transition: box-shadow 0.25s ease, transform 0.25s ease;
+}
+.fkm-station-service {
+  background: var(--fk-surface-sunken);
+  border: 1px dashed var(--fk-border-strong);
+  box-shadow: none;
+}
+.fkm-station-person {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--fk-border);
+}
+.fkm-station-glyph {
+  font-size: 17px;
+  line-height: 1;
+}
+.fkm-station-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.fkm-station-name {
+  font-family: var(--fk-font-display);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--fk-ink);
+  white-space: nowrap;
+}
+.fkm-station-note {
+  font-size: 10.5px;
+  color: var(--fk-text-faint);
+  white-space: nowrap;
+}
+.fkm-station-live {
+  box-shadow: var(--fkm-glow), var(--fk-shadow-md);
+  transform: translateY(-1px);
+}
+.fkm-station-bad .fkm-station-note {
+  color: var(--viz-bad);
+  font-weight: 600;
+}
+/* The ring only exists on a live station, so it can animate without becoming
+   wallpaper — see the note at the top of this file. */
+.fkm-station-ring {
+  position: absolute;
+  inset: -3px;
+  border-radius: 19px;
+  border: 1.5px solid var(--fk-amber);
+  opacity: 0;
+  animation: fkm-ring 2.4s ease-out infinite;
+  pointer-events: none;
+}
+@keyframes fkm-ring {
+  0% {
+    opacity: 0.75;
+    transform: scale(0.97);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.05);
+  }
+}
+
+/* The stretch between two stations. The dash travels only while the hop is
+   carrying something, which is what makes it a status light and not a shimmer. */
+.fkm-hop {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 8px;
+  color: var(--fk-text-faint);
+}
+.fkm-hop-line {
+  position: relative;
+  display: block;
+  width: 34px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--fk-border-strong);
+  overflow: hidden;
+}
+.fkm-hop-pulse {
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, var(--viz-work), transparent);
+}
+.fkm-hop-hot .fkm-hop-line {
+  background: var(--fkm-work-line);
+}
+.fkm-hop-hot .fkm-hop-pulse {
+  animation: fkm-travel 1.25s linear infinite;
+}
+@keyframes fkm-travel {
+  to {
+    transform: translateX(100%);
+  }
+}
+.fkm-hop-count {
+  font-family: var(--fk-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: var(--fk-surface-sunken);
+  color: var(--fk-text-soft);
+}
+.fkm-hop-arrow {
+  font-size: 14px;
+  line-height: 1;
+}
+.fkm-hop-hot .fkm-hop-arrow,
+.fkm-hop-hot .fkm-hop-count {
+  color: var(--viz-work);
+}
+.fkm-hop-bad .fkm-hop-line {
+  background: var(--fkm-bad-line);
+}
+.fkm-hop-bad .fkm-hop-count {
+  color: var(--viz-bad);
+}
+
+/* ── The "nothing yet" note ─────────────────────────────────────────────── */
+
+.fkm-note {
+  display: flex;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: var(--fk-amber-surface);
+  box-shadow: inset 0 0 0 1px var(--fk-amber-edge);
+}
+.fkm-note-glyph {
+  font-size: 20px;
+  line-height: 1.2;
+}
+.fkm-note-title {
+  margin: 0 0 4px;
+  font-family: var(--fk-font-display);
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--fk-ink);
+}
+.fkm-note-body {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--fk-text-soft);
+  max-width: 92ch;
+}
+.fkm-note-body a {
+  color: var(--fk-amber-ink);
+  font-weight: 600;
+}
+
+/* ── The split ──────────────────────────────────────────────────────────── */
+
+/* Cast on the left, script on the right. 5:7 because the right pane holds
+   sentences and the left holds cards, and a sentence needs the room. */
+.fkm-split {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: 14px;
+  align-items: stretch;
+}
+@media (max-width: 1240px) {
+  .fkm-split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  /* Stacked, the panes are auto-height, so the two scroll boxes need a ceiling
+     of their own or the page becomes one very long log. */
+  .fkm-convo-scroll,
+  .fkm-log-scroll {
+    max-height: 520px;
+  }
+}
+
+.fkm-pane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border-radius: 20px;
+  background: var(--fkm-ground);
+  box-shadow: 0 0 0 1px var(--fk-ring);
+  overflow: hidden;
+}
+
+.fkm-pane-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--fk-border);
+}
+.fkm-pane-title {
+  margin: 0;
+  font-family: var(--fk-font-display);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--fk-ink);
+}
+.fkm-pane-note {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--fk-text-faint);
+}
+.fkm-pane-note-right {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.fkm-unfocus,
+.fkm-scope {
+  appearance: none;
+  cursor: pointer;
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--fk-amber-edge);
+  background: var(--fk-amber-surface);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fk-amber-ink);
+}
+.fkm-unfocus:hover,
+.fkm-scope:hover {
+  background: var(--fk-surface);
+}
+
+/* The left pane owns its scroll so the right pane's height is not hostage to
+   how many agents are on the floor. */
+.fkm-rail {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px;
+  max-height: 620px;
+}
+
+.fkm-cards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ── An agent card ──────────────────────────────────────────────────────── */
+
+.fkm-card {
+  position: relative;
+  padding: 13px 14px;
+  border-radius: 16px;
+  background: var(--fk-surface);
+  box-shadow: 0 0 0 1px var(--fk-ring), var(--fk-shadow-sm);
+  transition: box-shadow 0.22s ease, transform 0.22s ease;
+}
+.fkm-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 0 1px var(--fk-ring), var(--fk-shadow-md);
+}
+.fkm-card-hot {
+  box-shadow: var(--fkm-glow), var(--fk-shadow-md);
+}
+.fkm-card-bad {
+  box-shadow: 0 0 0 1px var(--viz-bad), var(--fk-shadow-sm);
+}
+.fkm-card-focus {
+  box-shadow: 0 0 0 2px var(--fk-amber), var(--fk-shadow-md);
+}
+.fkm-card-service,
+.fkm-card-person {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--fk-border);
+}
+.fkm-card-service:hover,
+.fkm-card-person:hover {
+  transform: none;
+  box-shadow: inset 0 0 0 1px var(--fk-border-strong);
+}
+
+/* The whole card is the button — laid over it rather than wrapping it, so the
+   card's own contents keep their semantics and the expandable bits inside a
+   future card are not swallowed by an outer <button>. */
+.fkm-card-hit {
+  position: absolute;
+  inset: 0;
+  appearance: none;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  border-radius: inherit;
+  z-index: 1;
+}
+
+.fkm-card-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+}
+.fkm-card-glyph {
+  position: relative;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  font-size: 17px;
+  background: var(--fk-surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--fk-ring);
+}
+.fkm-card-halo {
+  position: absolute;
+  inset: -4px;
+  border-radius: 16px;
+  border: 1.5px solid var(--fk-amber);
+  opacity: 0;
+  animation: fkm-ring 2.4s ease-out infinite;
+}
+.fkm-card-id {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.fkm-card-name {
+  margin: 0;
+  font-family: var(--fk-font-display);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--fk-ink);
+}
+.fkm-card-role {
+  margin: 2px 0 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--fk-text-faint);
+}
+
+.fkm-health {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  font-family: var(--fk-font-display);
+  white-space: nowrap;
+}
+.fkm-health-work {
+  background: var(--viz-work-wash);
+  color: var(--viz-work);
+}
+.fkm-health-idle {
+  background: var(--fk-surface-sunken);
+  color: var(--fk-text-faint);
+}
+.fkm-health-bad,
+.fkm-health-off {
+  background: var(--viz-bad-wash);
+  color: var(--viz-bad);
+}
+
+.fkm-card-doing {
+  margin-top: 11px;
+  padding: 10px 11px;
+  border-radius: 12px;
+  background: var(--fk-surface-sunken);
+}
+.fkm-card-quiet {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--fk-text-faint);
+  font-style: italic;
+}
+.fkm-card-task {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.fkm-card-task-text {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--fk-text);
+  /* Two lines, then an ellipsis: an agent's last line can be a paragraph, and a
+     card that grows to fit one pushes every other agent off the screen. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.fkm-pulse {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.fkm-pulse-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+}
+.fkm-pulse-active {
+  background: var(--viz-work-wash);
+  color: var(--viz-work);
+}
+.fkm-pulse-active .fkm-pulse-dot {
+  animation: fkm-blink 1.4s ease-in-out infinite;
+}
+@keyframes fkm-blink {
+  50% {
+    opacity: 0.25;
+  }
+}
+.fkm-pulse-processing {
+  background: var(--viz-work-wash);
+  color: var(--viz-work);
+}
+.fkm-pulse-waiting {
+  background: var(--fk-surface);
+  color: var(--fk-text-faint);
+  box-shadow: inset 0 0 0 1px var(--fk-border);
+}
+.fkm-pulse-done {
+  background: var(--viz-good-wash);
+  color: var(--viz-good);
+}
+.fkm-pulse-error {
+  background: var(--viz-bad-wash);
+  color: var(--viz-bad);
+}
+
+.fkm-card-facing {
+  margin: 7px 0 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: var(--fk-text-faint);
+}
+.fkm-card-facing-label {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 9.5px;
+}
+.fkm-card-facing-who {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--fk-surface);
+  box-shadow: inset 0 0 0 1px var(--fk-border);
+  color: var(--fk-text);
+  font-weight: 600;
+}
+.fkm-card-ref {
+  font-family: var(--fk-font-mono);
+  font-size: 10px;
+  color: var(--fk-text-soft);
+}
+.fkm-card-when {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Sent against received as one bar. An agent that only ever receives is a
+   bottleneck, and that reads off a shape faster than off two numbers. */
+.fkm-card-traffic {
+  margin-top: 10px;
+}
+.fkm-traffic-bar {
+  display: flex;
+  height: 5px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--viz-track);
+}
+.fkm-traffic-out {
+  background: var(--viz-work);
+  transition: width 0.4s ease;
+}
+.fkm-traffic-back {
+  background: var(--fkm-idle-soft);
+  transition: width 0.4s ease;
+}
+.fkm-traffic-key {
+  margin: 6px 0 0;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 10.5px;
+  color: var(--fk-text-faint);
+}
+.fkm-traffic-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.fkm-traffic-legend::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+}
+.fkm-traffic-legend-out::before {
+  background: var(--viz-work);
+}
+.fkm-traffic-legend-back::before {
+  background: var(--fkm-idle-soft);
+}
+.fkm-traffic-bad {
+  color: var(--viz-bad);
+  font-weight: 600;
+}
+
+.fkm-card-problem {
+  margin: 9px 0 0;
+  padding: 7px 10px;
+  border-radius: 10px;
+  background: var(--viz-bad-wash);
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--fk-text);
+}
+
+.fkm-rail-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 16px 0 10px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fk-text-faint);
+}
+.fkm-rail-divider::before,
+.fkm-rail-divider::after {
+  content: '';
+  flex: 1 1 auto;
+  height: 1px;
+  background: var(--fk-border);
+}
+
+/* ── Who is calling whom ────────────────────────────────────────────────── */
+
+.fkm-links-block {
+  flex: none;
+  padding: 12px 14px 14px;
+  border-top: 1px solid var(--fk-border);
+}
+.fkm-sub {
+  margin: 0 0 9px;
+  font-family: var(--fk-font-display);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--fk-text-faint);
+}
+.fkm-links-empty {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--fk-text-faint);
+}
+.fkm-links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 8px;
+}
+.fkm-link {
+  padding: 9px 11px;
+  border-radius: 12px;
+  background: var(--fk-surface);
+  box-shadow: inset 0 0 0 1px var(--fk-ring);
+  min-width: 0;
+}
+.fkm-link-hot {
+  box-shadow: inset 0 0 0 1px var(--fk-amber-edge);
+  background: linear-gradient(
+    100deg,
+    var(--fk-amber-surface),
+    var(--fk-surface) 62%
+  );
+}
+.fkm-link-bad {
+  box-shadow: inset 0 0 0 1px var(--fkm-bad-edge);
+}
+.fkm-link-head {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--fk-ink);
+  min-width: 0;
+}
+.fkm-link-who {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+.fkm-link-arrow {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--fk-text-faint);
+  font-size: 12px;
+}
+/* A short rule before the arrowhead, so the pair reads as a wire rather than as
+   punctuation between two names. */
+.fkm-link-arrow-line {
+  display: inline-block;
+  width: 14px;
+  height: 1.5px;
+  border-radius: 2px;
+  background: currentColor;
+  opacity: 0.5;
+}
+.fkm-link-hot .fkm-link-arrow-line {
+  opacity: 1;
+}
+.fkm-link-hot .fkm-link-arrow {
+  color: var(--viz-work);
+}
+.fkm-link-count {
+  margin-left: auto;
+  font-family: var(--fk-font-mono);
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--fk-surface-sunken);
+  color: var(--fk-text-soft);
+}
+.fkm-link-last {
+  margin: 5px 0 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--fk-text-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fkm-link-when {
+  margin: 4px 0 0;
+  display: flex;
+  gap: 8px;
+  font-size: 10px;
+  color: var(--fk-text-faint);
+  font-variant-numeric: tabular-nums;
+}
+.fkm-link-errs {
+  color: var(--viz-bad);
+  font-weight: 600;
+}
+
+/* ── Tabs ───────────────────────────────────────────────────────────────── */
+
+.fkm-tabs {
+  display: inline-flex;
+  gap: 3px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--fk-surface-sunken);
+}
+.fkm-tab {
+  appearance: none;
+  border: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: transparent;
+  font-family: var(--fk-font-display);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--fk-text-faint);
+  transition: background-color 0.16s ease, color 0.16s ease;
+}
+.fkm-tab:hover {
+  color: var(--fk-text);
+}
+.fkm-tab-on,
+.fkm-tab-on:hover {
+  background: var(--fk-surface);
+  color: var(--fk-ink);
+  box-shadow: var(--fk-shadow-sm);
+}
+.fkm-tab-count {
+  font-family: var(--fk-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--fk-surface-sunken);
+  color: var(--fk-text-faint);
+}
+.fkm-tab-on .fkm-tab-count {
+  background: var(--fk-amber-surface);
+  color: var(--fk-amber-ink);
+}
+
+.fkm-pane-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── The conversation ───────────────────────────────────────────────────── */
+
+.fkm-convo {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+.fkm-convo-lanes {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 16px;
+  border-bottom: 1px dashed var(--fk-border);
+  background: var(--fk-surface-sunken);
+}
+.fkm-lane-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--fk-font-display);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--fk-text-soft);
+  min-width: 0;
+}
+.fkm-lane-tag-right {
+  text-align: right;
+}
+
+/* No `max-height` here on a wide screen, and that is deliberate. The panes are
+   stretched grid items, so this box already has a definite height — the left
+   rail's, which is the taller of the two — and capping it would leave a band of
+   dead space under the transcript. The cap comes back in the media queries
+   below, where the panes stack and are auto-height instead. */
+.fkm-convo-scroll {
+  flex: 1 1 auto;
+  min-height: 320px;
+  overflow-y: auto;
+  padding: 16px;
+  /* The centre rail the machinery rows sit on, drawn once behind the whole
+     list rather than per row — so the line is continuous through a run. */
+  background-image: linear-gradient(var(--fk-border), var(--fk-border));
+  background-size: 1px 100%;
+  background-position: 50% 0;
+  background-repeat: no-repeat;
+}
+
+.fkm-convo-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* A turn. */
+.fkm-turn {
+  display: flex;
+  gap: 10px;
+  max-width: 78%;
+  animation: fkm-land 0.28s ease-out;
+}
+@keyframes fkm-land {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+.fkm-turn-left {
+  align-self: flex-start;
+}
+.fkm-turn-right {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+
+.fkm-turn-avatar {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  font-size: 15px;
+  background: var(--fk-surface);
+  box-shadow: 0 0 0 1px var(--fk-ring), var(--fk-shadow-sm);
+}
+
+.fkm-turn-body {
+  min-width: 0;
+  padding: 10px 13px;
+  border-radius: 16px;
+  background: var(--fk-surface);
+  box-shadow: 0 0 0 1px var(--fk-ring), var(--fk-shadow-sm);
+}
+/* The two lanes are told apart by the corner that is cut, not only by which
+   side they sit on — the tail is what survives a narrow screen. */
+.fkm-turn-left .fkm-turn-body {
+  border-top-left-radius: 5px;
+}
+.fkm-turn-right .fkm-turn-body {
+  border-top-right-radius: 5px;
+  background: var(--fk-amber-surface);
+  box-shadow: inset 0 0 0 1px var(--fk-amber-edge);
+}
+.fkm-turn-bad .fkm-turn-body {
+  background: var(--viz-bad-wash);
+  box-shadow: inset 0 0 0 1px var(--fkm-bad-edge);
+}
+
+.fkm-turn-head {
+  margin: 0 0 5px;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 10.5px;
+  color: var(--fk-text-faint);
+}
+.fkm-turn-from {
+  font-family: var(--fk-font-display);
+  font-weight: 700;
+  font-size: 11.5px;
+  color: var(--fk-ink);
+}
+.fkm-turn-to-arrow {
+  color: var(--fk-text-faint);
+}
+.fkm-turn-to {
+  font-weight: 600;
+  color: var(--fk-text-soft);
+}
+.fkm-turn-time {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+.fkm-turn-text {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--fk-text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.fkm-turn-sub {
+  margin: 6px 0 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--fk-text-soft);
+}
+.fkm-turn-foot {
+  margin: 7px 0 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.fkm-turn-tag {
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fk-text-faint);
+}
+
+.fkm-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.fkm-mark-active,
+.fkm-mark-processing {
+  color: var(--viz-work);
+}
+.fkm-mark-waiting {
+  color: var(--fk-text-faint);
+}
+.fkm-mark-done {
+  color: var(--viz-good);
+}
+.fkm-mark-error {
+  color: var(--viz-bad);
+}
+
+/* The machinery rail down the middle: quieter than a turn, on purpose. */
+.fkm-rail-row {
+  align-self: center;
+  width: min(100%, 560px);
+}
+.fkm-rail-btn {
+  appearance: none;
+  border: 0;
+  width: 100%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: var(--fk-surface);
+  box-shadow: inset 0 0 0 1px var(--fk-border);
+  font-size: 11px;
+  color: var(--fk-text-soft);
+  text-align: left;
+  transition: box-shadow 0.16s ease;
+}
+.fkm-rail-btn:hover:not(:disabled) {
+  box-shadow: inset 0 0 0 1px var(--fk-border-strong);
+}
+.fkm-rail-btn:disabled {
+  cursor: default;
+}
+.fkm-rail-row-bad .fkm-rail-btn {
+  background: var(--viz-bad-wash);
+  box-shadow: inset 0 0 0 1px var(--fkm-bad-edge);
+}
+.fkm-rail-time {
+  font-family: var(--fk-font-mono);
+  font-size: 9.5px;
+  color: var(--fk-text-faint);
+  font-variant-numeric: tabular-nums;
+  flex: none;
+}
+.fkm-rail-glyph {
+  flex: none;
+}
+.fkm-rail-who {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--fk-text-faint);
+  white-space: nowrap;
+}
+.fkm-rail-arrow {
+  opacity: 0.65;
+}
+.fkm-rail-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fkm-rail-more {
+  flex: none;
+  font-family: var(--fk-font-mono);
+  color: var(--fk-text-faint);
+}
+.fkm-rail-detail {
+  margin: 6px 0 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--fk-surface-sunken);
+  font-family: var(--fk-font-mono);
+  font-size: 10.5px;
+  line-height: 1.55;
+  color: var(--fk-text-soft);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 220px;
+  overflow: auto;
+}
+
+.fkm-convo-live {
+  margin: 14px 0 0;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  justify-content: center;
+  font-size: 11px;
+  color: var(--fk-text-faint);
+  font-variant-numeric: tabular-nums;
+}
+.fkm-typing {
+  display: inline-flex;
+  gap: 3px;
+}
+.fkm-typing i {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--viz-work);
+  animation: fkm-type 1.2s ease-in-out infinite;
+}
+.fkm-typing i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.fkm-typing i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+@keyframes fkm-type {
+  0%,
+  60%,
+  100% {
+    opacity: 0.25;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+
+/* ── The event log ──────────────────────────────────────────────────────── */
+
+.fkm-log {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+.fkm-log-bar {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--fk-border);
+  background: var(--fk-surface-sunken);
+}
+
+.fkm-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.fkm-chip {
+  appearance: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: var(--fk-surface);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--fk-text-soft);
+  transition: border-color 0.16s ease, color 0.16s ease, transform 0.16s ease;
+}
+.fkm-chip:hover {
+  transform: translateY(-1px);
+  color: var(--fk-ink);
+}
+.fkm-chip-on {
+  border-color: var(--fk-amber);
+  background: var(--fk-amber-surface);
+  color: var(--fk-amber-ink);
+}
+.fkm-chip-count {
+  font-family: var(--fk-font-mono);
+  font-size: 9.5px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: var(--fk-surface-sunken);
+  color: var(--fk-text-faint);
+}
+.fkm-chip-on .fkm-chip-count {
+  background: var(--fk-surface);
+  color: var(--fk-amber-ink);
+}
+
+.fkm-log-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.fkm-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex: 1 1 220px;
+  min-width: 0;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--fk-surface);
+  box-shadow: inset 0 0 0 1px var(--fk-border);
+}
+.fkm-search:focus-within {
+  box-shadow: inset 0 0 0 1.5px var(--fk-amber);
+}
+.fkm-search-glyph {
+  font-size: 11px;
+  opacity: 0.7;
+}
+.fkm-search-input {
+  appearance: none;
+  border: 0;
+  outline: none;
+  background: transparent;
+  min-width: 0;
+  flex: 1 1 auto;
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--fk-text);
+}
+.fkm-search-input::placeholder {
+  color: var(--fk-text-faint);
+}
+
+.fkm-log-scroll {
+  flex: 1 1 auto;
+  min-height: 320px;
+  overflow-y: auto;
+  padding: 8px 10px 12px;
+}
+
+.fkm-log-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fkm-log-row {
+  border-radius: 10px;
+  animation: fkm-land 0.22s ease-out;
+}
+.fkm-log-row:hover {
+  background: var(--fk-surface);
+}
+.fkm-log-row-open {
+  background: var(--fk-surface);
+  box-shadow: 0 0 0 1px var(--fk-ring);
+}
+.fkm-log-row-bad {
+  box-shadow: inset 2px 0 0 var(--viz-bad);
+}
+
+.fkm-log-hit {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  width: 100%;
+  cursor: pointer;
+  display: grid;
+  grid-template-columns: auto auto auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 9px;
+  text-align: left;
+  font-size: 12px;
+  color: var(--fk-text);
+}
+.fkm-log-hit:disabled {
+  cursor: default;
+}
+
+.fkm-log-time {
+  font-family: var(--fk-font-mono);
+  font-size: 10px;
+  color: var(--fk-text-faint);
+  font-variant-numeric: tabular-nums;
+}
+.fkm-log-kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--fk-surface-sunken);
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--fk-text-faint);
+  white-space: nowrap;
+}
+.fkm-log-kind[data-kind='error'] {
+  background: var(--viz-bad-wash);
+  color: var(--viz-bad);
+}
+.fkm-log-kind[data-kind='message'],
+.fkm-log-kind[data-kind='handshake'] {
+  background: var(--fk-amber-surface);
+  color: var(--fk-amber-ink);
+}
+.fkm-log-kind[data-kind='order'],
+.fkm-log-kind[data-kind='artifact'],
+.fkm-log-kind[data-kind='run_finished'] {
+  background: var(--viz-good-wash);
+  color: var(--viz-good);
+}
+
+.fkm-log-wire {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+.fkm-log-actor {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--fk-text-soft);
+}
+.fkm-log-actor-none {
+  color: var(--fk-text-faint);
+  font-style: italic;
+  font-weight: 400;
+}
+.fkm-log-arrow {
+  color: var(--fk-text-faint);
+}
+.fkm-log-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fkm-log-row-open .fkm-log-text {
+  white-space: normal;
+  overflow: visible;
+}
+.fkm-log-ref {
+  font-family: var(--fk-font-mono);
+  font-size: 9.5px;
+  color: var(--fk-text-faint);
+}
+.fkm-log-caret {
+  font-family: var(--fk-font-mono);
+  color: var(--fk-text-faint);
+}
+
+.fkm-log-detail {
+  padding: 2px 12px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.fkm-log-field {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+.fkm-log-field-key {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 9.5px;
+  color: var(--fk-text-faint);
+  min-width: 58px;
+}
+.fkm-ok {
+  color: var(--viz-good);
+  font-weight: 600;
+}
+.fkm-not-ok {
+  color: var(--viz-bad);
+  font-weight: 600;
+}
+.fkm-log-json {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--fk-surface-sunken);
+  font-family: var(--fk-font-mono);
+  font-size: 10.5px;
+  line-height: 1.6;
+  color: var(--fk-text-soft);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 260px;
+  overflow: auto;
+}
+
+/* ── Empty states ───────────────────────────────────────────────────────── */
+
+/* An empty panel gets the same care as a full one. "Nothing here" and "this is
+   broken" look identical when the empty state is a blank box, and on a
+   monitoring screen that is the most expensive confusion available. */
+.fkm-empty {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 48px 28px;
+  text-align: center;
+}
+.fkm-empty-inline {
+  padding: 40px 24px;
+}
+.fkm-empty-glyph {
+  font-size: 30px;
+  opacity: 0.55;
+}
+.fkm-empty-title {
+  margin: 0;
+  font-family: var(--fk-font-display);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--fk-ink);
+}
+.fkm-empty-body {
+  margin: 0;
+  max-width: 46ch;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--fk-text-faint);
+}
+.fkm-empty-body a {
+  color: var(--fk-amber-ink);
+  font-weight: 600;
+}
+
+/* ── Motion, opted out of ───────────────────────────────────────────────── */
+
+/* Everything above that moves is a status light, and a status light that is
+   merely static is still a status light — the colour, the word and the glyph
+   all still say what they said. Nothing here is load-bearing motion. */
+@media (prefers-reduced-motion: reduce) {
+  .fkm *,
+  .fkm *::before,
+  .fkm *::after {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ── Narrow screens ─────────────────────────────────────────────────────── */
+
+@media (max-width: 720px) {
+  .fkm-pulsebar {
+    gap: 12px 18px;
+  }
+  .fkm-pulsebar-when {
+    margin-left: 0;
+  }
+  .fkm-turn {
+    max-width: 92%;
+  }
+  /* On a phone the row becomes three stacked lines instead of one wide one.
+     Every cell is placed explicitly — auto-placement around three forced
+     columns produces a different shuffle for rows that happen to lack a caret,
+     and a log whose rows are not aligned with each other is unreadable.
+
+     What must survive the narrowing is who talked to whom: that is the one
+     thing this row exists to say, so the wire keeps its own line rather than
+     being the first thing dropped. */
+  .fkm-log-hit {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    row-gap: 4px;
+  }
+  .fkm-log-time {
+    grid-area: 1 / 1 / 2 / 2;
+  }
+  .fkm-log-kind {
+    grid-area: 1 / 2 / 2 / 3;
+    justify-self: start;
+  }
+  .fkm-log-caret {
+    grid-area: 1 / 3 / 2 / 4;
+  }
+  .fkm-log-wire {
+    grid-area: 2 / 1 / 3 / 4;
+  }
+  .fkm-log-text {
+    grid-area: 3 / 1 / 4 / 4;
+    white-space: normal;
+  }
+  .fkm-log-ref {
+    grid-area: 4 / 1 / 5 / 4;
+  }
+  .fkm-convo-scroll,
+  .fkm-log-scroll {
+    max-height: 460px;
+  }
+}

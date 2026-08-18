@@ -98,6 +98,20 @@ export interface FeedRow {
   text: string;
   /** Result rows only: did the call succeed. */
   ok?: boolean;
+  /**
+   * The three fields below are for the control centre, not for the feed panel.
+   *
+   * `LiveFeed` renders a sentence and a clock and ignores all of them; the
+   * monitor needs to know which job a row belongs to so it can group a
+   * conversation, and which tool was called so it can say who the dispatcher
+   * was actually talking to. Optional so nothing that builds a `FeedRow` today
+   * has to change, and so a row without them still renders.
+   */
+  jobId?: string;
+  /** The raw tool name behind a `tool` or `result` row. */
+  toolName?: string;
+  /** The dispatcher's status word at the time — `accepted`, `in_transit`… */
+  stage?: string;
 }
 
 /** A magnitude at a point in time — the shape every chart on this page eats. */

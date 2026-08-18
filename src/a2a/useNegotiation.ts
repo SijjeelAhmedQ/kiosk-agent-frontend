@@ -13,6 +13,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { a2aApi } from './api';
+import { negotiationTap } from './negotiationBus';
 import type {
   A2ADelivery,
   A2AEvent,
@@ -83,11 +84,23 @@ export function useNegotiation(): Negotiation {
   const runId = useRef<string | null>(null);
   const unsubscribe = useRef<(() => void) | null>(null);
 
+  /**
+   * The tap that mirrors this negotiation onto the shared bus, or null between
+   * runs. See `negotiationBus.ts` — this console is the only thing that can see
+   * the two agents talking, so it is the only thing that can tell the
+   * operations dashboard about it.
+   */
+  const tap = useRef<((event: A2AEvent) => void) | null>(null);
+
   // Closing the stream on unmount matters more here than in a normal page: an
   // EventSource left open keeps a queue alive on the server for every reload.
   useEffect(() => () => unsubscribe.current?.(), []);
 
   const absorb = useCallback((event: A2AEvent) => {
+    // Mirrored before the fold, never inside a `setState` updater — StrictMode
+    // calls those twice, and the bus would carry every turn in duplicate.
+    tap.current?.(event);
+
     switch (event.type) {
       case 'status':
         // 'completed' and 'failed' are the *protocol's* words for a finished
@@ -188,6 +201,7 @@ export function useNegotiation(): Negotiation {
   const reset = useCallback(() => {
     unsubscribe.current?.();
     unsubscribe.current = null;
+    tap.current = null;
     runId.current = null;
     setStatus('idle');
     setEntries([]);
@@ -208,6 +222,7 @@ export function useNegotiation(): Negotiation {
       try {
         const id = await a2aApi.start(input);
         runId.current = id;
+        tap.current = negotiationTap(id, input);
         unsubscribe.current = a2aApi.subscribe(id, absorb, (message) => {
           setError(message);
           setStatus('failed');

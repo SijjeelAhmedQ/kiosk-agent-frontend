@@ -9,6 +9,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { agentApi } from '@/services/agentApi';
+import { runTap } from '@/hooks/runBus';
 import type {
   AgentEvent,
   AgentRunStatus,
@@ -105,11 +106,25 @@ export function useAgentRun() {
   const [state, setState] = useState<AgentRunState>(EMPTY);
   const unsubscribe = useRef<(() => void) | null>(null);
 
+  /**
+   * The tap that mirrors this run onto the shared bus, or null between runs.
+   *
+   * A ref rather than state: it changes once per run, nothing renders it, and
+   * making it state would re-render the whole console the moment a run starts
+   * for no visible reason. See `runBus.ts` for why the mirror exists at all.
+   */
+  const tap = useRef<((event: AgentEvent) => void) | null>(null);
+
   // Always detach on unmount, or an EventSource keeps streaming into a
   // component that is no longer there.
   useEffect(() => () => unsubscribe.current?.(), []);
 
   const apply = useCallback((event: AgentEvent) => {
+    // Mirrored *before* the fold, never inside it. The updater below is called
+    // twice under StrictMode, and a `publish` in there would log this floor's
+    // whole afternoon in duplicate.
+    tap.current?.(event);
+
     setState((prev) => {
       switch (event.type) {
         case 'status':
@@ -204,10 +219,12 @@ export function useAgentRun() {
   const start = useCallback(
     async (input: StartAgentRunInput) => {
       unsubscribe.current?.();
+      tap.current = null;
       setState({ ...EMPTY, status: 'queued' });
 
       try {
         const runId = await agentApi.start(input);
+        tap.current = runTap(runId, input);
         setState((prev) => ({ ...prev, runId }));
         unsubscribe.current = agentApi.subscribe(runId, apply, (message) =>
           setState((prev) => ({ ...prev, status: 'failed', error: message })),
@@ -229,6 +246,7 @@ export function useAgentRun() {
 
   const reset = useCallback(() => {
     unsubscribe.current?.();
+    tap.current = null;
     setState(EMPTY);
   }, []);
 

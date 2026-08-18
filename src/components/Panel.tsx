@@ -1,4 +1,12 @@
-import { useId, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 
 interface Props {
   icon: ReactNode;
@@ -22,6 +30,15 @@ interface Props {
   /** Only read on first render; after that the panel remembers its own state. */
   defaultOpen?: boolean;
   /**
+   * Remembers open/folded across reloads under this key.
+   *
+   * Opt-in rather than automatic: a console panel that folds itself back the
+   * way you left it last week is a panel whose state you have to re-read every
+   * time you open the page. A dashboard is the opposite — it is a document you
+   * arrange once and come back to — so only that page passes a key.
+   */
+  persistKey?: string;
+  /**
    * Makes the panel fill the height of the flex column it sits in, so the page
    * never grows past the viewport. Two shapes, because the body is not always
    * the right thing to scroll:
@@ -36,6 +53,34 @@ interface Props {
   footer?: ReactNode;
   className?: string;
   children: ReactNode;
+}
+
+/**
+ * A fold/unfold broadcast for every collapsible panel underneath it.
+ *
+ * `nonce` is what makes it a *signal* rather than a state: a panel applies a
+ * value it has not seen before and then goes back to owning its own, so
+ * "collapse all" does not become a lock that stops one section being reopened
+ * on its own afterwards. Panels rendered outside a provider never see it, which
+ * is why the three consoles are untouched by this.
+ */
+export interface PanelFold {
+  open: boolean;
+  nonce: number;
+}
+export const PanelFoldContext = createContext<PanelFold | null>(null);
+
+const STORE_PREFIX = 'fk.panel.open.';
+
+/** Storage is a nicety here, so every read and write is allowed to fail. */
+function readStored(key: string | undefined, fallback: boolean): boolean {
+  if (!key) return fallback;
+  try {
+    const raw = window.localStorage.getItem(STORE_PREFIX + key);
+    return raw === null ? fallback : raw === '1';
+  } catch {
+    return fallback;
+  }
 }
 
 /**
@@ -74,14 +119,35 @@ export function Panel({
   live,
   collapsible,
   defaultOpen = true,
+  persistKey,
   fill,
   shrink,
   footer,
   className,
   children,
 }: Props) {
-  const [open, setOpen] = useState(defaultOpen);
+  const [open, setOpen] = useState(() => readStored(persistKey, defaultOpen));
   const bodyId = useId();
+
+  // Remember the arrangement, for the panels that asked to be remembered.
+  useEffect(() => {
+    if (!collapsible || !persistKey) return;
+    try {
+      window.localStorage.setItem(STORE_PREFIX + persistKey, open ? '1' : '0');
+    } catch {
+      /* private mode, quota, a browser with storage switched off — all fine */
+    }
+  }, [collapsible, persistKey, open]);
+
+  // "Collapse all" / "Expand all", when a page provides one.
+  const fold = useContext(PanelFoldContext);
+  const seen = useRef(fold?.nonce ?? 0);
+  useEffect(() => {
+    if (!collapsible || !fold || fold.nonce === seen.current) return;
+    seen.current = fold.nonce;
+    setOpen(fold.open);
+  }, [collapsible, fold]);
+
   const folded = collapsible === true && !open;
   const toggle = () => setOpen((v) => !v);
 

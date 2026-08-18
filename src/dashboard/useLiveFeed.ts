@@ -59,7 +59,7 @@ export function useLiveFeed(jobs: Job[]): FeedRow[] {
       if (open.has(jobId)) continue;
 
       let sequence = 0;
-      const push = (row: Omit<FeedRow, 'id' | 'at' | 'orderNumber' | 'agent'>) => {
+      const push = (row: Omit<FeedRow, 'id' | 'at' | 'orderNumber' | 'agent' | 'jobId'>) => {
         sequence += 1;
         const entry: FeedRow = {
           // The job id and a counter, not a timestamp: two events can land in
@@ -68,26 +68,42 @@ export function useLiveFeed(jobs: Job[]): FeedRow[] {
           at: Date.now(),
           agent: 'dispatcher',
           orderNumber: namesRef.current.get(jobId) ?? jobId,
+          jobId,
           ...row,
         };
         setRows((previous) => [...previous, entry].slice(-ROWS_KEPT));
       };
 
+      // The name of the last tool this job's agent called, so a result row can
+      // be attributed. The stream pairs them by `toolUseId`, but the dispatcher
+      // runs one tool at a time per job, which makes "the last one" exact.
+      let lastTool: string | undefined;
+
       open.set(
         jobId,
         dashboardApi.follow(jobId, (event) => {
+          if (event.type === 'tool') lastTool = event.name;
           switch (event.type) {
             case 'status':
-              push({ kind: 'step', text: event.message });
+              push({ kind: 'step', text: event.message, stage: event.status });
               break;
             case 'awaiting':
               push({ kind: 'waiting', text: event.message });
               break;
             case 'tool':
-              push({ kind: 'tool', text: toolLabel(event.name) });
+              push({ kind: 'tool', text: toolLabel(event.name), toolName: event.name });
               break;
             case 'tool_result':
-              push({ kind: 'result', text: event.summary, ok: event.ok });
+              // The tool's own name is not on the result event — the stream
+              // sends an id — so it is carried forward from the call that
+              // opened it. Without it the monitor cannot say whether the
+              // dispatcher was talking to a rider or to the restaurant.
+              push({
+                kind: 'result',
+                text: event.summary,
+                ok: event.ok,
+                toolName: lastTool,
+              });
               break;
             case 'say':
               if (event.text.trim()) push({ kind: 'said', text: event.text.trim() });

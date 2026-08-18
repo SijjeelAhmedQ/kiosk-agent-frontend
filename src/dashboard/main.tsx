@@ -6,6 +6,7 @@ import { makeTheme } from '@/theme';
 import '@/styles.css';
 import App from './App';
 import './dashboard.css';
+import './monitor.css';
 
 /**
  * The operations dashboard's own root.
@@ -17,8 +18,9 @@ import './dashboard.css';
  * than less — a page that talks to four things should not be able to break the
  * three that each talk to one.
  *
- * The shared stylesheet is imported first and this page's own rules after, so
- * `dashboard.css` only ever adds.
+ * The stylesheets are imported in the order they layer: the shared design
+ * system first, this page's rules on top of it, and the control centre's on top
+ * of those. Each one only ever adds — nothing below is overridden.
  */
 function Root() {
   const { scheme } = useColorScheme();
