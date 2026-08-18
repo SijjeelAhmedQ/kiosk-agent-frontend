@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type KeyboardEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { Button, Input, InputNumber, Select, Tooltip } from 'antd';
 import type { DefaultOptionType } from 'antd/es/select';
 import { Panel } from '@/components/Panel';
@@ -42,6 +42,9 @@ const EXAMPLES = [
   { label: 'Creamy Ranch Sauce', errand: 'Order one Creamy Ranch Sauce' },
   { label: 'Coca-Cola®', errand: 'Order one Coca-Cola®' },
 ];
+
+/** What the cash box starts on when there is no coupon paying for the errand. */
+const DEFAULT_CASH_LIMIT = 2500;
 
 /** The send shortcut, named the way the keyboard in front of the operator is. */
 const SEND_KEYS =
@@ -156,9 +159,13 @@ export function ErrandForm({
   savedAddress,
 }: Props) {
   const [instruction, setInstruction] = useState('Order one Big Mac®');
-  const [cashLimit, setCashLimit] = useState<number | null>(2500);
+  /** Empty means "nothing beyond the coupon" — not the same as never set. */
+  const [cashLimit, setCashLimit] = useState<number | null>(DEFAULT_CASH_LIMIT);
   const [couponCode, setCouponCode] = useState<string | null>(null);
   const [coupons, setCoupons] = useState<CouponOption[]>([]);
+
+  /** What the box held before a coupon emptied it, so clearing puts it back. */
+  const lastCashLimit = useRef(DEFAULT_CASH_LIMIT);
 
   // Where it goes. Held here rather than inside `DeliveryField` because the send
   // button needs it: a delivery that was asked for and never given a drop must
@@ -200,6 +207,27 @@ export function ErrandForm({
     [coupons],
   );
 
+  /**
+   * Picking a coupon empties the cash limit — as it does on the errand console,
+   * and for the same reason.
+   *
+   * A coupon is the money for that errand, and a default sitting in the box
+   * underneath it is cash nobody asked to spend — so the operator has to say,
+   * deliberately, how much may go on top. Clearing the coupon puts back
+   * whatever the box held before, since an errand with neither cannot run.
+   */
+  const pickCoupon = (code: string | null) => {
+    setCouponCode(code);
+
+    if (code) {
+      if (cashLimit !== null) lastCashLimit.current = cashLimit;
+      setCashLimit(null);
+    } else if (cashLimit === null) {
+      setCashLimit(lastCashLimit.current);
+    }
+  };
+
+  // An empty box is a zero limit: spend the coupon and nothing else.
   const cash = cashLimit ?? 0;
   const chosen = coupons.find((coupon) => coupon.couponCode === couponCode) ?? null;
 
@@ -250,9 +278,13 @@ export function ErrandForm({
       ? 'None found — the buyer pays cash.'
       : `${spendable} spendable of ${coupons.length}`;
 
-  const cashHint = couponCode ? 'On top of the coupon.' : 'A hard ceiling, in code.';
+  // The box is emptied the moment a coupon is picked, so the line under it says
+  // what an empty box now means rather than describing a number that is gone.
+  const cashHint = couponCode
+    ? 'Empty spends the coupon and nothing else.'
+    : 'A hard ceiling, in code.';
   const cashTitle = couponCode
-    ? 'What may be spent on top of the coupon. Zero means the coupon must cover the whole order.'
+    ? 'What may be spent on top of the coupon. Empty means the coupon must cover the whole order.'
     : 'A hard ceiling, enforced in code — the buyer is refused at payment above it.';
 
   // The panel is drawn here rather than by the page, as it is on the errand
@@ -402,7 +434,7 @@ export function ErrandForm({
               showSearch
               placeholder="None — pay cash"
               value={couponCode}
-              onChange={setCouponCode}
+              onChange={pickCoupon}
               options={options}
               disabled={busy}
               optionFilterProp="label"
