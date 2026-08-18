@@ -543,13 +543,22 @@ button,
 .fk-panel-fold > * {
   min-height: 0;
   overflow: hidden;
-  transition: opacity 0.24s ease 0.06s;
+  transition: opacity 0.24s ease 0.06s,
+    padding-top 0.34s cubic-bezier(0.22, 1, 0.36, 1),
+    padding-bottom 0.34s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .fk-panel-folded .fk-panel-fold {
   grid-template-rows: 0fr;
 }
+/* The row goes to zero; the body's own vertical padding does not go with it,
+   because padding is not part of what a 0fr track measures. Left alone it is
+   30px of paper under the header of every folded panel — a card that looks
+   like it failed to close rather than one that is closed. It folds too, on the
+   same curve, so the two arrive together. */
 .fk-panel-folded .fk-panel-fold > * {
   opacity: 0;
+  padding-top: 0;
+  padding-bottom: 0;
   transition-delay: 0s;
 }
 .fk-panel-note {
