@@ -80,6 +80,22 @@ export interface StartA2ARunInput {
    * not be asked for from this console at all before.
    */
   userLocation?: UserLocation | null;
+  /**
+   * "Where it goes", as an answer rather than as an address.
+   *
+   * The same switch that fills in `userLocation`, sent as its own field because
+   * the two say different things. `userLocation` is *where* the order goes; this
+   * is whether the customer asked for it to be brought to them — which is the
+   * consent the delivery agent would otherwise stop and ask for itself, on its
+   * own board, with the rider already holding the food.
+   *
+   * True and that question is answered before it is asked: the A2A service puts
+   * it on the delivery request, and the delivery agent's "Deliver it to me" gate
+   * is open when the job lands. False leaves the delivery agent to ask, which is
+   * what it has always done — so an older service that ignores this field
+   * behaves exactly as it does today.
+   */
+  whereItGoes?: boolean;
 }
 
 /**
@@ -111,6 +127,14 @@ export interface A2ADelivery {
   distanceKm?: number | null;
   etaMinutes?: number | null;
   fee?: string | null;
+  /**
+   * Was the customer's "deliver it to me" handed over with the order?
+   *
+   * True and the delivery agent will not stop at its own consent gate — the
+   * question was answered on this console before the buyer was even sent out.
+   * Optional, because an older A2A service does not report it.
+   */
+  whereItGoes?: boolean;
   /** The service's own sentence about what has and has not happened yet. */
   note?: string;
 }

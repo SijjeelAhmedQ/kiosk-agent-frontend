@@ -44,6 +44,15 @@ import type { DeliveryHealth, UserLocation } from '../types';
  * **Coordinates can be pasted.** Nobody types "33.5875, 72.9950" in two boxes;
  * they copy it out of a map in one piece. The pair box takes it as it comes and
  * fills the two fields, which are still there for the fix that has to be edited.
+ *
+ * **On is also a consent, not only an address.** The delivery agent at the far
+ * end of the handover holds every order at its own "Deliver it to me" gate and
+ * waits for the customer to ask for it — rider outside the restaurant, food in
+ * the bag. This switch answers that question here, once, and the answer travels
+ * with the order: on, and the delivery goes out without the board being asked
+ * again; off, and the board asks, exactly as it always has. Which is why the
+ * tooltip on the switch says what each position means for the far end — the
+ * consequence of this control is now two services away from it.
  */
 
 interface Props {
@@ -233,8 +242,8 @@ export function DeliveryField({
         <Tooltip
           title={
             wanted
-              ? 'Turn off to deliver to the saved address'
-              : 'Send this order somewhere other than the saved address'
+              ? 'On: the order comes to this drop, and the delivery board is not asked to confirm it — this switch is that consent. Turn off to deliver to the saved address.'
+              : 'Off: the order still goes to the saved address, but the delivery board asks before it is brought out. Turn on to send it somewhere else and confirm the delivery now.'
           }
         >
           <Switch
@@ -474,7 +483,7 @@ export function DeliveryField({
                 {!courier
                   ? 'The delivery agent is not answering on port 8103 — a paid order would have no rider.'
                   : courier.dispatcher.ready
-                    ? `Ready — handed over the moment the order is paid for.${
+                    ? `Ready — handed over the moment the order is paid for. Sent out on this switch; the board is not asked again.${
                         courier.activeJobs > 0
                           ? ` ${courier.activeJobs} already on the board.`
                           : ''

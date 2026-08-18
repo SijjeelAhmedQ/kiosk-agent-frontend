@@ -38,9 +38,7 @@ interface Board {
   select: (jobId: string) => void;
   /** Ask for a rider on the selected job. */
   findRider: () => Promise<void>;
-  /** Ask for the selected job to be taken out to the customer. */
-  deliver: () => Promise<void>;
-  /** One of the two requests is in flight — the button it came from is spent. */
+  /** The rider request is in flight — the button it came from is spent. */
   asking: boolean;
   cancel: () => Promise<void>;
   refresh: () => Promise<void>;
@@ -198,7 +196,35 @@ export function useDeliveryBoard(): Board {
   // reload, so closing on unmount matters more here than on a normal page.
   useEffect(() => () => unsubscribe.current?.(), []);
 
-  // -- the two requests -------------------------------------------------- //
+  // -- "deliver it to me", answered without being asked -------------------- //
+  // There is no button for this. Every job that reaches this board is going to
+  // the customer, so the only answer the gate was ever going to get is yes, and
+  // holding food on a rider's back until somebody clicks it is a wait for
+  // nothing. The request the button used to send is sent here instead, the
+  // moment the gate opens.
+  //
+  // Off the polled list rather than off the selected job, because the gate is
+  // not the operator's to sit at: a job nobody has clicked on would otherwise
+  // wait at it for as long as the board is pointed somewhere else.
+  //
+  // Once per job. The gate closes on the first ask and a second one is a 409,
+  // so the id is remembered *before* the request goes out — the poll ticks
+  // every couple of seconds and would fire again underneath a request still in
+  // flight. A failure is reported and not retried for the same reason: a gate
+  // that answers itself must not also hammer itself.
+  const answered = useRef(new Set<string>());
+
+  useEffect(() => {
+    for (const job of jobs) {
+      if (job.awaiting !== 'delivery' || answered.current.has(job.jobId)) continue;
+      answered.current.add(job.jobId);
+      void foodpandaApi.deliver(job.jobId).catch((exc) => {
+        setError(exc instanceof Error ? exc.message : String(exc));
+      });
+    }
+  }, [jobs]);
+
+  // -- the rider request --------------------------------------------------- //
   // Nothing is patched into the job here on success. The dispatcher is waiting
   // inside a tool call for exactly this, and what it does next — assign a named
   // rider, ride to the restaurant — arrives on the stream within the second. A
@@ -223,7 +249,6 @@ export function useDeliveryBoard(): Board {
   );
 
   const findRider = useCallback(() => ask(foodpandaApi.findRider), [ask]);
-  const deliver = useCallback(() => ask(foodpandaApi.deliver), [ask]);
 
   const cancel = useCallback(async () => {
     if (selectedId) {
@@ -241,7 +266,6 @@ export function useDeliveryBoard(): Board {
     error,
     select: setSelectedId,
     findRider,
-    deliver,
     asking,
     cancel,
     refresh,

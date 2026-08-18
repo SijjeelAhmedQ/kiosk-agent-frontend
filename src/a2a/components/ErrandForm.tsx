@@ -258,6 +258,12 @@ export function ErrandForm({
       // to the customer's saved address either way. It is "nobody named another
       // drop", and the switch being off is exactly that.
       userLocation: deliverTo ? where.location : null,
+      // The same switch, sent again as the answer it also is. On, the operator
+      // has said the order is to be brought to the customer — which is the
+      // consent the delivery agent otherwise stops and asks for on its own board
+      // with the rider already holding the food. Off is not "do not deliver": it
+      // is "nobody has answered that here", and the delivery agent asks.
+      whereItGoes: deliverTo,
     });
   };
 

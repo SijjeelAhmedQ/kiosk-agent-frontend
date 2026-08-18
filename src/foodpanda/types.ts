@@ -65,6 +65,22 @@ export interface Job {
   done: boolean;
   /** Which request this job is waiting for, if it is waiting for one. */
   awaiting: AwaitingStep;
+  /**
+   * The customer asked for this to be delivered to them when they ordered.
+   *
+   * Sent by the ordering agent on the request itself — its console's "Where it
+   * goes" switch — and it means exactly one thing here: the `delivery` gate was
+   * already open when the job landed, so this job will never sit at `awaiting:
+   * 'delivery'`.
+   *
+   * Nothing on the board hangs on it any more, now that the gate is answered by
+   * `useDeliveryBoard` rather than by a button: a job that arrives without this
+   * reaches the gate and is let through the moment it does. It is still shown,
+   * as the difference between a delivery the customer asked for and one this
+   * board consented to on their behalf. Optional: an older delivery agent does
+   * not report it.
+   */
+  whereItGoes?: boolean;
   message: string;
   /** Why the dispatcher took the job or would not. Its own words. */
   decision: string | null;

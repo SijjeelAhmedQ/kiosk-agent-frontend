@@ -7,7 +7,8 @@ import type { Job, Place } from '../types';
  * on the wire, rendered rather than paraphrased. It is shown before anything
  * this agent decided, because every decision below is only as good as what came
  * in, and an operator asking "why did it refuse that?" should be able to answer
- * it from this card.
+ * it from this card — including "why was I never asked to send it out?", which
+ * the consent badge in the facts row answers.
  *
  * The coordinates are printed in full. A delivery agent's most consequential
  * input is a pair of numbers nobody reads until they are wrong.
@@ -89,6 +90,13 @@ export function RequestCard({ job }: Props) {
       <div className="fp-facts">
         <span className="fk-badge">Order · {job.orderNumber}</span>
         <span className="fk-badge">Paid</span>
+        {/* Consent, on the card that shows the request — because that is where it
+            arrived. The ordering agent's customer answered "deliver it to me"
+            before this job existed, so this job never reaches the delivery gate
+            at all. Jobs that arrive without it do reach it, and the board
+            answers it for them; the badge is the difference between a gate that
+            was never opened and one that was opened here. */}
+        {job.whereItGoes && <span className="fk-badge">Deliver it to me · asked for</span>}
         {job.branchId && <span className="fk-badge">{job.branchId}</span>}
         <span className="fk-badge fk-badge-mono">{job.jobId}</span>
       </div>

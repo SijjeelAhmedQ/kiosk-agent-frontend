@@ -239,7 +239,6 @@ export default function App() {
                     job={job}
                     asking={board.asking}
                     onFindRider={() => void board.findRider()}
-                    onDeliver={() => void board.deliver()}
                   />
                   <Journey job={job} />
                   <Outcome job={job} />
