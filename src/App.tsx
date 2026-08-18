@@ -143,6 +143,20 @@ export default function App(_props: Props) {
               </span>
             </a>
 
+            {/* And up to the board that watches all four at once. It drives
+                nothing, so it is safe to leave open on a second screen. */}
+            <a
+              className="fk-nav-link"
+              href="/dashboard.html"
+              title="Open the operations dashboard"
+            >
+              <span aria-hidden>📊</span>
+              <span className="fk-nav-link-label">Operations</span>
+              <span className="fk-nav-link-arrow" aria-hidden>
+                →
+              </span>
+            </a>
+
             <RunPill status={run.status} busy={run.busy} />
 
             {run.status !== 'idle' && !run.busy && (

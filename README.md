@@ -45,6 +45,10 @@ the first click:
 | In-house courier | `.venv\Scripts\python -m uvicorn delivery_server:app --port 8102` | 8102 | — |
 | Foodpanda dispatcher agent | `.venv\Scripts\python -m uvicorn foodpanda_server:app --port 8103` | 8103 | `/foodpanda.html` |
 
+`/dashboard.html` reads **all four** and drives none of them — see *The operations
+dashboard* below. It needs nothing extra running; whatever is up appears on it,
+and whatever is not says so by name and port.
+
 The two couriers are an either/or: `DELIVERY_PROVIDER` in the agent's `.env` names
 one of them, and the other cannot answer its jobs. `mock_foodpanda` means 8103 —
 the board at `/foodpanda.html` — so that is the one to start if you want to watch
@@ -95,6 +99,66 @@ to. On a narrow screen the two stack instead, errand first.
 
 `Ctrl`/`⌘`+`Enter` in the order box sends the agent, for whoever is running a
 dozen of these in a row.
+
+---
+
+## The operations dashboard — `/dashboard.html`
+
+A fourth page beside the three consoles, and the only one that reads every
+service at once. The consoles each drive an agent; this one drives nothing. It
+answers the questions you have *before* you know which console to open.
+
+**Who is on the floor.** Five workers across four services — the ordering agent
+on 8100, the buyer and the merchant that share 8101, the Foodpanda dispatcher on
+8103, and the in-house courier on 8102. Each says what it runs on, whether it is
+working, idle, not ready or offline, and — where the service will say — how much
+work it is holding. An agent card that is *blocked* is running and missing a key;
+one that is *offline* is not running at all. The two are kept apart because they
+send you to different terminals.
+
+**How work moves.** A diagram of the floor with live counts on it: what is
+waiting to be judged, what is on the dispatcher's desk, what is on the road, what
+arrived and what did not. Nodes tint with their state and edges crawl where work
+is actually crossing.
+
+**Who is holding what.** Every job with the name of whoever it is waiting on —
+derived from `status` *and* `awaiting` together, because neither says it alone.
+An accepted job is the dispatcher's while it hunts for a rider and **yours** the
+moment it starts waiting to be asked for one. Those rows are marked, and *Only
+what needs me* filters down to them.
+
+**What is being done, right now.** The dispatcher's tool calls and its own
+sentences, across up to four live jobs at once.
+
+**How it is going.** Arrivals per bucket, how far each job got, where the time
+goes, and how the settled ones ended — all read from the delivery board's
+timelines. One time range at the top scopes every number below it, and every
+chart has a table twin.
+
+### What it will not do
+
+- **It never writes.** Every call it makes is a `GET` (plus the read-only event
+  streams). An overview that could also press buttons would become a fifth place
+  an order's state can change, and this floor has enough of those.
+- **It does not invent history.** Neither ordering service publishes a list of
+  its runs, so the page can say whether one is running but not how many have run.
+  Those two agents report *no queue published* rather than a made-up zero.
+- **The activity strips are its own record.** No agent here tracks its own
+  busyness, so each strip is what this page has watched since it was opened,
+  sampled once per poll. Reload and they start empty — which is why the stretch
+  before you arrived is drawn as nothing rather than as idle time.
+
+A collapsible panel at the bottom of the page names the endpoint behind every
+number on it, so none of this has to be taken on trust.
+
+**On the colours.** The charts use a *status* palette, not a categorical one:
+amber is work in progress, green is arrived, red is not, grey is nothing
+happening — the same four meanings the delivery board's pills carry. Measured
+against the categorical checks those four collapse (amber↔red sit at ΔE 1.4 under
+deuteranopia on the light scheme), which is expected of status colour and is
+exactly why every mark here carries a glyph and a word beside it, and why the
+activity strips encode state as height first and colour second. Nothing on the
+page is distinguished by hue alone.
 
 ---
 
@@ -149,6 +213,20 @@ src/
     RunTrace.tsx           Timeline of steps
     DeliveryTrack.tsx      The route, and how far along the courier is
     RunReport.tsx          The agent's report and what it spent
+  dashboard/               The operations board — /dashboard.html
+    App.tsx                The page: toolbar, figures, diagram, roster, feed
+    api.ts                 All four services, read-only
+    derive.ts              Every number on the page, as pure functions
+    useFleet.ts            The poll, and the state history it keeps itself
+    useLiveFeed.ts         Several jobs' streams at once
+    dashboard.css          The chart palette and this page's own components
+    components/
+      KpiRow.tsx           The headline numbers, hero first
+      Pipeline.tsx         The floor as a diagram, with live counts
+      AgentRoster.tsx      Five agents, each with an activity strip
+      AssignmentTable.tsx  Every job and whose hands it is in
+      LiveFeed.tsx         What the agents are saying, across jobs
+      Charts.tsx           Columns, bars, sparkline, meter, table twin
 ```
 
 **Location never leaves this app as a claim.** The browser gives coordinates and

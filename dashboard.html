@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Agent Operations · Friends Kitchen</title>
+    <meta
+      name="description"
+      content="One board for the whole floor — every agent, what it is holding, how requests arrive, how they are worked and how they end."
+    />
+    <!-- Both schemes are real here, so the browser is told before it paints:
+         form controls, scrollbars and the address bar all read this. -->
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#F4F4F7" />
+    <!-- A fourth entry point beside index.html, a2a.html and foodpanda.html, not
+         a route inside any of them. The three consoles each drive one service;
+         this one reads all four and drives nothing — which is exactly why it
+         should not be able to reach into their code by being edited. -->
+    <link rel="icon" type="image/png" sizes="64x64" href="/favicon-64.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      // The saved scheme, applied before the first paint — shared with the three
+      // consoles under the same key, so switching pages keeps the theme.
+      (function () {
+        try {
+          var saved = localStorage.getItem('fk-agent-scheme');
+          var dark =
+            saved === 'dark' ||
+            (saved === null && matchMedia('(prefers-color-scheme: dark)').matches);
+          var root = document.documentElement;
+          root.setAttribute('data-theme', dark ? 'dark' : 'light');
+          root.style.setProperty('--fk-bg', dark ? '#0B0B0E' : '#F4F4F7');
+          root.style.setProperty('--fk-text', dark ? '#EDEDF0' : '#1C1C1F');
+          // The phone's address bar, painted the same colour as the page it sits
+          // above — otherwise the dark scheme ends in a light strip.
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.setAttribute('content', dark ? '#0B0B0E' : '#F4F4F7');
+        } catch (e) {
+          /* private mode, no storage — the default light palette is fine */
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/dashboard/main.tsx"></script>
+  </body>
+</html>

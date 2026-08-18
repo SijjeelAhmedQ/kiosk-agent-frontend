@@ -1,0 +1,1132 @@
+/* ---------------------------------------------------------------------------
+   The operations dashboard's own rules, on top of the shared stylesheet.
+
+   Everything here either adds a component the other consoles do not have — the
+   flow diagram, the charts, the roster strips — or bends one shared rule that a
+   dashboard genuinely needs bent (see `.fkd-content`). Nothing overrides a
+   `.fk-*` rule for cosmetic reasons: the point of four pages sharing one design
+   system is that they still look like one product.
+
+   Colours come from the same `--fk-*` variables as everywhere else, with one
+   addition. Charts need marks that clear 3:1 against the surface they sit on,
+   and brand amber does not — `#FFC72C` on cream is 1.4:1, which is a suggestion
+   of a bar rather than a bar. So the `--viz-*` block below is the same four
+   brand meanings stepped for contrast, per scheme.
+--------------------------------------------------------------------------- */
+
+/* ── The chart palette ──────────────────────────────────────────────────── */
+
+/* Four meanings, not eight identities. Amber is work in progress, green is
+   arrived, red is did not arrive, grey is nothing happening — the same
+   vocabulary the delivery board's pills already carry, so a reader learns it
+   once. This is a *status* palette and it is measured as one: run the
+   categorical checks over these four and amber↔red comes out at ΔE 1.4 under
+   deuteranopia on the light scheme, green↔red at 4.3 on the dark one. They
+   collapse, and that is expected of status colours. It is also why every mark
+   on this page that uses one carries a glyph and a word beside it, and why the
+   activity strips encode state as *height* first and colour second. Nothing
+   here is distinguished by hue alone.
+
+   Light steps are measured against the cream tiles they sit on (#F4F4F7), which
+   is the harder of the two light surfaces:
+     work  #A87400 → 3.71:1   good  #0F8F47 → 3.80:1
+     bad   #DA291C → 4.43:1   idle  #76767E → 4.10:1 */
+:root,
+html[data-theme='light'] {
+  --viz-work: #a87400;
+  --viz-good: #0f8f47;
+  --viz-bad: #da291c;
+  --viz-idle: #76767e;
+  --viz-work-wash: rgba(168, 116, 0, 0.16);
+  --viz-good-wash: rgba(15, 143, 71, 0.16);
+  --viz-bad-wash: rgba(218, 41, 28, 0.14);
+  --viz-idle-wash: rgba(118, 118, 126, 0.34);
+  --viz-track: rgba(118, 118, 126, 0.13);
+}
+
+/* The dark steps are chosen for the dark surface (#161619), not flipped from
+   the light ones: work 11.6:1, good 7.6:1, bad 5.9:1, idle 5.1:1. Brand amber
+   itself is legible here, which is why the mark goes back to it. */
+html[data-theme='dark'] {
+  --viz-work: #ffc72c;
+  --viz-good: #2fbf6b;
+  --viz-bad: #ff5c4d;
+  --viz-idle: #87878f;
+  --viz-work-wash: rgba(255, 199, 44, 0.2);
+  --viz-good-wash: rgba(47, 191, 107, 0.2);
+  --viz-bad-wash: rgba(255, 92, 77, 0.18);
+  --viz-idle-wash: rgba(135, 135, 143, 0.42);
+  --viz-track: rgba(160, 160, 172, 0.14);
+}
+
+/* ── The shell ──────────────────────────────────────────────────────────── */
+
+/* The one shared rule this page bends.
+
+   The consoles are exactly one viewport tall and never scroll: each is a task
+   with a fixed set of parts, and a control that moves under you mid-run is a
+   control you mis-click. A dashboard is the opposite shape — it is a document
+   about a floor, read top to bottom — and squeezing eleven panels into 100dvh
+   would make every one of them a 90px scroll box. So the *content region*
+   scrolls; the page and the header still do not. */
+.fkd-shell .fk-content {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  gap: 16px;
+  scroll-padding-top: 8px;
+}
+
+.fkd-content {
+  max-width: 1560px;
+}
+
+.fkd-mark {
+  height: 44px;
+  width: 44px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  font-size: 22px;
+  line-height: 1;
+  background: var(--fk-surface-sunken);
+  box-shadow: 0 0 0 1px var(--fk-ring);
+}
+
+.fkd-block,
+.fkd-split {
+  flex: none;
+}
+
+/* Roster on the left, the two working panels on the right. 4:8 rather than the
+   consoles' 5:7 — a roster card is a fixed-width object and the table beside it
+   is the one that actually needs room. */
+.fkd-split {
+  display: grid;
+  grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
+  gap: 16px;
+  align-items: start;
+}
+.fkd-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+@media (max-width: 1180px) {
+  .fkd-split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ── The toolbar ────────────────────────────────────────────────────────── */
+
+/* One row, above everything it scopes. Not a control inside a chart card and
+   not one per panel: every number on this page is counted from the same slice,
+   and two ranges on one screen is how two panels come to disagree. */
+.fkd-toolbar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 24px;
+  background: var(--fk-surface);
+  box-shadow: var(--fk-shadow-sm), 0 0 0 1px var(--fk-ring);
+}
+
+.fkd-seg {
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  border-radius: 999px;
+  background: var(--fk-surface-sunken);
+}
+.fkd-seg-btn {
+  appearance: none;
+  border: 0;
+  cursor: pointer;
+  padding: 7px 15px;
+  border-radius: 999px;
+  background: transparent;
+  font-family: var(--fk-font-display);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--fk-text-faint);
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.fkd-seg-btn:hover {
+  color: var(--fk-text);
+}
+.fkd-seg-on,
+.fkd-seg-on:hover {
+  background: var(--fk-surface);
+  color: var(--fk-ink);
+  box-shadow: var(--fk-shadow-sm);
+}
+
+.fkd-toolbar-read {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--fk-text-faint);
+}
+.fkd-toolbar-read strong {
+  color: var(--fk-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.fkd-live {
+  appearance: none;
+  cursor: pointer;
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--fk-border);
+  background: transparent;
+  font-family: var(--fk-font-display);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--fk-text);
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+.fkd-live:hover {
+  background: var(--fk-surface-sunken);
+  border-color: var(--fk-text-faint);
+}
+.fkd-live-off {
+  color: var(--fk-text-faint);
+}
+
+/* ── Everything is down ─────────────────────────────────────────────────── */
+
+.fkd-alarm {
+  flex: none;
+  padding: 18px 22px;
+  border-radius: 24px;
+  background: var(--fk-flame-surface);
+  box-shadow: 0 0 0 1px var(--fk-ring);
+}
+.fkd-alarm-title {
+  margin: 0 0 6px;
+  font-family: var(--fk-font-display);
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--fk-flame-ink);
+}
+.fkd-alarm-body {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--fk-text-soft);
+}
+
+/* ── The headline numbers ───────────────────────────────────────────────── */
+
+/* The hero takes two tracks and the four tiles take one each. Below 1180 the
+   hero keeps its double width on a two-up grid, so it stays the lead rather
+   than becoming the first of five identical boxes. */
+.fkd-kpis {
+  display: grid;
+  grid-template-columns: 1.5fr repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+@media (max-width: 1180px) {
+  .fkd-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .fkd-kpi-hero {
+    grid-column: span 2;
+  }
+}
+@media (max-width: 560px) {
+  .fkd-kpis {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .fkd-kpi-hero {
+    grid-column: auto;
+  }
+}
+
+.fkd-kpi {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 18px 15px;
+  border-radius: 24px;
+  background: var(--fk-surface);
+  box-shadow: var(--fk-shadow-sm), 0 0 0 1px var(--fk-ring);
+}
+.fkd-kpi-hero {
+  background: var(--fk-surface);
+  box-shadow: var(--fk-shadow-md), 0 0 0 1px var(--fk-ring);
+}
+/* The spine the shared `.fk-tile` carries, so a tile here reads as the same
+   family of object as the ones on the errand console's report. */
+.fkd-kpi-hero::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 18px;
+  bottom: 18px;
+  width: 4px;
+  border-radius: 0 4px 4px 0;
+  background: var(--viz-work);
+}
+.fkd-kpi-warn::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 18px;
+  bottom: 18px;
+  width: 4px;
+  border-radius: 0 4px 4px 0;
+  background: var(--viz-bad);
+}
+
+.fkd-kpi-label {
+  margin: 0;
+  font-family: var(--fk-font-display);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--fk-text-faint);
+}
+
+/* The one hero figure on the page. Proportional figures, not tabular: at 52px
+   `tabular-nums` gives every digit the width of a zero and a `12` comes out
+   looking like it has been kerned by a machine, which it has. */
+.fkd-hero {
+  margin: 2px 0 0;
+  font-family: var(--fk-font-display);
+  font-size: 54px;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: var(--fk-ink);
+}
+
+.fkd-kpi-value {
+  margin: 2px 0 0;
+  font-family: var(--fk-font-display);
+  font-size: 30px;
+  line-height: 1.05;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--fk-ink);
+}
+.fkd-kpi-of {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--fk-text-faint);
+}
+
+.fkd-kpi-foot {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--fk-text-faint);
+}
+.fkd-kpi-hint {
+  margin: -2px 0 0;
+  font-size: 11px;
+  color: var(--fk-text-faint);
+}
+.fkd-kpi-alert {
+  color: var(--fk-amber-ink);
+  font-weight: 700;
+}
+
+.fkd-meter {
+  margin: 4px 0 2px;
+}
+.fkd-meter-track {
+  height: 7px;
+  border-radius: 999px;
+  overflow: hidden;
+}
+.fkd-meter-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ── The flow diagram ───────────────────────────────────────────────────── */
+
+.fkd-flow-scroll {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  padding-bottom: 4px;
+}
+/* Pushed sideways on a narrow screen rather than scaled down, and never blown
+   up past its natural size on a wide one. A diagram whose labels shrink to grey
+   fuzz has stopped being a diagram; one whose 13px names render at 18 on a big
+   monitor has stopped matching the type around it. */
+.fkd-flow-svg {
+  display: block;
+  width: 100%;
+  min-width: 960px;
+  max-width: 1028px;
+  margin: 0 auto;
+  height: auto;
+}
+
+.fkd-flow-lane {
+  font-family: var(--fk-font-display);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  fill: var(--fk-text-faint);
+}
+.fkd-flow-glyph {
+  font-size: 14px;
+}
+.fkd-flow-name {
+  font-family: var(--fk-font-display);
+  font-size: 13px;
+  font-weight: 800;
+  fill: var(--fk-ink);
+}
+.fkd-flow-sub {
+  font-family: var(--fk-font-mono);
+  font-size: 10px;
+  fill: var(--fk-text-faint);
+}
+.fkd-flow-gate {
+  font-family: var(--fk-font-display);
+  font-size: 10.5px;
+  font-weight: 700;
+  fill: var(--fk-amber-ink);
+}
+/* The count wears ink, not the mark's colour — a number in amber on cream is
+   not a number anybody reads. The tint behind it is what carries the state. */
+.fkd-flow-count {
+  font-family: var(--fk-font-display);
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  fill: var(--fk-ink);
+}
+/* Where a count would go on the two agents that cannot report one. A word, not
+   a zero: "no queue published" and "nothing in the queue" are different facts. */
+.fkd-flow-state {
+  font-family: var(--fk-font-display);
+  font-size: 10.5px;
+  font-weight: 700;
+  fill: var(--fk-text-faint);
+}
+
+.fkd-flow-edge {
+  fill: none;
+  stroke: var(--fk-border);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+/* The only animation on the page, and it runs only where work is crossing.
+   An always-on shimmer is decoration; one that starts and stops is a light. */
+.fkd-flow-edge-live {
+  fill: none;
+  stroke: var(--viz-work);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-dasharray: 5 9;
+  animation: fkd-crawl 1.1s linear infinite;
+}
+@keyframes fkd-crawl {
+  to {
+    stroke-dashoffset: -14;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fkd-flow-edge-live {
+    animation: none;
+    stroke-dasharray: none;
+    opacity: 0.6;
+  }
+}
+
+.fkd-flow-link {
+  cursor: pointer;
+}
+.fkd-flow-link rect {
+  transition: filter 0.15s ease;
+}
+.fkd-flow-link:hover rect {
+  filter: brightness(1.04);
+}
+.fkd-flow-link:focus-visible rect {
+  outline: 3px solid var(--fk-amber-ink);
+  outline-offset: 2px;
+}
+
+/* The key. Three channels say a node's state — tint, dot, and the word in the
+   node's own second line — and this is the one that needs no colour vision. */
+.fkd-key {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  font-size: 12px;
+  color: var(--fk-text-faint);
+}
+.fkd-key li {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.fkd-key-swatch {
+  height: 10px;
+  width: 10px;
+  flex: none;
+  border-radius: 3px;
+}
+.fkd-key-work {
+  background: var(--fk-amber-surface);
+  box-shadow: inset 0 0 0 1.5px var(--fk-amber-edge);
+}
+.fkd-key-idle {
+  background: var(--fk-surface-sunken);
+  box-shadow: inset 0 0 0 1.5px var(--fk-border);
+}
+.fkd-key-bad {
+  background: var(--fk-flame-surface);
+  box-shadow: inset 0 0 0 1.5px var(--viz-bad);
+}
+.fkd-key-good {
+  background: var(--fk-leaf-surface);
+  box-shadow: inset 0 0 0 1.5px var(--viz-good);
+}
+.fkd-key-note {
+  color: var(--fk-text-faint);
+  font-style: italic;
+}
+
+/* ── The roster ─────────────────────────────────────────────────────────── */
+
+.fkd-roster {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.fkd-agent {
+  position: relative;
+  padding: 14px 16px 13px;
+  border-radius: 22px;
+  background: var(--fk-surface-sunken);
+  box-shadow: 0 0 0 1px var(--fk-ring);
+}
+/* A spine per state, so the column can be scanned down its left edge for the
+   one card that is not the same as the others. */
+.fkd-agent::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 16px;
+  bottom: 16px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--fk-border);
+}
+.fkd-agent-working::before {
+  background: var(--viz-work);
+}
+.fkd-agent-blocked::before,
+.fkd-agent-offline::before {
+  background: var(--viz-bad);
+}
+
+.fkd-agent-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+}
+.fkd-agent-glyph {
+  height: 34px;
+  width: 34px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  font-size: 17px;
+  line-height: 1;
+  background: var(--fk-surface);
+  box-shadow: 0 0 0 1px var(--fk-ring);
+}
+.fkd-agent-name {
+  display: block;
+  font-family: var(--fk-font-display);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--fk-ink);
+  text-decoration: none;
+}
+.fkd-agent-name:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.fkd-agent-role {
+  margin: 2px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--fk-text-faint);
+}
+
+/* Glyph and word together, every time. Four states in three hues is not a
+   distinction anybody should be asked to make by colour. */
+.fkd-state {
+  margin-left: auto;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  font-family: var(--fk-font-display);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.fkd-state-work {
+  background: var(--fk-amber-surface);
+  color: var(--fk-amber-ink);
+}
+.fkd-state-idle {
+  background: var(--fk-surface);
+  color: var(--fk-text-faint);
+  box-shadow: inset 0 0 0 1px var(--fk-border);
+}
+.fkd-state-bad,
+.fkd-state-off {
+  background: var(--fk-flame-surface);
+  color: var(--fk-flame-ink);
+}
+
+.fkd-agent-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin-top: 11px;
+}
+.fkd-agent-holding {
+  font-size: 11.5px;
+  color: var(--fk-text-faint);
+}
+.fkd-agent-holding strong {
+  color: var(--fk-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.fkd-agent-problem {
+  margin: 9px 0 0;
+  padding: 8px 11px;
+  border-radius: 12px;
+  background: var(--fk-flame-surface);
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--fk-flame-ink);
+}
+
+.fkd-agent-note {
+  margin: 8px 0 0;
+  font-size: 11.5px;
+  color: var(--fk-text-faint);
+}
+
+/* ── The activity strips ────────────────────────────────────────────────── */
+
+.fkd-strip-wrap {
+  margin-top: 12px;
+}
+.fkd-strip {
+  display: block;
+  width: 100%;
+  height: 20px;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.fkd-strip-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 5px;
+  font-size: 11px;
+  color: var(--fk-text-faint);
+}
+.fkd-strip-hint {
+  font-style: italic;
+  opacity: 0.8;
+}
+
+/* ── Figures ────────────────────────────────────────────────────────────── */
+
+.fkd-figs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px 26px;
+}
+@media (max-width: 900px) {
+  .fkd-figs {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.fkd-fig {
+  margin: 0;
+  min-width: 0;
+}
+.fkd-fig-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.fkd-fig-title {
+  margin: 0;
+  font-family: var(--fk-font-display);
+  font-size: 13.5px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--fk-ink);
+}
+.fkd-fig-note {
+  margin: 3px 0 0;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--fk-text-faint);
+}
+.fkd-fig-switch {
+  appearance: none;
+  cursor: pointer;
+  flex: none;
+  margin-left: auto;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--fk-border);
+  background: transparent;
+  font-family: var(--fk-font-display);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--fk-text-faint);
+  transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+}
+.fkd-fig-switch:hover {
+  color: var(--fk-text);
+  border-color: var(--fk-text-faint);
+  background: var(--fk-surface-sunken);
+}
+
+.fkd-fig-body {
+  min-width: 0;
+}
+
+/* ── Plots ──────────────────────────────────────────────────────────────── */
+
+.fkd-plot {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+.fkd-plot svg {
+  display: block;
+  overflow: visible;
+}
+
+/* Hairlines, solid, one step off the surface. Never dashed — a dashed rule
+   reads as a threshold, and none of these are one. */
+.fkd-grid {
+  stroke: var(--fk-border);
+  stroke-width: 1;
+}
+.fkd-axis {
+  stroke: var(--fk-border-strong);
+  stroke-width: 1;
+}
+.fkd-tick {
+  font-family: var(--fk-font-mono);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  fill: var(--fk-text-faint);
+}
+.fkd-callout {
+  font-family: var(--fk-font-display);
+  font-size: 11px;
+  font-weight: 800;
+  fill: var(--fk-text);
+}
+.fkd-row-label {
+  font-size: 12px;
+  fill: var(--fk-text);
+}
+.fkd-row-value {
+  font-family: var(--fk-font-display);
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  fill: var(--fk-ink);
+}
+
+/* The hit target is the whole band, not the painted pixels — a 3px column is a
+   pinpoint, and somebody aiming at a time of day should not have to aim at ink. */
+.fkd-hit {
+  cursor: default;
+  outline: none;
+}
+.fkd-hit:hover path,
+.fkd-hit:focus-visible path {
+  filter: brightness(1.12);
+}
+.fkd-hit:focus-visible rect:first-of-type {
+  outline: 2px solid var(--fk-amber-ink);
+  outline-offset: 1px;
+}
+
+.fkd-spark {
+  width: 100%;
+  margin-top: 4px;
+}
+
+/* The readout. Values lead and labels follow — the legend's hierarchy inverted,
+   because by the time somebody is hovering they know which bar they are on. */
+.fkd-tip {
+  position: absolute;
+  z-index: 5;
+  pointer-events: none;
+  transform: translate(-50%, -100%);
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: 14px;
+  background: var(--fk-surface-raised);
+  box-shadow: var(--fk-shadow-md), 0 0 0 1px var(--fk-ring);
+  white-space: nowrap;
+}
+.fkd-tip-flip {
+  transform: translate(-100%, -100%);
+}
+/* A short stroke of the mark's colour, not a filled box: at this density a
+   swatch is data-weight ink doing a label's job. */
+.fkd-tip-key {
+  margin-top: 5px;
+  height: 3px;
+  width: 14px;
+  flex: none;
+  border-radius: 999px;
+}
+.fkd-tip-value {
+  font-family: var(--fk-font-display);
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--fk-ink);
+}
+.fkd-tip-title {
+  font-size: 11.5px;
+  color: var(--fk-text-soft);
+}
+.fkd-tip-note {
+  font-size: 10.5px;
+  color: var(--fk-text-faint);
+}
+
+/* Its own component so an empty chart keeps the card's height — a panel that
+   collapses to one grey line and jumps back to 160px when the first job lands
+   makes the whole page shuffle at the worst possible moment. */
+.fkd-nodata {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  background: var(--viz-track);
+  font-size: 12.5px;
+  color: var(--fk-text-faint);
+  text-align: center;
+  padding: 16px;
+}
+
+/* ── Tables ─────────────────────────────────────────────────────────────── */
+
+/* Every chart has one of these, and it is not a fallback for a broken chart —
+   it is the accessible twin of a working one. */
+.fkd-table-wrap {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+.fkd-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+.fkd-table-wide {
+  min-width: 620px;
+}
+.fkd-table th,
+.fkd-table td {
+  text-align: left;
+  padding: 9px 12px 9px 0;
+  vertical-align: top;
+}
+.fkd-table thead th {
+  font-family: var(--fk-font-display);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--fk-text-faint);
+  padding-bottom: 7px;
+  border-bottom: 1px solid var(--fk-border);
+}
+.fkd-table tbody tr + tr th,
+.fkd-table tbody tr + tr td {
+  border-top: 1px solid var(--fk-border);
+}
+.fkd-table tbody th {
+  font-weight: 600;
+  color: var(--fk-text);
+}
+.fkd-table td {
+  color: var(--fk-text-soft);
+}
+.fkd-num {
+  font-family: var(--fk-font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ── Who is holding what ────────────────────────────────────────────────── */
+
+.fkd-assign-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.fkd-assign-count {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--fk-text-faint);
+}
+.fkd-assign-stuck {
+  color: var(--fk-amber-ink);
+}
+
+.fkd-toggle {
+  appearance: none;
+  cursor: pointer;
+  margin-left: auto;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--fk-border);
+  background: transparent;
+  font-family: var(--fk-font-display);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--fk-text-faint);
+  transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+}
+.fkd-toggle:hover:not(:disabled) {
+  color: var(--fk-text);
+  border-color: var(--fk-text-faint);
+}
+.fkd-toggle[aria-pressed='true'] {
+  background: var(--fk-amber-surface);
+  border-color: var(--fk-amber-edge);
+  color: var(--fk-amber-ink);
+}
+.fkd-toggle:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* A row nothing will happen to until somebody presses something. Marked with a
+   spine and a tint rather than only a chip, because this is the one row style
+   on the page that is meant to be found from across the table. */
+.fkd-row-stuck > * {
+  background: var(--fk-amber-surface);
+}
+.fkd-row-stuck > *:first-child {
+  box-shadow: inset 3px 0 0 var(--viz-work);
+  padding-left: 10px;
+}
+
+.fkd-order {
+  display: block;
+  font-family: var(--fk-font-mono);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--fk-ink);
+}
+.fkd-order-sub {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--fk-text-faint);
+}
+
+.fkd-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-family: var(--fk-font-display);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  background: var(--fk-surface-sunken);
+  color: var(--fk-text-soft);
+}
+.fkd-chip-dot {
+  height: 6px;
+  width: 6px;
+  flex: none;
+  border-radius: 999px;
+  background: currentColor;
+}
+.fkd-chip-work {
+  background: var(--fk-amber-surface);
+  color: var(--fk-amber-ink);
+}
+.fkd-chip-good {
+  background: var(--fk-leaf-surface);
+  color: var(--fk-leaf-ink);
+}
+.fkd-chip-bad {
+  background: var(--fk-flame-surface);
+  color: var(--fk-flame-ink);
+}
+.fkd-own-you {
+  background: var(--fk-amber-surface);
+  color: var(--fk-amber-ink);
+}
+.fkd-own-done {
+  color: var(--fk-text-faint);
+}
+
+.fkd-doing {
+  font-size: 12px;
+  min-width: 170px;
+}
+
+/* ── The live feed ──────────────────────────────────────────────────────── */
+
+.fkd-feed {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 300px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+/* The clock column is sized for the widest thing a locale puts in it —
+   "12:53 AM" — because a timestamp that wraps to two lines doubles the height
+   of every row in the log and turns a scannable column into a staircase. */
+.fkd-feed-row {
+  display: grid;
+  grid-template-columns: 64px 16px 62px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: 10px;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+.fkd-feed-row:nth-child(odd) {
+  background: var(--fk-surface-sunken);
+}
+.fkd-feed-time {
+  font-family: var(--fk-font-mono);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--fk-text-faint);
+  white-space: nowrap;
+}
+.fkd-feed-glyph {
+  text-align: center;
+  font-size: 11px;
+  color: var(--fk-text-faint);
+}
+.fkd-feed-order {
+  font-family: var(--fk-font-mono);
+  font-size: 11px;
+  color: var(--fk-text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fkd-feed-text {
+  color: var(--fk-text-soft);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* The dispatcher's own words are the thing you came to read; the tool calls
+   under them are the machinery. Weighted accordingly. */
+.fkd-feed-said .fkd-feed-text {
+  color: var(--fk-text);
+  font-weight: 500;
+}
+.fkd-feed-step .fkd-feed-text {
+  color: var(--fk-text);
+  font-weight: 600;
+}
+.fkd-feed-step .fkd-feed-glyph {
+  color: var(--viz-work);
+}
+.fkd-feed-waiting .fkd-feed-glyph,
+.fkd-feed-waiting .fkd-feed-text {
+  color: var(--fk-amber-ink);
+}
+.fkd-feed-tool .fkd-feed-text {
+  color: var(--fk-text-faint);
+}
+.fkd-feed-bad .fkd-feed-glyph,
+.fkd-feed-bad .fkd-feed-text {
+  color: var(--fk-flame-ink);
+}
+
+/* ── Provenance ─────────────────────────────────────────────────────────── */
+
+.fkd-provenance {
+  margin: 0;
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) minmax(0, 3fr);
+  gap: 10px 24px;
+  font-size: 12.5px;
+}
+.fkd-provenance dt {
+  font-family: var(--fk-font-display);
+  font-weight: 700;
+  color: var(--fk-ink);
+}
+.fkd-provenance dd {
+  margin: 0;
+  line-height: 1.6;
+  color: var(--fk-text-soft);
+}
+@media (max-width: 720px) {
+  .fkd-provenance {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+  .fkd-provenance dd {
+    margin-bottom: 12px;
+  }
+}

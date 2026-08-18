@@ -116,6 +116,18 @@ export default function App() {
               <span className="fk-nav-link-label">Ordering agent</span>
             </a>
 
+            <a
+              className="fk-nav-link"
+              href="/dashboard.html"
+              title="Open the operations dashboard"
+            >
+              <span aria-hidden>📊</span>
+              <span className="fk-nav-link-label">Operations</span>
+              <span className="fk-nav-link-arrow" aria-hidden>
+                →
+              </span>
+            </a>
+
             <span className="fk-tag">
               <span aria-hidden>🛵</span>
               Delivery
