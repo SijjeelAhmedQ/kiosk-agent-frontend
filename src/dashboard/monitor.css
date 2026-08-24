@@ -60,9 +60,14 @@ html[data-theme='dark'] .fkm {
 
 /* ── The pulse bar ──────────────────────────────────────────────────────── */
 
-/* Four numbers, and each one answers a different question: is anything running,
-   is it moving, how many parties are involved, is anything broken. Set as one
-   strip rather than as four cards — they are read together or not at all. */
+/* Five numbers, and each one answers a different question: is anything running,
+   is it moving, how many parties are involved, how fast are the calls coming
+   back, is anything broken. Set as one strip rather than as five cards — they
+   are read together or not at all.
+
+   The page's overview carries the fuller set. This line is what is read *while
+   watching*, so it stays narrow on purpose: the same eight figures twice on one
+   screen is how a control room becomes a wall of numbers nobody reads. */
 .fkm-pulsebar {
   display: flex;
   align-items: center;

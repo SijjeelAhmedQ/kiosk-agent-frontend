@@ -49,7 +49,19 @@ const OWNER: Record<Owner, { label: string; glyph: string; className: string }> 
   settled: { label: 'Nobody', glyph: '—', className: 'fkd-own-done' },
 };
 
-export function AssignmentTable({ rows }: { rows: Assignment[] }) {
+interface Props {
+  rows: Assignment[];
+  /**
+   * Opens the whole task in the page's drawer.
+   *
+   * Keyed by `jobId` because that is what the control centre groups a delivery's
+   * events under — the same id, so a row here and a conversation up there are
+   * the same object rather than two things that look alike.
+   */
+  onOpen?: (jobId: string) => void;
+}
+
+export function AssignmentTable({ rows, onOpen }: Props) {
   const [onlyMine, setOnlyMine] = useState(false);
   const stuck = rows.filter((row) => row.stuck).length;
   const shown = onlyMine ? rows.filter((row) => row.stuck) : rows;
@@ -103,7 +115,25 @@ export function AssignmentTable({ rows }: { rows: Assignment[] }) {
                 return (
                   <tr key={job.jobId} className={waiting ? 'fkd-row-stuck' : undefined}>
                     <th scope="row">
-                      <span className="fkd-order">{job.orderNumber}</span>
+                      {onOpen ? (
+                        // Only the order number is the control, not the row: a
+                        // whole clickable row on a table people scan with a
+                        // pointer opens a drawer every time somebody selects
+                        // text in it.
+                        <button
+                          type="button"
+                          className="fkd-order fko-order-open"
+                          onClick={() => onOpen(job.jobId)}
+                          title={`Open everything recorded for ${job.orderNumber}`}
+                        >
+                          {job.orderNumber}
+                          <span className="fko-order-go" aria-hidden>
+                            ⤢
+                          </span>
+                        </button>
+                      ) : (
+                        <span className="fkd-order">{job.orderNumber}</span>
+                      )}
                       <span className="fkd-order-sub">
                         {job.itemCount} {job.itemCount === 1 ? 'item' : 'items'}
                         {job.distanceKm !== null && ` · ${job.distanceKm.toFixed(1)} km`}

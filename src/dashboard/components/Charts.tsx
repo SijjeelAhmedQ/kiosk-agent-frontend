@@ -27,9 +27,17 @@
  * light scheme, and green and red to 4.3 on the dark one. That is exactly why
  * every status mark on this page ships with a glyph and a word beside it, and
  * why nothing here is distinguished by hue alone.
+ *
+ * Five things in here are exported without being components — `useWidth`,
+ * `capPath`, `niceTicks`, `compact` and the hover `Tip`. They are the *specs*
+ * above expressed as code, and the usage drawer's own three charts draw with
+ * them rather than re-deriving a rounded cap or a tick ladder of their own. A
+ * second copy of `capPath` somewhere else in this app is a second radius, and
+ * the whole point of writing the restraint down was that it stays one.
  */
 
 import { useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { Empty, Progress, Segmented, Table, Typography } from 'antd';
 import type { Point, Row } from '../types';
 
 // --------------------------------------------------------------------------- //
@@ -44,7 +52,7 @@ import type { Point, Row } from '../types';
  * strokes go with them. Measuring and drawing at true size keeps one text size
  * and one hairline weight across every breakpoint.
  */
-function useWidth(): [React.RefObject<HTMLDivElement | null>, number] {
+export function useWidth(): [React.RefObject<HTMLDivElement | null>, number] {
   const ref = useRef<HTMLDivElement | null>(null);
   const [width, setWidth] = useState(0);
 
@@ -67,7 +75,7 @@ function useWidth(): [React.RefObject<HTMLDivElement | null>, number] {
 // --------------------------------------------------------------------------- //
 
 /** A bar rounded at the data end and square at the baseline. */
-function capPath(x: number, y: number, w: number, h: number, grow: 'up' | 'right'): string {
+export function capPath(x: number, y: number, w: number, h: number, grow: 'up' | 'right'): string {
   if (w <= 0 || h <= 0) return '';
   const r = Math.min(4, grow === 'up' ? w / 2 : h / 2, grow === 'up' ? h : w);
   if (r <= 0.5) return `M${x} ${y}h${w}v${h}h${-w}z`;
@@ -87,7 +95,7 @@ function capPath(x: number, y: number, w: number, h: number, grow: 'up' | 'right
  * which is not a rounding artefact so much as a claim about the data that is
  * simply false.
  */
-function niceTicks(max: number, { count = 3, integer = false } = {}): number[] {
+export function niceTicks(max: number, { count = 3, integer = false } = {}): number[] {
   if (max <= 0) return [0];
   const raw = max / count;
   const magnitude = 10 ** Math.floor(Math.log10(raw));
@@ -100,14 +108,14 @@ function niceTicks(max: number, { count = 3, integer = false } = {}): number[] {
   return ticks;
 }
 
-const compact = (value: number): string =>
+export const compact = (value: number): string =>
   value >= 10_000 ? `${Math.round(value / 1000)}K` : value.toLocaleString();
 
 // --------------------------------------------------------------------------- //
 // The hover readout
 // --------------------------------------------------------------------------- //
 
-interface TipState {
+export interface TipState {
   x: number;
   y: number;
   title: string;
@@ -124,7 +132,7 @@ interface TipState {
  * want the number. It flips to the left of the pointer near the right edge so it
  * is never the thing that makes the card scroll sideways.
  */
-function Tip({ tip, width }: { tip: TipState | null; width: number }) {
+export function Tip({ tip, width }: { tip: TipState | null; width: number }) {
   if (!tip) return null;
   const flip = tip.x > width - 130;
   return (
@@ -184,41 +192,40 @@ export function Figure({ title, note, table, children }: FigureProps) {
           <h3 className="fkd-fig-title">{title}</h3>
           <p className="fkd-fig-note">{note}</p>
         </div>
-        <button
-          type="button"
-          className="fkd-fig-switch"
-          aria-pressed={asTable}
+        {/* antd's Segmented rather than a toggle button: this is a choice between
+            two renderings of the same numbers, and a segmented control says that
+            on its face where a button labelled with the *other* state has to be
+            read twice. */}
+        <Segmented
+          size="small"
+          className="fkd-fig-switch-seg"
+          value={asTable ? 'table' : 'chart'}
           aria-controls={bodyId}
-          onClick={() => setAsTable((value) => !value)}
-        >
-          {asTable ? 'Chart' : 'Table'}
-        </button>
+          onChange={(value) => setAsTable(value === 'table')}
+          options={[
+            { label: 'Chart', value: 'chart' },
+            { label: 'Table', value: 'table' },
+          ]}
+        />
       </figcaption>
 
       <div id={bodyId} className="fkd-fig-body">
         {asTable ? (
-          <div className="fkd-table-wrap">
-            <table className="fkd-table">
-              <thead>
-                <tr>
-                  {table.head.map((cell) => (
-                    <th key={cell} scope="col">
-                      {cell}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {table.rows.map((row, index) => (
-                  <tr key={index}>
-                    {row.map((cell, column) => (
-                      <td key={column}>{cell}</td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table
+            className="fkd-fig-table"
+            size="small"
+            bordered={false}
+            pagination={false}
+            scroll={{ x: 'max-content', y: 220 }}
+            rowKey={(_, index) => String(index)}
+            dataSource={table.rows.map((row, index) => ({ key: index, cells: row }))}
+            columns={table.head.map((head, column) => ({
+              title: head,
+              key: head,
+              align: column === 0 ? ('left' as const) : ('right' as const),
+              render: (_: unknown, record: { cells: (string | number)[] }) => record.cells[column],
+            }))}
+          />
         ) : (
           children
         )}
@@ -523,21 +530,15 @@ export function Meter({
 }) {
   const pct = ratio === null ? 0 : Math.max(0, Math.min(1, ratio));
   return (
-    <div
+    <Progress
       className="fkd-meter"
-      role="meter"
-      aria-valuenow={ratio === null ? undefined : Math.round(pct * 100)}
-      aria-valuemin={0}
-      aria-valuemax={100}
+      percent={pct * 100}
+      showInfo={false}
+      size={['100%', 8]}
+      strokeColor={`var(--viz-${tone})`}
+      trailColor={`var(--viz-${tone}-wash)`}
       aria-label={label}
-    >
-      <div className="fkd-meter-track" style={{ background: `var(--viz-${tone}-wash)` }}>
-        <div
-          className="fkd-meter-fill"
-          style={{ width: `${pct * 100}%`, background: `var(--viz-${tone})` }}
-        />
-      </div>
-    </div>
+    />
   );
 }
 
@@ -551,7 +552,10 @@ export function Meter({
 export function NoData({ note, height = 132 }: { note: string; height?: number }) {
   return (
     <div className="fkd-nodata" style={{ minHeight: height }}>
-      {note}
+      <Empty
+        image={Empty.PRESENTED_IMAGE_SIMPLE}
+        description={<Typography.Text type="secondary">{note}</Typography.Text>}
+      />
     </div>
   );
 }

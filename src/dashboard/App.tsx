@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Panel, PanelFoldContext, type PanelFold } from '@/components/Panel';
 import { Bars, Columns, Figure, NoData } from './components/Charts';
 import { AgentRoster } from './components/AgentRoster';
@@ -7,6 +7,9 @@ import { KpiRow } from './components/KpiRow';
 import { LiveFeed } from './components/LiveFeed';
 import { Pipeline } from './components/Pipeline';
 import { ControlCenter } from './components/monitor/ControlCenter';
+import { TaskDrawer } from './components/monitor/TaskDrawer';
+import { UsageChip } from './components/monitor/UsageChip';
+import { UsageDrawer } from './components/monitor/UsageDrawer';
 import {
   arrivals as bucketArrivals,
   assignments,
@@ -19,9 +22,11 @@ import {
   stageTimes,
   type Lookback,
 } from './derive';
+import { brainsFrom } from './usage';
 import { useFleet } from './useFleet';
 import { useLiveFeed } from './useLiveFeed';
 import { useMonitor } from './useMonitor';
+import { useUsage } from './useUsage';
 
 /**
  * The operations dashboard — the fourth console, and the only one that watches.
@@ -73,6 +78,7 @@ function Toolbar({
   rangeLabel,
   allOpen,
   onFoldAll,
+  usage,
 }: {
   lookback: Lookback;
   onLookback: (lookback: Lookback) => void;
@@ -83,6 +89,15 @@ function Toolbar({
   rangeLabel: string;
   allOpen: boolean;
   onFoldAll: (open: boolean) => void;
+  /**
+   * The API usage chip — passed in already rendered rather than as figures.
+   *
+   * This strip scopes the page and says how busy the floor is; what a model
+   * costs is neither, and giving the toolbar the numbers would make it a second
+   * owner of them. It gets a slot, and the door behind the slot is somebody
+   * else's business.
+   */
+  usage: ReactNode;
 }) {
   return (
     <div className="fkd-toolbar" role="region" aria-label="Range and floor status">
@@ -128,6 +143,8 @@ function Toolbar({
       </div>
 
       <div className="fkd-toolbar-actions">
+        {usage}
+
         {/* Housekeeping for a long page, not a control over the data: it folds
             the sections away and leaves every number exactly as it was. */}
         <button
@@ -194,7 +211,53 @@ export default function App() {
   // of the run it is showing you the end of.
   const monitor = useMonitor(feed);
 
+  /**
+   * What the models are costing — estimated, and kept behind a drawer.
+   *
+   * The brains come from the same three health payloads the roster reads, taken
+   * as provider and model rather than as one display string, because a price
+   * lookup needs the two apart. A service that is not answering contributes no
+   * brain, so its turns go uncosted rather than being priced at whatever it was
+   * running the last time this page could see it.
+   *
+   * `usage.ts` is the file to read before trusting any number this produces: no
+   * service on this floor reports token usage, so all of it is estimated from
+   * the text the control centre has already watched go past, and every surface
+   * that shows one of these figures says so.
+   */
+  const brains = useMemo(
+    () => brainsFrom({ ordering: fleet.ordering, a2a: fleet.a2a, dispatcher: fleet.dispatcher }),
+    [fleet.ordering, fleet.a2a, fleet.dispatcher],
+  );
+  const usage = useUsage(monitor.events, brains, monitor.now);
+  const [usageOpen, setUsageOpen] = useState(false);
+
   const everythingDown = fleet.agents.every((agent) => agent.state === 'offline');
+
+  /**
+   * The header's one-line verdict on the floor.
+   *
+   * Three states, and each one says what it means in words beside its colour. A
+   * header that only tints a dot is asking the reader to remember what amber
+   * meant on this particular product, which nobody does at a glance from four
+   * feet away.
+   */
+  const health =
+    fleet.loading && kpis.agentsUp === 0
+      ? { tone: 'idle' as const, title: 'Connecting', note: 'reading the four services' }
+      : everythingDown
+        ? { tone: 'bad' as const, title: 'All services down', note: 'nothing is answering' }
+        : kpis.agentsUp < kpis.agentsTotal
+          ? {
+              tone: 'warn' as const,
+              title: 'Degraded',
+              note: `${kpis.agentsUp} of ${kpis.agentsTotal} agents answering`,
+            }
+          : {
+              tone: 'ok' as const,
+              title: 'All systems operational',
+              note: `${kpis.agentsTotal} agents answering`,
+            };
 
   // "Collapse all" / "Expand all". A broadcast rather than a lock — each panel
   // applies it once and then owns its own state again, so folding everything
@@ -208,16 +271,32 @@ export default function App() {
     setAllOpen(open);
   }, []);
 
+  /**
+   * The task under inspection, held here rather than inside the control centre.
+   *
+   * The drawer is opened from four places — a run chip, a handover card, a call
+   * row, and a job in the table further down the page — and two of those are in
+   * different panels. One owner at the page level is what lets any of them point
+   * at it without the panels having to know about each other.
+   *
+   * A job id that this page has no events for is a real state rather than a bug:
+   * the delivery board keeps jobs the shared log may have been cleared of. The
+   * drawer says so instead of silently not opening.
+   */
+  const [taskId, setTaskId] = useState<string | null>(null);
+  const task = taskId ? (monitor.conversations.find((run) => run.id === taskId) ?? null) : null;
+
   return (
     <PanelFoldContext.Provider value={fold}>
       <div className="fk-shell fkd-shell">
-        <header className="fk-header">
-          <div className="fk-header-inner">
-            <div className="fk-brand">
+        <header className="fk-header fkd-header">
+          <div className="fk-header-inner fkd-header-inner">
+            <div className="fk-brand fkd-brand">
               <span className="fkd-mark" aria-hidden>
                 🛰️
               </span>
               <div style={{ minWidth: 0 }}>
+                <p className="fkd-eyebrow">Friends Kitchen · multi-agent floor</p>
                 <h1 className="fk-brand-name">Agent operations</h1>
                 <div className="fk-brand-sub">
                   Five agents, four services — what came in, who is working it, how it ended
@@ -225,50 +304,92 @@ export default function App() {
               </div>
             </div>
 
-            <div className="fk-header-actions">
+            <div className="fkd-header-right">
               {/* The floor's vitals, in the header rather than in a panel: this is
                   the one line that has to be readable from across the room, and
-                  on a page that scrolls, a panel is not always on screen. Both
-                  halves are read off state this page already holds — nothing here
-                  is a new request. */}
-              <p
-                className={`fkd-vitals${kpis.agentsUp < kpis.agentsTotal ? ' fkd-vitals-warn' : ''}`}
-              >
-                <span>
-                  <strong>
-                    {kpis.agentsUp}/{kpis.agentsTotal}
-                  </strong>{' '}
-                  answering
-                </span>
-                <span className="fkd-vitals-sep" aria-hidden />
-                <span>
-                  <strong>{monitor.pulse.live}</strong> live
-                </span>
-                <span className="fkd-vitals-sep" aria-hidden />
-                <span>
-                  <strong>{monitor.pulse.perMinute}</strong> events/min
-                </span>
-              </p>
+                  on a page that scrolls, a panel is not always on screen. Every
+                  figure here is read off state this page already holds — nothing
+                  in this block is a new request.
 
-              <span className="fk-tag">
-                <span aria-hidden>📊</span>
-                Dashboard
-              </span>
+                  The lead pill answers the only question a monitoring header is
+                  really for: is anything wrong. It has three states and it says
+                  which in words, because a coloured dot alone is a question
+                  rather than an answer. */}
+              <div className="fkd-sysbar" role="status" aria-live="polite">
+                <p className={`fkd-sys fkd-sys-${health.tone}`}>
+                  <span className="fkd-sys-dot" aria-hidden />
+                  <span className="fkd-sys-text">
+                    <span className="fkd-sys-title">{health.title}</span>
+                    <span className="fkd-sys-note">{health.note}</span>
+                  </span>
+                </p>
+
+                <span className="fkd-sysbar-rule" aria-hidden />
+
+                <p className="fkd-vital">
+                  <span className="fkd-vital-value">{monitor.pulse.live}</span>
+                  <span className="fkd-vital-label">live</span>
+                </p>
+                <p className="fkd-vital">
+                  <span className="fkd-vital-value">{monitor.pulse.perMinute}</span>
+                  <span className="fkd-vital-label">events/min</span>
+                </p>
+
+                <span className="fkd-sysbar-rule" aria-hidden />
+
+                {/* Monitoring context: a wall screen with no clock on it makes
+                    every timestamp below it relative to nothing. Driven by the
+                    monitor's existing one-second tick rather than a timer of its
+                    own. */}
+                <p className="fkd-clock">
+                  <time className="fkd-clock-time" dateTime={new Date(monitor.now).toISOString()}>
+                    {new Date(monitor.now).toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      second: '2-digit',
+                    })}
+                  </time>
+                  <span className="fkd-clock-date">
+                    {new Date(monitor.now).toLocaleDateString([], {
+                      weekday: 'short',
+                      day: 'numeric',
+                      month: 'short',
+                    })}
+                  </span>
+                </p>
+              </div>
 
               {/* Plain anchors: the four consoles are separate Vite entries rather
-                  than routes, so this is a page load by design. */}
-              <a className="fk-nav-link" href="/" title="Open the ordering agent's console">
-                <span aria-hidden>🤖</span>
-                <span className="fk-nav-link-label">Ordering</span>
-              </a>
-              <a className="fk-nav-link" href="/a2a.html" title="Open the A2A ordering console">
-                <span aria-hidden>🤝</span>
-                <span className="fk-nav-link-label">A2A</span>
-              </a>
-              <a className="fk-nav-link" href="/foodpanda.html" title="Open the delivery agent's board">
-                <span aria-hidden>🛵</span>
-                <span className="fk-nav-link-label">Delivery</span>
-              </a>
+                  than routes, so this is a page load by design. Grouped and
+                  labelled so the three that drive an agent read as one set and
+                  the page you are on reads as where you are, rather than as a
+                  fourth thing you could click. */}
+              <nav className="fkd-nav" aria-label="Consoles">
+                <span className="fkd-nav-group" aria-hidden>
+                  Agents
+                </span>
+                <a className="fkd-nav-item" href="/" title="Open the ordering agent's console">
+                  <span aria-hidden>🤖</span>
+                  <span className="fkd-nav-label">Ordering</span>
+                </a>
+                <a className="fkd-nav-item" href="/a2a.html" title="Open the A2A ordering console">
+                  <span aria-hidden>🤝</span>
+                  <span className="fkd-nav-label">A2A</span>
+                </a>
+                <a
+                  className="fkd-nav-item"
+                  href="/foodpanda.html"
+                  title="Open the delivery agent's board"
+                >
+                  <span aria-hidden>🛵</span>
+                  <span className="fkd-nav-label">Delivery</span>
+                </a>
+                <span className="fkd-nav-rule" aria-hidden />
+                <span className="fkd-nav-item fkd-nav-current" aria-current="page">
+                  <span aria-hidden>📊</span>
+                  <span className="fkd-nav-label">Dashboard</span>
+                </span>
+              </nav>
             </div>
           </div>
         </header>
@@ -284,6 +405,14 @@ export default function App() {
             rangeLabel={rangeLabel}
             allOpen={allOpen}
             onFoldAll={foldAll}
+            usage={
+              <UsageChip
+                totals={usage.totals}
+                rangeLabel={usage.range.label}
+                open={usageOpen}
+                onOpen={() => setUsageOpen(true)}
+              />
+            }
           />
 
           {everythingDown && !fleet.loading && (
@@ -306,12 +435,19 @@ export default function App() {
             <Panel
               icon={<span aria-hidden>📊</span>}
               title="At a glance"
-              note={`The five numbers the floor is judged on, across ${rangeLabel.toLowerCase()}`}
+              note={`The delivery floor across ${rangeLabel.toLowerCase()}, and the agent fleet as it stands`}
               className="fkd-panel-bare"
               collapsible
               persistKey="fkd.kpis"
             >
-              <KpiRow kpis={kpis} arrivals={charts.arrivals.points} rangeLabel={rangeLabel} />
+              <KpiRow
+                kpis={kpis}
+                arrivals={charts.arrivals.points}
+                rangeLabel={rangeLabel}
+                metrics={monitor.metrics}
+                a2aMessages={monitor.counts.negotiation}
+                loading={fleet.loading && fleet.jobs.length === 0}
+              />
             </Panel>
           </div>
 
@@ -325,7 +461,7 @@ export default function App() {
               collapsible
               persistKey="fkd.monitor"
             >
-              <ControlCenter monitor={monitor} agents={fleet.agents} />
+              <ControlCenter monitor={monitor} agents={fleet.agents} onOpenTask={setTaskId} />
             </Panel>
           </div>
 
@@ -361,7 +497,7 @@ export default function App() {
                 collapsible
                 persistKey="fkd.assignments"
               >
-                <AssignmentTable rows={rows} />
+                <AssignmentTable rows={rows} onOpen={setTaskId} />
               </Panel>
 
               <Panel
@@ -522,6 +658,35 @@ export default function App() {
             </Panel>
           </div>
         </main>
+
+        {/* Outside `main` and last in the markup: it is an overlay over the whole
+            page rather than a section of it, and a dialog that renders after
+            everything it covers needs no z-index argument with the sticky bar. */}
+        <TaskDrawer
+          run={task}
+          missingId={taskId && !task ? taskId : null}
+          handovers={monitor.handovers}
+          calls={monitor.calls}
+          now={monitor.now}
+          onClose={() => setTaskId(null)}
+          onOpenTask={setTaskId}
+        />
+
+        {/* The second drawer, and closed by default — the whole point of it.
+            Opening a task from inside it closes it and hands over to the task
+            drawer above: two overlays on top of each other is a stack nobody
+            can find their way out of, and "which call was that" is a question
+            about a run rather than about a bill. */}
+        <UsageDrawer
+          usage={usage}
+          open={usageOpen}
+          now={monitor.now}
+          onClose={() => setUsageOpen(false)}
+          onOpenTask={(id) => {
+            setUsageOpen(false);
+            setTaskId(id);
+          }}
+        />
       </div>
     </PanelFoldContext.Provider>
   );

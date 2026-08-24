@@ -1,0 +1,1820 @@
+/* ---------------------------------------------------------------------------
+   The operations layer: metrics, filters, handovers, lifecycle, calls, drawer.
+
+   Loaded last, after `styles.css`, `dashboard.css` and `monitor.css`, and it
+   only ever adds. Nothing here overrides a `.fk-*` or `.fkm-*` rule — the four
+   pages share one design system and the point of that is that they still look
+   like one product.
+
+   Everything in this file belongs to the same instrument the control centre is:
+   a darker sunken ground so lit elements read as lit, motion bound to a state
+   and stopping when that state does, and colour used only for status. The
+   palette is the shared `--fk-*` / `--viz-*` set, so both schemes are one
+   stylesheet.
+
+   One rule worth stating because it shapes half the file: **status is never
+   colour alone.** Every state on this screen carries a glyph and a word beside
+   its tint — a handover that is `pending` says "Pending" and wears `◷`. A
+   control room is exactly where a red/green-only design fails, and it fails
+   silently.
+--------------------------------------------------------------------------- */
+
+.fkm {
+  /* Local tokens, on top of the control centre's own. Each `color-mix` is
+     preceded by a plain fallback for browsers that cannot resolve it. */
+  --fko-line: var(--fk-border);
+  --fko-tile: var(--fk-surface);
+  --fko-code: var(--fk-surface-sunken);
+  --fko-code: color-mix(in srgb, var(--fk-surface-sunken) 70%, var(--fk-text) 6%);
+}
+html[data-theme='dark'] .fkm {
+  --fko-code: #0c0c11;
+}
+
+/* ── One status vocabulary ──────────────────────────────────────────────── */
+
+/* Six components on this page carry a state: the roster's pill, the control
+   centre's health and activity lights, the handover board's verdict, the
+   assignment table's stage chip and the log's kind tag. They already agree
+   about *meaning* — every one of them resolves to the same four `--viz-*`
+   tokens — but they had drifted apart typographically, at 10px, 10.5px and 11px
+   in two different families, which is the kind of difference nobody can name
+   and everybody can see.
+ *
+   So the vocabulary is stated once, here, at the last layer:
+ *
+     🟢 active / success   `--viz-good`   done, delivered, completed
+     🟡 waiting / working  `--viz-work`   processing, in progress, handed over
+     🔵 information        `--fk-text`    a plain fact, no tint at all
+     🔴 failed / error     `--viz-bad`    refused, failed, unanswered
+     ⚪ idle               `--viz-idle`   up and silent, nothing to say
+ *
+   Every one of them carries a glyph and a word beside its tint. That is not
+   politeness about colour blindness, it is the only reason this page works on a
+   projector: amber↔red collapses under deuteranopia at ΔE 1.4 on the light
+   scheme, and a control room is exactly where that matters.
+ *
+   These rules touch type only — never the box — so no grid column shifts. */
+.fkd-state,
+.fkm-health,
+.fkm-pulse,
+.fko-status,
+.fkd-chip {
+  font-family: var(--fk-font-display);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.35;
+}
+.fkm-pulse {
+  /* The one that stays uppercase: it is a live reading rather than a label, and
+     it sits inside a sentence of the agent's own words. */
+  letter-spacing: 0.05em;
+}
+
+/* ── The unanswered-handover alarm ──────────────────────────────────────── */
+
+/* The one thing on this panel worth interrupting somebody for, so it is the one
+   element allowed to look like an alert. It is a button because the only useful
+   response to it is "show me", and a banner that states a problem without
+   offering the way to it is a banner people learn to scroll past. */
+.fko-alert {
+  appearance: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  padding: 11px 14px;
+  border: none;
+  border-radius: 16px;
+  background: var(--viz-bad-wash);
+  box-shadow: inset 0 0 0 1px var(--fkm-bad-edge);
+  color: var(--fk-text);
+}
+.fko-alert:hover {
+  background: var(--fk-surface);
+  box-shadow: inset 0 0 0 1px var(--viz-bad);
+}
+.fko-alert-glyph {
+  font-size: 18px;
+  flex: none;
+}
+.fko-alert-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.fko-alert-text strong {
+  font-family: var(--fk-font-display);
+  font-size: 13px;
+  color: var(--fk-ink);
+}
+.fko-alert-text span {
+  font-size: 11.5px;
+  color: var(--fk-text-soft);
+}
+.fko-alert-go {
+  margin-left: auto;
+  font-size: 20px;
+  color: var(--viz-bad);
+  flex: none;
+}
+
+/* ── The command bar ────────────────────────────────────────────────────── */
+
+/* Pinned above the tab body rather than scrolling with it: the pane is a flex
+   column whose *body* owns the scroll, so the bar keeps its place over the rows
+   it filters without needing to be sticky. A filter that scrolls away from what
+   it filters is a filter people lose. */
+.fko-bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 9px 12px;
+  background: var(--fkm-ground);
+  border-bottom: 1px solid var(--fko-line);
+}
+
+.fko-find {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 1 1 260px;
+  min-width: 180px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--fk-field);
+  box-shadow: inset 0 0 0 1px var(--fk-ring);
+}
+.fko-find:focus-within {
+  background: var(--fk-surface);
+  box-shadow: inset 0 0 0 1px var(--fk-amber-edge);
+}
+.fko-find-glyph {
+  font-size: 12px;
+  opacity: 0.7;
+  flex: none;
+}
+.fko-find-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: none;
+  background: none;
+  outline: none;
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--fk-text);
+}
+.fko-find-input::placeholder {
+  color: var(--fk-text-faint);
+}
+/* The browser's own clear button is drawn in the UA's colours and sits at a
+   different size in every engine; this page draws its own. */
+.fko-find-input::-webkit-search-cancel-button {
+  display: none;
+}
+.fko-find-clear {
+  appearance: none;
+  cursor: pointer;
+  border: none;
+  background: none;
+  padding: 0 2px;
+  font-size: 13px;
+  color: var(--fk-text-faint);
+  flex: none;
+}
+.fko-find-clear:hover {
+  color: var(--fk-text);
+}
+
+.fko-selects {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.fko-select {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px 4px 10px;
+  border-radius: 999px;
+  background: var(--fk-field);
+  box-shadow: inset 0 0 0 1px var(--fk-ring);
+}
+.fko-select-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--fk-text-faint);
+}
+.fko-select select {
+  appearance: none;
+  border: none;
+  background: none;
+  outline: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--fk-text);
+  /* Room for the caret drawn by the wrapper's background below. */
+  padding-right: 14px;
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: right 4px top 52%, right 0px top 52%;
+  background-size: 4px 4px, 4px 4px;
+  background-repeat: no-repeat;
+}
+.fko-select select option {
+  /* Native menus render on the OS surface; without this the dark scheme gets
+     white-on-white options in several engines. */
+  background: var(--fk-surface);
+  color: var(--fk-text);
+}
+
+.fko-bar-count {
+  margin: 0 0 0 auto;
+  font-size: 11.5px;
+  color: var(--fk-text-faint);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.fko-bar-count strong {
+  color: var(--fk-ink);
+}
+.fko-bar-count-on strong {
+  color: var(--fk-amber-ink);
+}
+
+.fko-reset {
+  appearance: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--fk-amber-edge);
+  background: var(--fk-amber-surface);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fk-amber-ink);
+}
+.fko-reset:hover {
+  background: var(--fk-surface);
+}
+
+/* The pinned-task line, under the bar. */
+.fko-scope-line {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  padding: 7px 14px;
+  font-size: 11.5px;
+  color: var(--fk-text-soft);
+  background: var(--fk-amber-surface);
+  border-bottom: 1px solid var(--fko-line);
+}
+.fko-scope-line strong {
+  color: var(--fk-ink);
+  font-family: var(--fk-font-mono);
+  font-size: 11px;
+}
+.fko-scope-clear {
+  appearance: none;
+  cursor: pointer;
+  border: none;
+  background: none;
+  margin-left: auto;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fk-amber-ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Five tabs where there were two. The strip scrolls sideways rather than
+   wrapping onto a second line — a row of tabs that wraps stops reading as one
+   control — and the run label below it takes the full width when it has to. */
+.fko-pane-head {
+  row-gap: 8px;
+}
+.fko-pane-head .fkm-tabs {
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.fko-pane-head .fkm-tabs::-webkit-scrollbar {
+  height: 0;
+}
+.fko-pane-head .fkm-tab {
+  flex: none;
+}
+@media (max-width: 1100px) {
+  .fko-pane-head .fkm-tab {
+    padding: 7px 10px;
+  }
+}
+.fko-inspect {
+  appearance: none;
+  cursor: pointer;
+  margin-left: 8px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--fk-border);
+  background: var(--fk-surface);
+  font-family: inherit;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--fk-text-soft);
+}
+.fko-inspect:hover {
+  border-color: var(--fk-amber-edge);
+  color: var(--fk-amber-ink);
+}
+
+/* A tab with something wrong behind it. */
+.fko-tab-alert .fkm-tab-count {
+  background: var(--viz-bad-wash);
+  color: var(--viz-bad);
+}
+
+/* Link rows became controls; the hit area covers the row the same way an agent
+   card's does. */
+.fkm-link {
+  position: relative;
+}
+.fko-link-hit {
+  position: absolute;
+  inset: 0;
+  appearance: none;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: inherit;
+}
+.fko-link-focus {
+  box-shadow: inset 0 0 0 1.5px var(--fk-amber-edge);
+}
+
+/* ── Handovers ──────────────────────────────────────────────────────────── */
+
+/* The three new tab bodies fill the pane and own their scroll, the same way the
+   log beside them does — with a ceiling for the stacked layout, where the pane
+   has no height of its own to fill. */
+.fko-moves {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  overflow-y: auto;
+  max-height: 620px;
+}
+
+.fko-moves-lead {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--fk-text-faint);
+}
+.fko-moves-lead strong {
+  color: var(--fk-ink);
+}
+.fko-moves-open {
+  color: var(--fk-amber-ink);
+  font-weight: 600;
+}
+
+.fko-move {
+  border-radius: 18px;
+  background: var(--fk-surface);
+  box-shadow: 0 0 0 1px var(--fk-ring), var(--fkm-inset);
+  padding: 12px 14px 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.fko-move-good {
+  box-shadow: 0 0 0 1px var(--fk-ring), inset 3px 0 0 var(--viz-good);
+}
+.fko-move-work {
+  box-shadow: 0 0 0 1px var(--fk-ring), inset 3px 0 0 var(--viz-work);
+}
+.fko-move-bad {
+  box-shadow: 0 0 0 1px var(--fkm-bad-edge), inset 3px 0 0 var(--viz-bad);
+}
+.fko-move-idle {
+  box-shadow: 0 0 0 1px var(--fk-ring), inset 3px 0 0 var(--viz-idle);
+}
+/* Handed over and never answered — the one card state that should catch an eye
+   crossing the screen. */
+.fko-move-stale {
+  background: var(--viz-bad-wash);
+  box-shadow: 0 0 0 1px var(--fkm-bad-edge), inset 3px 0 0 var(--viz-bad);
+}
+
+.fko-move-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.fko-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.fko-status-good {
+  background: var(--viz-good-wash);
+  color: var(--viz-good);
+}
+.fko-status-work {
+  background: var(--viz-work-wash);
+  color: var(--fk-amber-ink);
+}
+.fko-status-bad {
+  background: var(--viz-bad-wash);
+  color: var(--viz-bad);
+}
+.fko-status-idle {
+  background: var(--viz-track);
+  color: var(--fk-text-soft);
+}
+
+.fko-move-kind {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fk-text-soft);
+}
+.fko-move-assign .fko-move-kind {
+  color: var(--fk-text-faint);
+}
+
+.fko-move-ref {
+  appearance: none;
+  cursor: pointer;
+  border: none;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--fk-field);
+  font-family: var(--fk-font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--fk-text);
+}
+.fko-move-ref:hover {
+  background: var(--fk-amber-surface);
+  color: var(--fk-amber-ink);
+}
+
+.fko-move-when {
+  margin-left: auto;
+  font-size: 10.5px;
+  color: var(--fk-text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The transfer diagram: two boxes and the wire between them. Grid rather than
+   flex so the arrow keeps its width while the two parties share what is left —
+   a party box that shrinks to its text makes the arrow wander. */
+.fko-transfer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(96px, 132px) minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+}
+@media (max-width: 620px) {
+  .fko-transfer {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .fko-arrow {
+    transform: rotate(90deg);
+    justify-self: center;
+    width: 96px;
+  }
+}
+
+.fko-party {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 13px;
+  background: var(--fkm-ground);
+  box-shadow: inset 0 0 0 1px var(--fk-ring);
+  min-width: 0;
+}
+.fko-party-to {
+  background: var(--fk-amber-surface);
+  box-shadow: inset 0 0 0 1px var(--fk-amber-edge);
+}
+.fko-party-glyph {
+  font-size: 17px;
+  flex: none;
+}
+.fko-party-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.fko-party-name {
+  font-family: var(--fk-font-display);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--fk-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fko-party-role {
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fk-text-faint);
+}
+
+.fko-arrow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  position: relative;
+  flex-direction: column;
+}
+.fko-arrow-line {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--fkm-work-line);
+  overflow: hidden;
+}
+/* The pulse runs only while the handover is unanswered: motion here means
+   "still travelling", so it must stop when it has arrived. */
+.fko-arrow-pulse {
+  display: none;
+}
+.fko-arrow-open .fko-arrow-line {
+  background: var(--viz-track);
+}
+.fko-arrow-open .fko-arrow-pulse {
+  display: block;
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, var(--viz-work), transparent);
+  animation: fko-travel 1.6s linear infinite;
+}
+@keyframes fko-travel {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fko-arrow-open .fko-arrow-pulse {
+    animation: none;
+    width: 100%;
+    opacity: 0.4;
+  }
+}
+.fko-arrow-label {
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--fk-text-faint);
+  text-align: center;
+  white-space: nowrap;
+}
+.fko-arrow-head {
+  position: absolute;
+  right: -4px;
+  top: 0;
+  font-size: 11px;
+  color: var(--fkm-work-line);
+  line-height: 1;
+}
+
+.fko-move-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px 14px;
+  margin: 0;
+}
+.fko-move-facts dt {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--fk-text-faint);
+  margin-bottom: 2px;
+}
+.fko-move-facts dd {
+  margin: 0;
+  font-size: 12px;
+  color: var(--fk-text);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.fko-move-reason {
+  font-weight: 600;
+  color: var(--fk-ink);
+}
+.fko-move-accept-when,
+.fko-move-none {
+  font-size: 10.5px;
+  color: var(--fk-text-faint);
+  font-variant-numeric: tabular-nums;
+}
+.fko-move-stale .fko-move-none {
+  color: var(--viz-bad);
+  font-weight: 600;
+}
+
+.fko-move-detail {
+  margin: 0;
+  padding: 7px 10px;
+  border-radius: 10px;
+  background: var(--fko-code);
+  font-family: var(--fk-font-mono);
+  font-size: 10.5px;
+  color: var(--fk-text-soft);
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.fko-move-context > summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fk-text-soft);
+}
+.fko-move-context > summary::-webkit-details-marker {
+  display: none;
+}
+.fko-move-context > summary::before {
+  content: '▸';
+  color: var(--fk-text-faint);
+}
+.fko-move-context[open] > summary::before {
+  content: '▾';
+}
+.fko-move-context-count {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--fk-text-faint);
+}
+.fko-move-context-body {
+  padding-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.fko-move-context-head {
+  margin: 0;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fk-text-faint);
+}
+.fko-move-follow {
+  appearance: none;
+  cursor: pointer;
+  align-self: flex-start;
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--fk-amber-edge);
+  background: var(--fk-amber-surface);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fk-amber-ink);
+}
+.fko-move-follow:hover {
+  background: var(--fk-surface);
+}
+
+/* ── Supporting event rows, used by three views ─────────────────────────── */
+
+.fko-traces {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.fko-trace {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: var(--fkm-ground);
+  font-size: 11.5px;
+  color: var(--fk-text-soft);
+}
+.fko-trace-bad {
+  background: var(--viz-bad-wash);
+  color: var(--viz-bad);
+}
+.fko-trace-time {
+  font-family: var(--fk-font-mono);
+  font-size: 10px;
+  color: var(--fk-text-faint);
+  font-variant-numeric: tabular-nums;
+}
+.fko-trace-who {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--fk-text-faint);
+  white-space: nowrap;
+}
+.fko-trace-arrow {
+  color: var(--fk-border-strong);
+}
+.fko-trace-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--fk-text);
+}
+.fko-trace-sub {
+  display: block;
+  font-size: 10.5px;
+  color: var(--fk-text-faint);
+  white-space: normal;
+}
+.fko-trace-tag {
+  font-family: var(--fk-font-mono);
+  font-size: 9.5px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--fk-field);
+  color: var(--fk-text-faint);
+  white-space: nowrap;
+}
+
+/* ── The lifecycle spine ────────────────────────────────────────────────── */
+
+.fko-life {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 12px 14px 14px;
+  overflow-y: auto;
+  max-height: 620px;
+}
+.fko-life-lead {
+  margin: 0 0 10px;
+  font-size: 11.5px;
+  color: var(--fk-text-faint);
+  font-variant-numeric: tabular-nums;
+}
+.fko-life-ref {
+  font-family: var(--fk-font-mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--fk-ink);
+}
+.fko-life-sep {
+  margin: 0 6px;
+  color: var(--fk-border-strong);
+}
+.fko-life-foot {
+  margin: 10px 0 0;
+  font-size: 11.5px;
+  color: var(--fk-text-faint);
+}
+
+.fko-nodes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.fko-node {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  gap: 10px;
+}
+
+/* The spine is drawn on the rail rather than as a border on the row, so it can
+   run between the dots and stop at the last one instead of trailing past it. */
+.fko-node-rail {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  padding-top: 12px;
+}
+.fko-node:not(:last-child) .fko-node-rail::after {
+  content: '';
+  position: absolute;
+  top: 30px;
+  bottom: -6px;
+  width: 2px;
+  background: var(--viz-track);
+  border-radius: 2px;
+}
+.fko-node-dot {
+  position: relative;
+  z-index: 1;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--fk-surface);
+  box-shadow: 0 0 0 1.5px var(--fk-border-strong);
+  color: var(--fk-text-faint);
+}
+.fko-node-done .fko-node-dot {
+  box-shadow: 0 0 0 1.5px var(--viz-good);
+  color: var(--viz-good);
+}
+.fko-node-failed .fko-node-dot {
+  box-shadow: 0 0 0 1.5px var(--viz-bad);
+  color: var(--viz-bad);
+  background: var(--viz-bad-wash);
+}
+.fko-node-current .fko-node-dot {
+  box-shadow: 0 0 0 1.5px var(--viz-work), 0 0 0 5px var(--viz-work-wash);
+  color: var(--fk-amber-ink);
+  background: var(--fk-amber-surface);
+}
+
+.fko-node-body {
+  padding-bottom: 8px;
+  min-width: 0;
+}
+
+.fko-node-hit {
+  appearance: none;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 11px;
+  border: none;
+  border-radius: 13px;
+  background: var(--fk-surface);
+  box-shadow: 0 0 0 1px var(--fk-ring);
+}
+.fko-node-hit:hover {
+  box-shadow: 0 0 0 1px var(--fk-amber-edge);
+}
+.fko-node-current .fko-node-hit {
+  background: var(--fk-amber-surface);
+}
+.fko-node-failed .fko-node-hit {
+  background: var(--viz-bad-wash);
+}
+
+.fko-node-step {
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  background: var(--fk-field);
+  font-family: var(--fk-font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--fk-text-faint);
+}
+.fko-node-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.fko-node-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--fk-font-display);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--fk-ink);
+}
+.fko-node-live {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--viz-work-wash);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fk-amber-ink);
+}
+.fko-node-note {
+  font-size: 10.5px;
+  color: var(--fk-text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fko-node-who {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fk-text-soft);
+  white-space: nowrap;
+}
+.fko-node-arrow {
+  color: var(--fk-border-strong);
+}
+.fko-node-times {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-variant-numeric: tabular-nums;
+}
+.fko-node-clock {
+  font-family: var(--fk-font-mono);
+  font-size: 10.5px;
+  color: var(--fk-text);
+}
+.fko-node-took {
+  font-size: 10px;
+  color: var(--fk-text-faint);
+}
+.fko-node-caret {
+  font-size: 13px;
+  color: var(--fk-text-faint);
+}
+
+.fko-node-detail {
+  padding: 8px 11px 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.fko-node-detail-head {
+  margin: 0;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fk-text-faint);
+}
+.fko-node-json {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--fko-code);
+  font-family: var(--fk-font-mono);
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--fk-text-soft);
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+@media (max-width: 720px) {
+  .fko-node-hit {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+  .fko-node-who {
+    display: none;
+  }
+}
+
+/* ── The technical log ──────────────────────────────────────────────────── */
+
+.fko-calls {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  overflow-y: auto;
+  max-height: 620px;
+}
+.fko-calls-lead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--fk-text-faint);
+}
+.fko-calls-lead strong {
+  color: var(--fk-ink);
+}
+.fko-calls-bad {
+  color: var(--viz-bad);
+  font-weight: 600;
+}
+.fko-calls-out {
+  color: var(--fk-amber-ink);
+  font-weight: 600;
+}
+
+.fko-call-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fko-call {
+  border-radius: 14px;
+  background: var(--fk-surface);
+  box-shadow: 0 0 0 1px var(--fk-ring);
+  overflow: hidden;
+}
+.fko-call-bad {
+  box-shadow: 0 0 0 1px var(--fkm-bad-edge), inset 3px 0 0 var(--viz-bad);
+}
+.fko-call-open {
+  box-shadow: 0 0 0 1px var(--fk-ring), inset 3px 0 0 var(--viz-work);
+}
+
+.fko-call-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-right: 10px;
+}
+
+.fko-call-hit {
+  appearance: none;
+  cursor: pointer;
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
+  display: grid;
+  grid-template-columns: auto auto minmax(96px, auto) minmax(0, 1fr) auto auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 4px 9px 12px;
+  border: none;
+  background: none;
+  font-family: inherit;
+}
+.fko-call-hit:disabled {
+  cursor: default;
+}
+
+.fko-call-time {
+  font-family: var(--fk-font-mono);
+  font-size: 10.5px;
+  color: var(--fk-text-faint);
+  font-variant-numeric: tabular-nums;
+}
+.fko-call-actor {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--fk-text);
+  white-space: nowrap;
+}
+/* The function name is the thing an engineer scans this list for, so it is the
+   one element here set in the mono face at full ink. */
+.fko-call-fn {
+  font-family: var(--fk-font-mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--fk-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fko-call-fn-paren {
+  color: var(--fk-text-faint);
+}
+.fko-call-target {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  font-size: 11px;
+  color: var(--fk-text-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fko-call-arrow {
+  color: var(--fk-border-strong);
+}
+.fko-call-target-none {
+  color: var(--fk-text-faint);
+  font-style: italic;
+}
+.fko-call-verdict {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--fk-text-faint);
+  white-space: nowrap;
+}
+.fko-call-ok {
+  color: var(--viz-good);
+}
+.fko-call-fail {
+  color: var(--viz-bad);
+}
+.fko-call-wait {
+  color: var(--fk-amber-ink);
+}
+.fko-call-ms {
+  font-family: var(--fk-font-mono);
+  font-size: 11px;
+  color: var(--fk-text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.fko-call-slow {
+  color: var(--fk-amber-ink);
+  font-weight: 600;
+}
+.fko-call-caret {
+  font-size: 13px;
+  color: var(--fk-text-faint);
+}
+.fko-call-ref {
+  appearance: none;
+  cursor: pointer;
+  border: none;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--fk-field);
+  font-family: var(--fk-font-mono);
+  font-size: 10px;
+  color: var(--fk-text-soft);
+  white-space: nowrap;
+  flex: none;
+}
+.fko-call-ref:hover {
+  background: var(--fk-amber-surface);
+  color: var(--fk-amber-ink);
+}
+
+.fko-call-summary {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 0 12px 9px 12px;
+  font-size: 11.5px;
+  color: var(--fk-text-soft);
+}
+.fko-call-summary-arrow {
+  color: var(--fk-border-strong);
+}
+.fko-call-summary-back {
+  color: var(--fk-text);
+}
+
+.fko-call-body {
+  padding: 10px 12px 12px;
+  border-top: 1px solid var(--fko-line);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--fkm-ground);
+}
+.fko-payload-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 5px;
+  font-family: var(--fk-font-display);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--fk-ink);
+}
+.fko-payload-note {
+  font-family: var(--fk-font-sans);
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--fk-text-faint);
+}
+.fko-payload-json {
+  margin: 0;
+  padding: 9px 11px;
+  border-radius: 11px;
+  background: var(--fko-code);
+  font-family: var(--fk-font-mono);
+  font-size: 10.5px;
+  line-height: 1.55;
+  color: var(--fk-text);
+  overflow: auto;
+  max-height: 260px;
+  white-space: pre;
+  box-shadow: inset 0 0 0 1px var(--fk-ring);
+}
+.fko-call-meta {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin: 0;
+  font-size: 10.5px;
+  color: var(--fk-text);
+  font-variant-numeric: tabular-nums;
+}
+.fko-call-meta-key {
+  margin-right: 5px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--fk-text-faint);
+}
+
+@media (max-width: 860px) {
+  .fko-call-hit {
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+  }
+  .fko-call-actor,
+  .fko-call-target {
+    display: none;
+  }
+}
+
+/* ── The task drawer ────────────────────────────────────────────────────── */
+
+.fko-drawer-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.fko-scrim {
+  position: absolute;
+  inset: 0;
+  appearance: none;
+  border: none;
+  cursor: pointer;
+  background: rgba(13, 13, 15, 0.42);
+  backdrop-filter: blur(2px);
+  animation: fko-fade 0.18s ease-out;
+}
+@keyframes fko-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+.fko-drawer {
+  position: relative;
+  width: min(720px, 100%);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--fk-bg);
+  box-shadow: -24px 0 60px -30px rgba(13, 13, 15, 0.6);
+  animation: fko-slide 0.22s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+@keyframes fko-slide {
+  from {
+    transform: translateX(24px);
+    opacity: 0.6;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fko-scrim,
+  .fko-drawer {
+    animation: none;
+  }
+}
+
+.fko-drawer-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--fk-surface);
+  border-bottom: 1px solid var(--fko-line);
+}
+/* The title block is what gives way when a task id is long: without a floor of
+   zero it refuses to shrink and pushes the state pill and the close button off
+   the end of the row. */
+.fko-drawer-id {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.fko-drawer-eyebrow {
+  margin: 0;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fk-text-faint);
+}
+.fko-drawer-ref {
+  margin: 0;
+  font-family: var(--fk-font-display);
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--fk-ink);
+  word-break: break-all;
+}
+
+.fko-drawer-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: var(--viz-track);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--fk-text-soft);
+}
+.fko-drawer-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.fko-drawer-state-live {
+  background: var(--viz-work-wash);
+  color: var(--fk-amber-ink);
+}
+.fko-drawer-state-live .fko-drawer-dot {
+  animation: fko-breathe 2s ease-in-out infinite;
+}
+/* The one breath in this file, and it runs only on a task that is still going.
+   Defined beside its single user so it cannot be orphaned by an edit further
+   up. */
+@keyframes fko-breathe {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fko-drawer-state-live .fko-drawer-dot {
+    animation: none;
+  }
+}
+.fko-drawer-state-done {
+  background: var(--viz-good-wash);
+  color: var(--viz-good);
+}
+.fko-drawer-state-bad {
+  background: var(--viz-bad-wash);
+  color: var(--viz-bad);
+}
+
+.fko-drawer-close {
+  appearance: none;
+  cursor: pointer;
+  margin-left: auto;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: var(--fk-field);
+  font-size: 15px;
+  color: var(--fk-text-soft);
+  flex: none;
+}
+.fko-drawer-close:hover {
+  background: var(--fk-field-hover);
+  color: var(--fk-ink);
+}
+
+.fko-drawer-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 8px 12px;
+  overflow-x: auto;
+  background: var(--fk-surface);
+  border-bottom: 1px solid var(--fko-line);
+}
+.fko-drawer-tab {
+  appearance: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--fk-text-soft);
+  white-space: nowrap;
+}
+.fko-drawer-tab:hover {
+  background: var(--fk-field);
+}
+.fko-drawer-tab-on {
+  background: var(--fk-ink);
+  color: var(--fk-surface);
+}
+.fko-drawer-tab-count {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--fk-field);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  color: var(--fk-text-soft);
+}
+.fko-drawer-tab-on .fko-drawer-tab-count {
+  background: rgba(255, 255, 255, 0.18);
+  color: var(--fk-surface);
+}
+
+.fko-drawer-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+/* The tab bodies each carry their own scroll ceiling for the panel layout; in
+   the drawer the drawer is the scroll box, so those ceilings are lifted. */
+.fko-drawer-body .fko-moves,
+.fko-drawer-body .fko-calls,
+.fko-drawer-body .fko-life {
+  max-height: none;
+  overflow: visible;
+}
+/* The transcript keeps its own scroll box in here rather than letting the drawer
+   scroll it, because that box is what follows the tail of a live run — a
+   conversation whose scroll belongs to an ancestor cannot follow anything. */
+.fko-drawer-convo {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 420px;
+}
+.fko-drawer-convo .fkm-convo-scroll {
+  max-height: none;
+}
+
+.fko-overview {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px 20px;
+}
+
+.fko-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 12px;
+  border-radius: 16px;
+  background: var(--fk-surface);
+  box-shadow: 0 0 0 1px var(--fk-ring);
+}
+.fko-facts dt {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--fk-text-faint);
+  margin-bottom: 2px;
+}
+.fko-facts dd {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--fk-ink);
+  word-break: break-all;
+  font-variant-numeric: tabular-nums;
+}
+.fko-facts-ago {
+  font-weight: 500;
+  color: var(--fk-text-faint);
+}
+.fko-facts-bad {
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--viz-bad-wash);
+  font-size: 10px;
+  color: var(--viz-bad);
+}
+
+.fko-block {
+  padding: 12px;
+  border-radius: 16px;
+  background: var(--fk-surface);
+  box-shadow: 0 0 0 1px var(--fk-ring);
+}
+.fko-block-bad {
+  background: var(--viz-bad-wash);
+  box-shadow: 0 0 0 1px var(--fkm-bad-edge);
+}
+.fko-block-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 8px;
+  font-family: var(--fk-font-display);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--fk-ink);
+}
+.fko-block-note {
+  margin-left: auto;
+  font-family: var(--fk-font-sans);
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--fk-text-faint);
+}
+
+.fko-headline {
+  margin: 0 0 6px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--fk-ink);
+}
+.fko-latest {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 7px 10px;
+  border-radius: 10px;
+  background: var(--fkm-ground);
+  font-size: 11.5px;
+}
+.fko-latest-who {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 700;
+  color: var(--fk-text-soft);
+  white-space: nowrap;
+}
+.fko-latest-text {
+  color: var(--fk-text);
+  min-width: 0;
+}
+
+/* The ownership chain — the drawer's answer to "where did this go". */
+.fko-chain {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.fko-chain-link {
+  display: block;
+  padding: 2px 0 2px 18px;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--fk-border-strong);
+}
+.fko-chain-card {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 11px;
+  border-radius: 12px;
+  background: var(--fkm-ground);
+  box-shadow: inset 0 0 0 1px var(--fk-ring);
+}
+.fko-chain-card-now {
+  background: var(--fk-amber-surface);
+  box-shadow: inset 0 0 0 1px var(--fk-amber-edge);
+}
+.fko-chain-glyph {
+  font-size: 17px;
+  flex: none;
+}
+.fko-chain-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.fko-chain-name {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--fk-font-display);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--fk-ink);
+}
+.fko-chain-now {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--viz-work-wash);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fk-amber-ink);
+}
+.fko-chain-why {
+  font-size: 11px;
+  color: var(--fk-text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fko-chain-by {
+  font-weight: 600;
+  color: var(--fk-text-soft);
+}
+.fko-chain-when {
+  margin-left: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-family: var(--fk-font-mono);
+  font-size: 10.5px;
+  color: var(--fk-text-faint);
+  white-space: nowrap;
+}
+.fko-chain-held {
+  font-size: 9.5px;
+}
+
+.fko-parties {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.fko-party-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--fk-field);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fk-text);
+}
+/* Services and people are drawn differently from agents everywhere else in the
+   control centre, and this chip is not an exception to that. */
+.fko-party-chip-service {
+  background: none;
+  box-shadow: inset 0 0 0 1px var(--fk-border);
+  color: var(--fk-text-soft);
+}
+.fko-party-chip-person {
+  background: none;
+  box-shadow: inset 0 1px 0 0 var(--fk-border), inset 0 -1px 0 0 var(--fk-border);
+  border-radius: 8px;
+  color: var(--fk-text-faint);
+}
+
+.fko-mini-moves {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.fko-mini-move {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 9px;
+  border-radius: 10px;
+  background: var(--fkm-ground);
+  font-size: 11.5px;
+}
+.fko-mini-move-wire {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-weight: 600;
+  color: var(--fk-text);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fko-mini-move-when {
+  margin-left: auto;
+  font-family: var(--fk-font-mono);
+  font-size: 10px;
+  color: var(--fk-text-faint);
+}
+
+@media (max-width: 640px) {
+  .fko-drawer {
+    width: 100%;
+  }
+}
+
+/* ── Openable references elsewhere on the page ──────────────────────────── */
+
+/* The log row's task reference became a control of its own, which means it had
+   to leave the disclosure button it used to sit inside — a button cannot be
+   nested in another button, and these two open different things. The row takes
+   over the columns the reference used to occupy: the disclosure keeps its five,
+   the reference sits in a column of its own, and an opened row's detail spans
+   both. */
+.fkm-log-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+.fkm-log-row .fkm-log-hit {
+  grid-template-columns: auto auto auto minmax(0, 1fr) auto;
+}
+.fkm-log-row .fkm-log-detail {
+  grid-column: 1 / -1;
+}
+
+.fko-log-ref {
+  appearance: none;
+  cursor: pointer;
+  border: none;
+  background: none;
+  padding: 4px 9px 4px 2px;
+  font-family: var(--fk-font-mono);
+  white-space: nowrap;
+}
+.fko-log-ref:hover {
+  color: var(--fk-amber-ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.fko-order-open {
+  appearance: none;
+  cursor: pointer;
+  border: none;
+  background: none;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+}
+.fko-order-open:hover {
+  color: var(--fk-amber-ink);
+}
+.fko-order-go {
+  font-size: 10px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.fko-order-open:hover .fko-order-go,
+.fko-order-open:focus-visible .fko-order-go {
+  opacity: 0.75;
+}

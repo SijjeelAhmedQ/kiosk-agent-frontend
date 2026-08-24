@@ -108,6 +108,22 @@ A fourth page beside the three consoles, and the only one that reads every
 service at once. The consoles each drive an agent; this one drives nothing. It
 answers the questions you have *before* you know which console to open.
 
+**The header** is the floor's verdict, not a page title: whether every service is
+answering or the floor is degraded — said in words beside its colour — how many
+conversations are live, how many events a minute are crossing, and the clock
+every timestamp below it is relative to. The three consoles sit to its right as
+one grouped rail with the page you are on filled in.
+
+**At a glance.** The overview reads in two weights, because the questions are not
+equal. Paper tiles for the delivery floor — what is live this second (with the
+arrival sparkline behind it), what came in, what landed, how long it took, how
+many services are answering — and under them one rail for the agent fleet: agents
+talking, live conversations, agent-to-agent turns, handovers open, tool and API
+calls, median response, completed, and failed or blocked. Anything unknowable
+prints an em dash rather than a zero, and nothing carries a trend arrow: the page
+holds no history to compare against, and an arrow drawn without one is decoration
+that reads as evidence.
+
 **Who is on the floor.** Five workers across four services — the ordering agent
 on 8100, the buyer and the merchant that share 8101, the Foodpanda dispatcher on
 8103, and the in-house courier on 8102. Each says what it runs on, whether it is
@@ -120,22 +136,77 @@ send you to different terminals.
 this tab open on a second screen. It shows what the agents are *saying to each
 other* while they say it:
 
+- a **pulse line** along the top: conversations live, events in the last minute,
+  parties that have spoken, the median round trip and failures recorded — the
+  five readings you watch *while* watching. The fuller set lives in the overview
+  at the top of the page rather than being printed twice on one screen;
 - a **route ribbon** — the parties this particular request has passed through, in
   the order it reached them, with the hop that is carrying right now lit up;
 - the **cast**, on the left: every worker with two separate readings on it —
   reachable (from the health poll) and *doing* (from the wire). Up and silent is
   a different morning from down, and one card shows both;
-- the **conversation**, on the right: a negotiation drawn as a negotiation, two
-  lanes with the machinery — tool calls, API answers, the handover to the
-  courier — running quietly down the middle;
-- the **event log** behind it: every event with both ends named, filterable by
-  agent messages, negotiation, API calls, tool calls, orders, delivery or errors,
-  searchable, and with the raw payload one click away;
 - **who is calling whom**: each directed wire with its traffic, its last message
-  and whether anything on it has failed.
+  and whether anything on it has failed. Clicking one narrows the whole right
+  side to that agent.
 
-Pick any run from the chips along the top, or leave it alone and it follows
-whatever is live.
+On the right, the same events cut five ways, because five different questions get
+asked of them:
+
+- **Conversation** — a negotiation drawn as a negotiation, two lanes with the
+  machinery (tool calls, API answers, the handover to the courier) running
+  quietly down the middle;
+- **Handovers** — every time work changed hands, drawn as a transfer: previous
+  owner, new owner, the reason given, how long the receiver took to answer, what
+  happened before and after, and where a handover opened a job of its own, a link
+  through to it. A transfer nobody has answered says *pending* however old it is,
+  and the panel raises an alert above the tabs when one goes unanswered;
+- **Timeline** — one task's stages in the order it passed through them, each with
+  its owner, its duration and the events it was read from. Stages that have not
+  happened are absent rather than greyed out;
+- **Event log** — every event with both ends named, chip-filterable by agent
+  messages, negotiation, API calls, tool calls, orders, delivery or errors, with
+  the raw payload one click away;
+- **Code** — the technical view: each call paired with its answer, both payloads
+  collapsible, with the round trip in milliseconds. This is the one that answers
+  "it succeeded and still returned the wrong thing".
+
+One **search and filter bar** sits above all five rather than one per tab —
+agent, event kind, status, time window and free text over everything an event
+carries, its stored payload included, so a delivery id that only exists as a JSON
+value is still findable. Pick a run from the chips along the top, or leave it
+alone and it follows whatever is live.
+
+**The task drawer.** Every task id on the page opens it — a run chip, a handover
+card, a call row, a log row, an order number in *Who is holding what*. Inside:
+what the task is and how long it has been going, the chain of agents that have
+held it (and who handed it to whom), everyone involved, what went wrong if
+anything did, and then the same conversation, handovers, calls and timeline for
+that task alone. It reads and never writes, like the rest of the page.
+
+**API usage & billing.** One chip in the toolbar — `API usage · 1.24M tokens ·
+≈$4.82` — and everything else behind it. Press it and a drawer comes in from the
+right over the board: total tokens with the input/output split, the estimated
+bill, requests, remaining budget, average cost per request, usage against the
+budget, provider, model, key status, billing period and the last call. Under
+those, a token-split bar and a budget bar; three figures over the range (tokens
+used, the running cost trend, request activity by outcome), each with its table
+twin; a per-service **agent breakdown** — ordering, agent-to-agent, dispatcher —
+that opens onto each worker's own requests, tokens, cost and last calls; and a
+**live activity** list reading *Ordering → claude-opus-5 → 1,240 tokens →
+$0.0042 → Success*, where any row opens the task drawer on the run it belongs
+to. Today / 7 days / 30 days / a custom range scopes all of it. Closed by
+default, closes on `Esc`, on the scrim, or on the ×.
+
+It is an **estimate**, and it says so on every surface that shows a figure. No
+service on this floor reports token usage — not on a stream, not in a health
+payload — so the drawer counts the text it has actually watched go past (four
+characters to the token) and prices it from a table of published rates keyed by
+model id. System prompts, tool schemas and the history a model is re-sent every
+turn never reach this page, so the real invoice is **larger**, usually by a wide
+margin. It is built to compare agents and catch a runaway, not to reconcile a
+bill, and the drawer's last section spells that out in full. The budget is your
+own number, kept in this browser; nothing enforces it. The in-house courier never
+appears — it runs no model.
 
 **How work moves.** A diagram of the floor with live counts on it: what is
 waiting to be judged, what is on the dispatcher's desk, what is on the road, what
@@ -168,6 +239,11 @@ chart has a table twin.
   busyness, so each strip is what this page has watched since it was opened,
   sampled once per poll. Reload and they start empty — which is why the stretch
   before you arrived is drawn as nothing rather than as idle time.
+- **It does not invent a bill.** Nothing reports token usage, so the usage drawer
+  estimates from text it has seen and labels every figure as an estimate — rather
+  than printing a confident number nobody can trace. A model with no published
+  rate in the table is counted in tokens and left out of the money, because an
+  unpriced model is a missing rate and not a free one.
 - **It does not invent a conversation.** See below. With no console open, the two
   ordering agents are silent on this screen and the panel says so, rather than
   drawing you a plausible negotiation that never happened.
@@ -274,9 +350,14 @@ src/
     useFleet.ts            The poll, and the state history it keeps itself
     useLiveFeed.ts         Several jobs' streams at once
     monitor.ts             Bus + feed in one shape, and what is derived from it
+    ops.ts                 Handovers, paired calls, task stages, one filter model
     useMonitor.ts          The control centre's live wire
+    usage.ts               Token and cost estimates, priced per model — read it first
+    useUsage.ts            The range picker, and the numbers the chip and drawer share
     dashboard.css          The chart palette and this page's own components
     monitor.css            The control centre's own rules
+    ops.css                Metrics, filters, handovers, lifecycle, drawer
+    usage.css              The usage chip, the billing drawer, one categorical pair
     components/
       KpiRow.tsx           The headline numbers, hero first
       Pipeline.tsx         The floor as a diagram, with live counts
@@ -290,6 +371,14 @@ src/
         AgentRail.tsx      Each party: reachable, and what it is doing
         ConversationView.tsx  The negotiation, in two lanes
         EventLog.tsx       Every event, filtered, searchable, expandable
+        CommandBar.tsx     One search and four filters, above every tab
+        HandoverBoard.tsx  Where work changed hands, and who picked it up
+        Lifecycle.tsx      One task's stages, with the events behind each
+        TechLog.tsx        Calls paired with answers, payloads and timings
+        TaskDrawer.tsx     One task opened right up — the page's deep view
+        UsageChip.tsx      The whole of billing on the board: one chip, one door
+        UsageDrawer.tsx    Tokens, cost, budget, per-agent spend, live calls
+        UsageCharts.tsx    The drawer's three figures and its two bars
 ```
 
 **Location never leaves this app as a claim.** The browser gives coordinates and

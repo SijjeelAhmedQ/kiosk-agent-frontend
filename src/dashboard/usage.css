@@ -1,0 +1,996 @@
+/* ---------------------------------------------------------------------------
+   The usage layer: the chip on the board, and the billing drawer behind it.
+
+   Loaded last, after `ops.css`, and like every layer before it, it only ever
+   adds. The drawer reuses the task drawer's shell wholesale — `.fko-drawer-layer`,
+   `.fko-scrim`, `.fko-drawer` — so the slide, the scrim, the header rhythm and
+   the close button are one implementation rather than two that drift apart. The
+   `.fku-*` rules here extend that shell; none of them overrides it.
+
+   Two new colours, and they are the only categorical pair in this app.
+   Everything else on this floor uses the status palette — amber is working,
+   green arrived, red failed, grey idle — but input and output tokens are not
+   states, they are two halves of one quantity, and a status colour would be
+   claiming something false about them. So they get their own fixed pair,
+   validated against both surfaces:
+
+     input   #3F5BD9 on light, #5D79DE on dark
+     output  the brand amber the rest of the page already uses for work
+
+   Adjacent-pair separation is ΔE 30.1 under protanopia and 21.1 under
+   tritanopia on light, 37.8 / 30.8 on dark — comfortably past the ΔE 8 target,
+   which is what you get for choosing blue against yellow. Both are also
+   direct-labelled in a legend and in the hover readout, so nothing in here is
+   distinguished by hue alone either.
+--------------------------------------------------------------------------- */
+
+:root,
+html[data-theme='light'] {
+  --fku-input: #3f5bd9;
+  --fku-output: var(--viz-work);
+  /* The cost line is one series, so it takes no categorical hue at all — the
+     title names it, and ink keeps the money chart from looking like a third
+     category in a drawer that has exactly two. */
+  --fku-cost: var(--fk-ink);
+  --fku-cost-wash: rgba(13, 13, 15, 0.07);
+}
+
+html[data-theme='dark'] {
+  --fku-input: #5d79de;
+  --fku-output: var(--viz-work);
+  --fku-cost: var(--fk-text);
+  --fku-cost-wash: rgba(255, 255, 255, 0.08);
+}
+
+/* ── The chip on the board ──────────────────────────────────────────────── */
+
+/* Sized and weighted as a sibling of the pause switch beside it rather than as
+   a call to action. It is a door, not an offer. */
+.fku-chip {
+  appearance: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px 6px 10px;
+  border: none;
+  border-radius: 999px;
+  background: var(--fk-field);
+  box-shadow: 0 0 0 1px var(--fk-ring);
+  font-family: inherit;
+  color: var(--fk-text);
+  text-align: left;
+  transition:
+    background 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.fku-chip:hover {
+  background: var(--fk-field-hover);
+  box-shadow: 0 0 0 1px var(--fk-border-strong);
+}
+.fku-chip-on {
+  background: var(--fk-ink);
+  color: var(--fk-surface);
+}
+.fku-chip-glyph {
+  font-size: 14px;
+  line-height: 1;
+}
+.fku-chip-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.fku-chip-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fk-text-faint);
+}
+.fku-chip-on .fku-chip-label {
+  color: rgba(255, 255, 255, 0.62);
+}
+.fku-chip-figures {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  font-family: var(--fk-font-display);
+  font-size: 12.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.fku-chip-dot,
+.fku-chip-quiet {
+  color: var(--fk-text-faint);
+  font-weight: 600;
+}
+.fku-chip-quiet {
+  font-size: 11.5px;
+}
+.fku-chip-on .fku-chip-dot,
+.fku-chip-on .fku-chip-quiet {
+  color: rgba(255, 255, 255, 0.6);
+}
+.fku-chip-arrow {
+  margin-left: 2px;
+  font-size: 12px;
+  color: var(--fk-text-faint);
+}
+.fku-chip:hover .fku-chip-arrow {
+  color: var(--fk-ink);
+}
+.fku-chip-on .fku-chip-arrow {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+@media (max-width: 640px) {
+  /* On a phone the toolbar is already two rows; the figures are the first thing
+     to go, because the drawer behind the chip carries them at full size. */
+  .fku-chip-figures {
+    display: none;
+  }
+}
+
+/* ── The drawer shell ───────────────────────────────────────────────────── */
+
+/* Wider than the task drawer: this one holds a two-column fact grid and three
+   figures, and at 720px the grid drops to a single column of tall tiles. */
+.fku-drawer {
+  width: min(860px, 100%);
+}
+
+.fku-head {
+  align-items: flex-start;
+}
+.fku-head .fko-drawer-ref {
+  font-size: 26px;
+  line-height: 1.15;
+}
+.fku-head-sub {
+  margin: 2px 0 0;
+  font-size: 11.5px;
+  color: var(--fk-text-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.fku-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: none;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--viz-track);
+  font-family: var(--fk-font-display);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--fk-text-soft);
+}
+
+/* ── The range picker ───────────────────────────────────────────────────── */
+
+/* Pinned above the scroll box, like the task drawer's tab bar: it scopes every
+   figure below it, and a control that scopes the page cannot be one of the
+   things the page scrolls away. */
+.fku-filters {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  padding: 10px 16px;
+  background: var(--fk-surface);
+  border-bottom: 1px solid var(--fk-border);
+}
+.fku-filters-note {
+  flex: 1 1 240px;
+  margin: 0;
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--fk-text-faint);
+}
+
+.fku-dates {
+  display: flex;
+  gap: 8px;
+}
+.fku-date {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fk-text-faint);
+}
+.fku-date input {
+  appearance: none;
+  border: none;
+  border-radius: 10px;
+  padding: 5px 8px;
+  background: var(--fk-field);
+  font-family: var(--fk-font-mono);
+  font-size: 11px;
+  color: var(--fk-text);
+  color-scheme: light dark;
+}
+.fku-date input:focus-visible {
+  outline: 2px solid var(--fk-amber);
+  outline-offset: 1px;
+}
+
+/* ── The body ───────────────────────────────────────────────────────────── */
+
+.fku-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px 16px 24px;
+  background: var(--fk-bg);
+}
+
+/* The two headline figures. Everything else in the drawer is a detail of one of
+   these, so they are the only things in here set at hero weight. */
+.fku-heroes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+}
+.fku-hero {
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: var(--fk-surface);
+  box-shadow: 0 0 0 1px var(--fk-ring), var(--fk-shadow-sm);
+}
+.fku-hero-money {
+  background: linear-gradient(180deg, var(--fk-amber-surface), var(--fk-surface) 72%);
+}
+.fku-hero-label {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fk-text-faint);
+}
+.fku-hero-value {
+  margin: 4px 0 0;
+  font-family: var(--fk-font-display);
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--fk-ink);
+  font-variant-numeric: tabular-nums;
+}
+.fku-hero-foot {
+  margin: 6px 0 0;
+  font-size: 11.5px;
+  color: var(--fk-text-soft);
+  font-variant-numeric: tabular-nums;
+}
+.fku-hero-warn {
+  color: var(--viz-bad);
+  font-weight: 700;
+}
+
+/* ── The facts ──────────────────────────────────────────────────────────── */
+
+.fku-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(158px, 1fr));
+  gap: 2px;
+  margin: 0;
+  padding: 2px;
+  border-radius: 16px;
+  background: var(--fk-border);
+  overflow: hidden;
+}
+/* A hairline grid drawn as gaps in a tinted ground rather than as borders: one
+   background, no doubled edges where two cells meet, and it survives the cells
+   reflowing at any breakpoint. */
+.fku-fact {
+  padding: 10px 12px;
+  background: var(--fk-surface);
+}
+.fku-facts-tight .fku-fact {
+  padding: 8px 10px;
+}
+.fku-fact dt {
+  margin: 0;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--fk-text-faint);
+}
+.fku-fact dd {
+  margin: 3px 0 0;
+  font-family: var(--fk-font-display);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--fk-ink);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.fku-fact-mono dd,
+dd.fku-fact-mono {
+  font-family: var(--fk-font-mono);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.fku-fact-foot {
+  margin: 3px 0 0;
+  font-size: 10.5px;
+  line-height: 1.45;
+  color: var(--fk-text-faint);
+  overflow-wrap: anywhere;
+}
+.fku-fact-good dd {
+  color: var(--viz-good);
+}
+.fku-fact-warn dd {
+  color: var(--viz-work);
+}
+.fku-fact-bad dd {
+  color: var(--viz-bad);
+}
+
+/* ── The two bars ───────────────────────────────────────────────────────── */
+
+.fku-meters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 10px;
+}
+.fku-meter {
+  padding: 12px 14px 14px;
+  border-radius: 16px;
+  background: var(--fk-surface);
+  box-shadow: 0 0 0 1px var(--fk-ring);
+}
+.fku-meter-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0 0 10px;
+  font-family: var(--fk-font-display);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--fk-ink);
+}
+.fku-meter-note {
+  font-family: var(--fk-font-sans);
+  font-size: 10.5px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--fk-text-faint);
+}
+
+.fku-split-track {
+  display: flex;
+  gap: 2px; /* the surface gap between two stacked segments */
+  height: 12px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--viz-track);
+}
+.fku-split-part {
+  display: block;
+  height: 100%;
+}
+.fku-split-empty {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--viz-track);
+}
+.fku-split-keys {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.fku-split-key {
+  display: grid;
+  grid-template-columns: 10px 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  color: var(--fk-text-soft);
+}
+.fku-split-key-value,
+.fku-split-key-share {
+  font-family: var(--fk-font-display);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--fk-ink);
+}
+.fku-split-key-share {
+  min-width: 34px;
+  text-align: right;
+  color: var(--fk-text-faint);
+}
+
+.fku-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex: none;
+}
+
+.fku-budget-track {
+  height: 12px;
+  border-radius: 999px;
+  background: var(--viz-track);
+  overflow: hidden;
+}
+.fku-budget-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--viz-good);
+  transition: width 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.fku-budget-work .fku-budget-fill {
+  background: var(--viz-work);
+}
+.fku-budget-bad .fku-budget-fill {
+  background: var(--viz-bad);
+}
+.fku-budget-read {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+  margin: 8px 0 0;
+  font-size: 11.5px;
+  color: var(--fk-text-soft);
+}
+.fku-budget-verdict {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--fk-font-display);
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--viz-good);
+}
+.fku-budget-work .fku-budget-verdict {
+  color: var(--viz-work);
+}
+.fku-budget-bad .fku-budget-verdict {
+  color: var(--viz-bad);
+}
+.fku-budget-idle .fku-budget-verdict {
+  color: var(--fk-text-faint);
+}
+.fku-budget-figures {
+  font-variant-numeric: tabular-nums;
+  color: var(--fk-ink);
+  font-weight: 600;
+}
+.fku-budget-edit {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--fk-border);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fk-text-faint);
+}
+.fku-budget-edit input {
+  appearance: none;
+  width: 96px;
+  border: none;
+  border-radius: 10px;
+  padding: 6px 10px;
+  background: var(--fk-field);
+  font-family: var(--fk-font-mono);
+  font-size: 12px;
+  color: var(--fk-text);
+  text-align: right;
+}
+.fku-budget-edit input:focus-visible {
+  outline: 2px solid var(--fk-amber);
+  outline-offset: 1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fku-budget-fill {
+    transition: none;
+  }
+}
+
+/* ── The folding sections ───────────────────────────────────────────────── */
+
+.fku-section {
+  border-radius: 16px;
+  background: var(--fk-surface);
+  box-shadow: 0 0 0 1px var(--fk-ring);
+  overflow: hidden;
+}
+.fku-section-head {
+  appearance: none;
+  cursor: pointer;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border: none;
+  background: none;
+  font-family: inherit;
+  text-align: left;
+  color: var(--fk-text);
+}
+.fku-section-head:hover {
+  background: var(--fk-field);
+}
+.fku-section-open .fku-section-head {
+  border-bottom: 1px solid var(--fk-border);
+}
+.fku-section-caret {
+  font-size: 10px;
+  color: var(--fk-text-faint);
+}
+.fku-section-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.fku-section-title {
+  font-family: var(--fk-font-display);
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--fk-ink);
+}
+.fku-section-note {
+  font-size: 10.5px;
+  line-height: 1.45;
+  color: var(--fk-text-faint);
+}
+.fku-section-figure {
+  flex: none;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--viz-track);
+  font-family: var(--fk-font-display);
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--fk-text-soft);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.fku-section-body {
+  padding: 12px 14px 14px;
+}
+
+.fku-note {
+  margin: 10px 0 0;
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--fk-text-faint);
+}
+.fku-empty-line {
+  margin: 0;
+  padding: 14px 4px;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--fk-text-soft);
+}
+
+/* ── The figures ────────────────────────────────────────────────────────── */
+
+/* One column, full width, however wide the drawer gets. These are three time
+   series over the same range and they are read in order — used, cost, outcome —
+   so side by side would halve the time resolution of each to save a scroll
+   nobody minds making. The rule between them is what keeps three stacked plots
+   from reading as one tall chart. */
+.fku-figs {
+  display: grid;
+  gap: 16px;
+}
+.fku-figs > * + * {
+  padding-top: 16px;
+  border-top: 1px solid var(--fk-border);
+}
+
+/* The cost trend's hit areas are bare `<rect>`s rather than the `<g>` the two
+   column charts use, so the shared focus ring — which is written for a group's
+   first child — never lands on them. Stated here rather than widened over there:
+   the columns already have theirs, and one rule that tries to cover both shapes
+   would draw two rings on the shape that is already covered. */
+rect.fkd-hit:focus-visible {
+  outline: 2px solid var(--fk-amber-ink);
+  outline-offset: 1px;
+}
+
+.fku-legend {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0 0 6px;
+  padding: 0;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--fk-text-soft);
+}
+.fku-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ── The agent breakdown ────────────────────────────────────────────────── */
+
+.fku-families {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.fku-family {
+  border-radius: 14px;
+  background: var(--fk-surface-sunken);
+  overflow: hidden;
+}
+.fku-family-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+}
+.fku-family-glyph {
+  font-size: 16px;
+}
+.fku-family-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.fku-family-name {
+  font-family: var(--fk-font-display);
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--fk-ink);
+}
+.fku-family-role {
+  font-size: 10.5px;
+  line-height: 1.4;
+  color: var(--fk-text-faint);
+}
+.fku-family-figures {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  flex: none;
+  font-size: 11px;
+  color: var(--fk-text-soft);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.fku-family-cost {
+  font-family: var(--fk-font-display);
+  font-weight: 800;
+  color: var(--fk-ink);
+}
+
+.fku-agents {
+  list-style: none;
+  margin: 0;
+  padding: 0 6px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.fku-agent {
+  border-radius: 12px;
+  background: var(--fk-surface);
+  box-shadow: 0 0 0 1px var(--fk-ring);
+  overflow: hidden;
+}
+.fku-agent-hit {
+  appearance: none;
+  cursor: pointer;
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) repeat(3, auto) 16px;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 11px;
+  border: none;
+  background: none;
+  font-family: inherit;
+  text-align: left;
+  color: var(--fk-text);
+}
+.fku-agent-hit:hover {
+  background: var(--fk-field);
+}
+.fku-agent-who {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.fku-agent-glyph {
+  font-size: 14px;
+}
+.fku-agent-name {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  font-family: var(--fk-font-display);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--fk-ink);
+}
+.fku-agent-brain {
+  font-family: var(--fk-font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--fk-text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fku-agent-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  min-width: 52px;
+}
+.fku-agent-cell-value {
+  font-family: var(--fk-font-display);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--fk-text);
+  font-variant-numeric: tabular-nums;
+}
+.fku-agent-cell-lead .fku-agent-cell-value {
+  color: var(--fk-ink);
+  font-size: 13.5px;
+}
+.fku-agent-cell-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fk-text-faint);
+}
+.fku-agent-caret {
+  font-size: 13px;
+  color: var(--fk-text-faint);
+  text-align: center;
+}
+.fku-agent-share {
+  height: 3px;
+  background: var(--viz-track);
+}
+.fku-agent-share-fill {
+  display: block;
+  height: 100%;
+  background: var(--fku-output);
+}
+.fku-agent-body {
+  padding: 10px 11px 12px;
+  border-top: 1px solid var(--fk-border);
+}
+.fku-agent-role {
+  margin: 8px 0 0;
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--fk-text-faint);
+}
+.fku-agent-turns {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.fku-agent-turn {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: baseline;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: 8px;
+  background: var(--fk-surface-sunken);
+  font-size: 11px;
+}
+.fku-agent-turn-time,
+.fku-agent-turn-tokens {
+  font-family: var(--fk-font-mono);
+  font-size: 10px;
+  color: var(--fk-text-faint);
+  font-variant-numeric: tabular-nums;
+}
+.fku-agent-turn-text {
+  color: var(--fk-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fku-agent-turn-ref {
+  appearance: none;
+  cursor: pointer;
+  border: none;
+  border-radius: 999px;
+  padding: 1px 8px;
+  background: var(--fk-field);
+  font-family: var(--fk-font-mono);
+  font-size: 9.5px;
+  color: var(--fk-text-soft);
+}
+.fku-agent-turn-ref:hover {
+  background: var(--fk-amber-surface);
+  color: var(--fk-amber-ink);
+}
+
+/* ── The live list ──────────────────────────────────────────────────────── */
+
+.fku-live {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+/* One line per call, and the sentence the brief asks for reads left to right
+   across it: who, on what model, how many tokens, what it cost, how it went.
+   The tool name wraps onto a second line of its own rather than squeezing the
+   figures, because the figures are why anybody is on this screen. */
+.fku-live-row {
+  display: grid;
+  grid-template-columns: auto auto auto minmax(0, 1fr) auto auto auto auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 9px;
+  border-radius: 10px;
+  background: var(--fk-surface-sunken);
+  font-size: 11.5px;
+}
+.fku-live-row-bad {
+  background: var(--viz-bad-wash);
+}
+.fku-live-time {
+  font-family: var(--fk-font-mono);
+  font-size: 10px;
+  color: var(--fk-text-faint);
+  white-space: nowrap;
+}
+.fku-live-actor {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 700;
+  color: var(--fk-ink);
+  white-space: nowrap;
+}
+.fku-live-arrow {
+  color: var(--fk-text-faint);
+}
+.fku-live-model {
+  font-family: var(--fk-font-mono);
+  font-size: 10.5px;
+  color: var(--fk-text-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fku-live-tokens {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  font-family: var(--fk-font-display);
+  font-weight: 700;
+  color: var(--fk-text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.fku-live-unit {
+  font-family: var(--fk-font-sans);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--fk-text-faint);
+}
+.fku-live-cost {
+  font-family: var(--fk-font-display);
+  font-weight: 800;
+  color: var(--fk-ink);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.fku-live-ref {
+  appearance: none;
+  cursor: pointer;
+  border: none;
+  border-radius: 999px;
+  padding: 2px 8px;
+  background: var(--fk-field);
+  font-family: var(--fk-font-mono);
+  font-size: 9.5px;
+  color: var(--fk-text-soft);
+  white-space: nowrap;
+}
+.fku-live-ref:hover {
+  background: var(--fk-amber-surface);
+  color: var(--fk-amber-ink);
+}
+.fku-live-what {
+  grid-column: 1 / -1;
+  font-family: var(--fk-font-mono);
+  font-size: 10px;
+  color: var(--fk-text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The verdict, in a word and a glyph — the same vocabulary the rest of the
+   operations layer uses, so a reader learns it once. */
+.fku-verdict {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-family: var(--fk-font-display);
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.fku-verdict-good {
+  background: var(--viz-good-wash);
+  color: var(--viz-good);
+}
+.fku-verdict-bad {
+  background: var(--viz-bad-wash);
+  color: var(--viz-bad);
+}
+.fku-verdict-open {
+  background: var(--viz-track);
+  color: var(--fk-text-soft);
+}
+
+@media (max-width: 720px) {
+  /* The model id and the arrows are the first things to go: the agent's name
+     and the three figures are the row. */
+  .fku-live-row {
+    grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+  }
+  .fku-live-arrow,
+  .fku-live-model {
+    display: none;
+  }
+  .fku-agent-hit {
+    grid-template-columns: minmax(0, 1fr) auto auto 16px;
+  }
+  .fku-agent-cell:nth-of-type(2) {
+    display: none;
+  }
+}

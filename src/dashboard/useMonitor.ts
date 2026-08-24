@@ -31,6 +31,14 @@ import {
   type MonitorEvent,
   type Pulse,
 } from './monitor';
+import {
+  apiCalls,
+  handovers,
+  metrics,
+  type ApiCall,
+  type Handover,
+  type OpsMetrics,
+} from './ops';
 import type { Actor } from '@/shared/agentBus';
 import type { FeedRow } from './types';
 
@@ -42,6 +50,18 @@ export interface Monitor {
   activity: Record<Actor, ActorActivity>;
   pulse: Pulse;
   counts: Record<FilterId, number>;
+  /**
+   * The structure the raw log only implies — every task transfer on the floor,
+   * every call paired with its answer, and the numbers read off both.
+   *
+   * Derived here rather than in the components so the pulse bar, the handover
+   * board and the task drawer are all counting the same things. Three surfaces
+   * deriving "how many handovers" separately is three chances to disagree in
+   * front of an operator.
+   */
+  handovers: Handover[];
+  calls: ApiCall[];
+  metrics: OpsMetrics;
   /** Ticks once a second — what "just now" and the hot rings are keyed to. */
   now: number;
   /** Wipes the shared log, in this tab and every other one. */
@@ -114,6 +134,18 @@ export function useMonitor(feed: FeedRow[]): Monitor {
     [events, runs, Math.floor(now / 5000)],
   );
 
+  // Keyed to the events alone: a handover's status and a call's duration change
+  // when something is *said*, never because a second passed. Only `metrics`
+  // takes the clock, and only at five-second resolution, because "agents active
+  // now" decays on its own.
+  const moves = useMemo(() => handovers(events, runs), [events, runs]);
+  const calls = useMemo(() => apiCalls(events), [events]);
+  const numbers = useMemo(
+    () => metrics(events, runs, moves, calls, now),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [events, runs, moves, calls, Math.floor(now / 5000)],
+  );
+
   return {
     events,
     conversations: runs,
@@ -121,6 +153,9 @@ export function useMonitor(feed: FeedRow[]): Monitor {
     activity: who,
     pulse: beat,
     counts,
+    handovers: moves,
+    calls,
+    metrics: numbers,
     now,
     reset: clear,
   };
