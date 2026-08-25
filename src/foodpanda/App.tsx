@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Button } from 'antd';
+import { AppShell, SidebarTrigger } from '@/components/AppShell';
 import { Panel } from '@/components/Panel';
 import { foodpandaApi } from './api';
 import { DispatcherLog } from './components/DispatcherLog';
@@ -89,172 +90,157 @@ export default function App() {
   const job = board.selected;
 
   return (
-    <div className="fk-shell">
-      <header className="fk-header">
-        <div className="fk-header-inner">
-          <div className="fk-brand">
-            <span className="fp-mark" aria-hidden>
-              🛵
-            </span>
-            <div style={{ minWidth: 0 }}>
-              <h1 className="fk-brand-name">Foodpanda Delivery</h1>
-              <div className="fk-brand-sub">
-                A dispatcher agent — it takes orders from the restaurant’s agent and
-                carries them to the customer
+    // No `action` of its own: this board has no "new errand" handler — errands
+    // are started on the ordering console, so the rail's action links there.
+    <AppShell active="delivery">
+      <div className="fk-shell">
+        <header className="fk-header">
+          <div className="fk-header-inner">
+            {/* Branding and this board's own controls stay here; the way across
+                to the other consoles is the left rail's job now. */}
+            <div className="fk-brand">
+              <SidebarTrigger />
+              <span className="fp-mark" aria-hidden>
+                🛵
+              </span>
+              <div style={{ minWidth: 0 }}>
+                <h1 className="fk-brand-name">Foodpanda Delivery</h1>
+                <div className="fk-brand-sub">
+                  A dispatcher agent — it takes orders from the restaurant’s agent and
+                  carries them to the customer
+                </div>
               </div>
+            </div>
+
+            <div className="fk-header-actions">
+              <span className="fk-tag">
+                <span aria-hidden>🛵</span>
+                Delivery
+              </span>
+
+              {job && <StatusPill status={job.status} live={!job.done} />}
+
+              {job && !job.done && (
+                <Button danger onClick={() => void board.cancel()}>
+                  Cancel delivery
+                </Button>
+              )}
+            </div>
+          </div>
+        </header>
+
+        <main className="fk-content">
+          <div className="fk-status-bar fk-rise">
+            <Services health={health} />
+          </div>
+
+          <div className="fp-columns">
+            <div className="fk-col fk-col-stack fk-rise fk-rise-1">
+              <Panel
+                icon={<span aria-hidden>📋</span>}
+                title="The board"
+                note="Deliveries handed over by the ordering agent"
+                fill="scroll"
+                className="fp-share-3"
+                // Folds away when the operator is watching one delivery rather
+                // than triaging the queue.
+                //
+                // No refresh button beside the chevron: the board re-reads itself
+                // every couple of seconds, so the control would only ever do what
+                // was about to happen anyway — and two controls in this header
+                // squeeze the title onto three lines.
+                collapsible
+              >
+                <JobBoard
+                  jobs={board.jobs}
+                  selectedId={board.selectedId}
+                  onSelect={board.select}
+                />
+              </Panel>
+            </div>
+
+            <div className="fk-col fk-col-stack fk-rise fk-rise-2">
+              <Panel
+                icon={<span aria-hidden>📨</span>}
+                title="The request, as it arrived"
+                note={
+                  job ? (
+                    <>
+                      from the Friends Kitchen ordering agent · order{' '}
+                      <span className="fk-pill-mono">{job.orderNumber}</span>
+                    </>
+                  ) : (
+                    'The A2A message this agent was sent'
+                  )
+                }
+                collapsible
+                fill="scroll"
+                className="fp-share-2"
+              >
+                {job ? (
+                  <RequestCard job={job} />
+                ) : (
+                  <p className="fk-hint">Nothing selected.</p>
+                )}
+              </Panel>
+
+              <Panel
+                icon={<span aria-hidden>🧠</span>}
+                title="What the dispatcher did"
+                note="Every tool call, in the order it made them"
+                live={board.live}
+                // Folds away once the reasoning has been read and the request
+                // above it is what's being checked against. The live bar stays on
+                // the header either way, so a folded panel still shows a run
+                // going on underneath it.
+                collapsible
+                fill="scroll"
+                className="fp-share-3"
+              >
+                <DispatcherLog rows={board.rows} live={board.live} />
+              </Panel>
+            </div>
+
+            <div className="fk-col fk-col-stack fk-rise fk-rise-2">
+              <Panel
+                icon={<span aria-hidden>🗺️</span>}
+                title="Where it has got to"
+                note={job ? job.message : 'The journey, from request to doorstep'}
+                live={board.live}
+                extra={
+                  job && !job.done && job.etaSeconds !== null ? (
+                    <span className="fk-badge">~{job.etaSeconds}s</span>
+                  ) : null
+                }
+                fill="scroll"
+                className="fp-share-3"
+              >
+                {job ? (
+                  <>
+                    {/* Above the journey, not below it: this is what somebody came
+                        to this panel to do, and a control under six steps and a
+                        paragraph is a control found by scrolling. */}
+                    <RequestActions
+                      job={job}
+                      asking={board.asking}
+                      onFindRider={() => void board.findRider()}
+                    />
+                    <Journey job={job} />
+                    <Outcome job={job} />
+                  </>
+                ) : (
+                  <p className="fk-hint">
+                    Nothing selected. Jobs appear on the board as the ordering agent
+                    hands them over.
+                  </p>
+                )}
+              </Panel>
             </div>
           </div>
 
-          <div className="fk-header-actions">
-            {/* Plain anchors, because the three consoles are separate Vite
-                entries rather than routes in one app. */}
-            <a className="fk-nav-link" href="/" title="Back to the ordering agent">
-              <span className="fk-nav-link-arrow" aria-hidden>
-                ←
-              </span>
-              <span aria-hidden>🤖</span>
-              <span className="fk-nav-link-label">Ordering agent</span>
-            </a>
-
-            <a
-              className="fk-nav-link"
-              href="/dashboard.html"
-              title="Open the operations dashboard"
-            >
-              <span aria-hidden>📊</span>
-              <span className="fk-nav-link-label">Operations</span>
-              <span className="fk-nav-link-arrow" aria-hidden>
-                →
-              </span>
-            </a>
-
-            <span className="fk-tag">
-              <span aria-hidden>🛵</span>
-              Delivery
-            </span>
-
-            {job && <StatusPill status={job.status} live={!job.done} />}
-
-            {job && !job.done && (
-              <Button danger onClick={() => void board.cancel()}>
-                Cancel delivery
-              </Button>
-            )}
-          </div>
-        </div>
-      </header>
-
-      <main className="fk-content">
-        <div className="fk-status-bar fk-rise">
-          <Services health={health} />
-        </div>
-
-        <div className="fp-columns">
-          <div className="fk-col fk-col-stack fk-rise fk-rise-1">
-            <Panel
-              icon={<span aria-hidden>📋</span>}
-              title="The board"
-              note="Deliveries handed over by the ordering agent"
-              fill="scroll"
-              className="fp-share-3"
-              // Folds away when the operator is watching one delivery rather
-              // than triaging the queue.
-              //
-              // No refresh button beside the chevron: the board re-reads itself
-              // every couple of seconds, so the control would only ever do what
-              // was about to happen anyway — and two controls in this header
-              // squeeze the title onto three lines.
-              collapsible
-            >
-              <JobBoard
-                jobs={board.jobs}
-                selectedId={board.selectedId}
-                onSelect={board.select}
-              />
-            </Panel>
-          </div>
-
-          <div className="fk-col fk-col-stack fk-rise fk-rise-2">
-            <Panel
-              icon={<span aria-hidden>📨</span>}
-              title="The request, as it arrived"
-              note={
-                job ? (
-                  <>
-                    from the Friends Kitchen ordering agent · order{' '}
-                    <span className="fk-pill-mono">{job.orderNumber}</span>
-                  </>
-                ) : (
-                  'The A2A message this agent was sent'
-                )
-              }
-              collapsible
-              fill="scroll"
-              className="fp-share-2"
-            >
-              {job ? (
-                <RequestCard job={job} />
-              ) : (
-                <p className="fk-hint">Nothing selected.</p>
-              )}
-            </Panel>
-
-            <Panel
-              icon={<span aria-hidden>🧠</span>}
-              title="What the dispatcher did"
-              note="Every tool call, in the order it made them"
-              live={board.live}
-              // Folds away once the reasoning has been read and the request
-              // above it is what's being checked against. The live bar stays on
-              // the header either way, so a folded panel still shows a run
-              // going on underneath it.
-              collapsible
-              fill="scroll"
-              className="fp-share-3"
-            >
-              <DispatcherLog rows={board.rows} live={board.live} />
-            </Panel>
-          </div>
-
-          <div className="fk-col fk-col-stack fk-rise fk-rise-2">
-            <Panel
-              icon={<span aria-hidden>🗺️</span>}
-              title="Where it has got to"
-              note={job ? job.message : 'The journey, from request to doorstep'}
-              live={board.live}
-              extra={
-                job && !job.done && job.etaSeconds !== null ? (
-                  <span className="fk-badge">~{job.etaSeconds}s</span>
-                ) : null
-              }
-              fill="scroll"
-              className="fp-share-3"
-            >
-              {job ? (
-                <>
-                  {/* Above the journey, not below it: this is what somebody came
-                      to this panel to do, and a control under six steps and a
-                      paragraph is a control found by scrolling. */}
-                  <RequestActions
-                    job={job}
-                    asking={board.asking}
-                    onFindRider={() => void board.findRider()}
-                  />
-                  <Journey job={job} />
-                  <Outcome job={job} />
-                </>
-              ) : (
-                <p className="fk-hint">
-                  Nothing selected. Jobs appear on the board as the ordering agent
-                  hands them over.
-                </p>
-              )}
-            </Panel>
-          </div>
-        </div>
-
-        {board.error && <p className="fp-fault fp-gap">{board.error}</p>}
-      </main>
-    </div>
+          {board.error && <p className="fp-fault fp-gap">{board.error}</p>}
+        </main>
+      </div>
+    </AppShell>
   );
 }

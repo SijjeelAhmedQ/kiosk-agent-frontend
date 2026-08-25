@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Button } from 'antd';
+import { AppShell, SidebarTrigger } from '@/components/AppShell';
 import { Panel } from '@/components/Panel';
 import { a2aApi } from './api';
 import { ErrandForm } from './components/ErrandForm';
@@ -145,136 +145,118 @@ export default function App() {
           ? 'Friends Kitchen is not answering on port 8000 — start the Friends Kitchen backend.'
           : null;
 
+  // Same handler and the same condition the header's "New errand" button used.
+  const canReset = run.status !== 'idle' && !run.busy;
+
   return (
-    <div className="fk-shell">
-      <header className="fk-header">
-        <div className="fk-header-inner">
-          <div className="fk-brand">
-            <img className="fk-mark" src="/logo.png" alt="" width={44} height={44} aria-hidden />
-            <div style={{ minWidth: 0 }}>
-              <h1 className="fk-brand-name">Friends Kitchen</h1>
-              <div className="fk-brand-sub">
-                Agent to agent — a buyer with a wallet, a restaurant with a menu
+    <AppShell
+      active="a2a"
+      action={{
+        onClick: fresh,
+        disabled: !canReset,
+        title: canReset
+          ? 'Clear the settled negotiation and start a new one'
+          : run.busy
+            ? 'A negotiation is running — stop it first'
+            : 'The form is already clear and ready for an errand',
+      }}
+    >
+      <div className="fk-shell">
+        <header className="fk-header">
+          <div className="fk-header-inner">
+            {/* Branding and this page's own state stay here; the way across to
+                the other consoles is the left rail's job now. */}
+            <div className="fk-brand">
+              <SidebarTrigger />
+              <img className="fk-mark" src="/logo.png" alt="" width={44} height={44} aria-hidden />
+              <div style={{ minWidth: 0 }}>
+                <h1 className="fk-brand-name">Friends Kitchen</h1>
+                <div className="fk-brand-sub">
+                  Agent to agent — a buyer with a wallet, a restaurant with a menu
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="fk-header-actions">
-            {/* The way back to the errand console — the same plain anchor it
-                used to get here, since the two pages are separate entries. */}
-            <a className="fk-nav-link" href="/" title="Back to the ordering agent">
-              <span className="fk-nav-link-arrow" aria-hidden>
-                ←
+            <div className="fk-header-actions">
+              <span className="fk-tag">
+                <span aria-hidden>🤝</span>
+                A2A
               </span>
-              <span aria-hidden>🤖</span>
-              <span className="fk-nav-link-label">Ordering agent</span>
-            </a>
-
-            {/* The delivery agent's board, the third console in the family. */}
-            <a
-              className="fk-nav-link"
-              href="/foodpanda.html"
-              title="Open the delivery agent's board"
-            >
-              <span aria-hidden>🛵</span>
-              <span className="fk-nav-link-label">Delivery</span>
-              <span className="fk-nav-link-arrow" aria-hidden>
-                →
-              </span>
-            </a>
-
-            {/* And the board that watches all four services at once. */}
-            <a
-              className="fk-nav-link"
-              href="/dashboard.html"
-              title="Open the operations dashboard"
-            >
-              <span aria-hidden>📊</span>
-              <span className="fk-nav-link-label">Operations</span>
-              <span className="fk-nav-link-arrow" aria-hidden>
-                →
-              </span>
-            </a>
-
-            <span className="fk-tag">
-              <span aria-hidden>🤝</span>
-              A2A
-            </span>
-            <StatusPill status={run.status} busy={run.busy} />
-            {run.status !== 'idle' && !run.busy && <Button onClick={fresh}>New errand</Button>}
+              <StatusPill status={run.status} busy={run.busy} />
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
 
-      <main className="fk-content">
-        <div className="fk-status-bar fk-rise">
-          <Services health={health} delivery={delivery} />
-        </div>
-
-        <div className="a2a-columns">
-          <div className="fk-col fk-rise fk-rise-1">
-            {/* The form draws its own panel: the send button belongs in the
-                panel's footer, pinned under the fields rather than scrolling
-                away with them, and only the form knows what that button says. */}
-            <ErrandForm
-              onRun={(input: StartA2ARunInput) => void run.start(input)}
-              onCancel={() => void run.cancel()}
-              busy={run.busy}
-              blockedReason={blocked}
-              couponsKey={couponsKey}
-              // The courier and the address it would deliver to, so "Where it
-              // goes" can name both. Null from a service that is not answering,
-              // and undefined from one too old to report an address — the form
-              // reads either as "there is nothing on file" rather than guessing.
-              delivery={delivery}
-              savedAddress={health?.customer ?? null}
-            />
+        <main className="fk-content">
+          <div className="fk-status-bar fk-rise">
+            <Services health={health} delivery={delivery} />
           </div>
 
-          <div className="fk-col fk-rise fk-rise-2">
-            <Panel
-              icon={<span aria-hidden>💬</span>}
-              title="The negotiation"
-              note={
-                run.merchantTaskId ? (
-                  <>
-                    conversation <span className="fk-pill-mono">{run.merchantTaskId}</span>
-                  </>
-                ) : (
-                  'Both sides of the conversation, in the order it happened'
-                )
-              }
-              live={run.busy}
-              fill="scroll"
-            >
-              <Transcript entries={run.entries} busy={run.busy} status={run.status} />
-            </Panel>
-          </div>
-
-          <div className="fk-col fk-col-stack fk-rise fk-rise-2">
-            {/* The only card in this column now that the delivery panel is gone,
-                so it takes the column's height rather than sitting as a short
-                card over empty paper. `scroll`, because a long report is the one
-                thing in it that can outgrow the viewport. */}
-            <Panel
-              icon={<span aria-hidden>💰</span>}
-              title="What it came to"
-              note="The wallet, from the ledger — not from the report"
-              fill="scroll"
-            >
-              <Outcome
-                wallet={run.wallet}
-                finalText={run.finalText}
-                finalAfterError={run.finalAfterError}
-                paid={run.paid}
-                orderNumber={run.orderNumber}
-                error={run.error}
-                status={run.status}
+          <div className="a2a-columns">
+            <div className="fk-col fk-rise fk-rise-1">
+              {/* The form draws its own panel: the send button belongs in the
+                  panel's footer, pinned under the fields rather than scrolling
+                  away with them, and only the form knows what that button says. */}
+              <ErrandForm
+                onRun={(input: StartA2ARunInput) => void run.start(input)}
+                onCancel={() => void run.cancel()}
+                busy={run.busy}
+                blockedReason={blocked}
+                couponsKey={couponsKey}
+                // The courier and the address it would deliver to, so "Where it
+                // goes" can name both. Null from a service that is not answering,
+                // and undefined from one too old to report an address — the form
+                // reads either as "there is nothing on file" rather than guessing.
+                delivery={delivery}
+                savedAddress={health?.customer ?? null}
               />
-            </Panel>
+            </div>
+
+            <div className="fk-col fk-rise fk-rise-2">
+              <Panel
+                icon={<span aria-hidden>💬</span>}
+                title="The negotiation"
+                note={
+                  run.merchantTaskId ? (
+                    <>
+                      conversation <span className="fk-pill-mono">{run.merchantTaskId}</span>
+                    </>
+                  ) : (
+                    'Both sides of the conversation, in the order it happened'
+                  )
+                }
+                live={run.busy}
+                fill="scroll"
+              >
+                <Transcript entries={run.entries} busy={run.busy} status={run.status} />
+              </Panel>
+            </div>
+
+            <div className="fk-col fk-col-stack fk-rise fk-rise-2">
+              {/* The only card in this column now that the delivery panel is gone,
+                  so it takes the column's height rather than sitting as a short
+                  card over empty paper. `scroll`, because a long report is the one
+                  thing in it that can outgrow the viewport. */}
+              <Panel
+                icon={<span aria-hidden>💰</span>}
+                title="What it came to"
+                note="The wallet, from the ledger — not from the report"
+                fill="scroll"
+              >
+                <Outcome
+                  wallet={run.wallet}
+                  finalText={run.finalText}
+                  finalAfterError={run.finalAfterError}
+                  paid={run.paid}
+                  orderNumber={run.orderNumber}
+                  error={run.error}
+                  status={run.status}
+                />
+              </Panel>
+            </div>
           </div>
-        </div>
-      </main>
-    </div>
+        </main>
+      </div>
+    </AppShell>
   );
 }

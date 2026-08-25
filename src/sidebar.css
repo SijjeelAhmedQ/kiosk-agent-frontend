@@ -1,0 +1,835 @@
+/* ---------------------------------------------------------------------------
+   The left rail
+   ---------------------------------------------------------------------------
+   The row of anchors each header used to carry, moved to a column down the left
+   side. Same destinations, same plain `<a>` elements — this is a layout change,
+   not a routing one.
+
+   Every colour, radius, shadow and family here comes from the --fk-* variables
+   `theme.ts` already sets, so the rail follows both schemes without a rule of
+   its own and matches the cards it sits beside: paper on cream, a mist
+   hairline, no borders on the controls, amber for the thing you are standing on.
+
+   Three states. Expanded is the desktop default; collapsed is a 76px rail of
+   icons with tooltips; under 1024px the whole thing becomes a drawer over the
+   page, opened from a button in the header. The first two are remembered in
+   localStorage because these four consoles are four separate pages.
+
+   The rail draws itself in four tones and nothing else: paper for the surface,
+   soft grey for a row at rest, ink for the row under the pointer, amber for the
+   page you are standing on. Everything below is in service of that ladder —
+   nothing is tinted, ringed or shadowed unless it moves a row up or down it.
+--------------------------------------------------------------------------- */
+
+.fk-app {
+  --fk-side-w: 268px;
+  --fk-side-w-min: 76px;
+
+  /* The two curves the whole rail moves on, named once. `--fk-side-ease` is the
+     decelerating one every layout change uses; `--fk-side-quick` is for colour,
+     which should land before the eye follows it. */
+  --fk-side-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --fk-side-quick: 0.17s cubic-bezier(0.4, 0, 0.2, 1);
+
+  display: flex;
+  height: 100%;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+/* The page keeps everything it had — it is just no longer the widest thing on
+   screen. Two classes deep so it outranks `.fk-shell`'s own height whichever
+   order the stylesheets end up in. */
+.fk-app > .fk-shell {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+}
+
+/* ── The rail ───────────────────────────────────────────────────────────── */
+
+.fk-side {
+  flex: none;
+  z-index: 30;
+  width: var(--fk-side-w);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  /* Paper, with the faintest amber bloom bleeding down from the brand. It is
+     five per cent of one colour over about a third of the rail — not a gradient
+     you are meant to notice, only the reason the top of the column feels lit
+     and the foot of it feels settled. Both schemes read it the same way. */
+  background:
+    linear-gradient(180deg, rgba(255, 199, 44, 0.055), rgba(255, 199, 44, 0) 260px),
+    var(--fk-surface);
+  border-right: 1px solid var(--fk-border);
+  /* The hairline says where the rail ends; this says which of the two planes is
+     on top. Nearly all spread and no offset, so it reads as depth rather than
+     as a drop shadow lying across the page. */
+  box-shadow: 14px 0 34px -28px rgba(13, 13, 15, 0.4);
+  /* Width is the only thing that animates on a collapse: the labels are hidden
+     rather than faded, because half a word sliding out of a 76px rail is the
+     kind of motion this design does not do. */
+  transition: width 0.24s var(--fk-side-ease);
+  overflow: hidden;
+}
+
+.fk-side[data-collapsed='true'] {
+  width: var(--fk-side-w-min);
+}
+
+/* ── Brand ──────────────────────────────────────────────────────────────── */
+
+/* The product's name, once, at the top of the rail. The header below it keeps
+   its own brand block, which says which console you are on — this one says
+   which product it belongs to, so the two are not the same sentence twice.
+   80px tall, which is the header's own height: the two hairlines meet. */
+.fk-side-brand {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 80px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--fk-border);
+}
+
+.fk-side-mark {
+  display: block;
+  height: 38px;
+  width: 38px;
+  flex: none;
+  border-radius: 13px;
+  padding: 3px;
+  object-fit: contain;
+  /* Literal, like `.fk-mark`: the artwork is navy on transparent and has to
+     keep a white tile under it in both schemes. */
+  background: #ffffff;
+  box-shadow: 0 3px 10px rgba(12, 28, 47, 0.14), 0 0 0 1px var(--fk-ring);
+}
+
+.fk-side-brand-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.fk-side-brand-name {
+  font-family: var(--fk-font-display);
+  font-size: 15.5px;
+  font-weight: 800;
+  letter-spacing: -0.018em;
+  color: var(--fk-ink);
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fk-side-brand-sub {
+  margin-top: 3px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--fk-text-faint);
+  /* Two lines and then stop — the subtitle is context, not a paragraph. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.fk-side[data-collapsed='true'] .fk-side-brand {
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
+}
+.fk-side[data-collapsed='true'] .fk-side-brand-text {
+  display: none;
+}
+
+/* Only real in drawer mode; the media query at the foot of this file turns it
+   on. A close button on a rail that cannot be closed is a dead control. */
+.fk-side-close {
+  display: none;
+  margin-left: auto;
+  flex: none;
+  height: 34px;
+  width: 34px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--fk-surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--fk-ring);
+  color: var(--fk-text-faint);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color var(--fk-side-quick), color var(--fk-side-quick);
+}
+.fk-side-close:hover {
+  background: var(--fk-field);
+  color: var(--fk-text);
+}
+
+/* ── The list ───────────────────────────────────────────────────────────── */
+
+/* The rail's own scroll, so a short viewport never pushes the collapse control
+   off the bottom of the screen. The bar itself is drawn to the palette rather
+   than the platform's default, which on a light rail is a black slab. */
+.fk-side-nav {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 16px 12px 10px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--fk-border) transparent;
+}
+
+.fk-side-nav::-webkit-scrollbar {
+  width: 10px;
+}
+.fk-side-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+.fk-side-nav::-webkit-scrollbar-thumb {
+  background: var(--fk-border);
+  /* Padding-box over a transparent border is how a 4px thumb sits centred in a
+     10px gutter without a second element. */
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+.fk-side-nav:hover::-webkit-scrollbar-thumb {
+  background: var(--fk-border-strong);
+  background-clip: padding-box;
+}
+
+.fk-side[data-collapsed='true'] .fk-side-nav {
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+.fk-side-section + .fk-side-section {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--fk-border);
+}
+
+.fk-side-label {
+  margin: 0 0 9px;
+  padding: 0 12px;
+  font-family: var(--fk-font-display);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fk-text-faint);
+}
+
+/* A 76px rail has no room for a word, and the hairline between sections is
+   already saying what the caption said. */
+.fk-side[data-collapsed='true'] .fk-side-label {
+  display: none;
+}
+
+/* One row: icon, label, and whatever the row itself adds on the right. */
+.fk-side-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 9.5px 12px;
+  margin-bottom: 3px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  font-family: var(--fk-font-display);
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: -0.008em;
+  color: var(--fk-text-soft);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color var(--fk-side-quick), color var(--fk-side-quick),
+    box-shadow var(--fk-side-quick);
+}
+
+/* A tint and a hairline rather than a tint alone: on the dark scheme the sunken
+   fill is *darker* than the rail, and the ring is what keeps a hovered row from
+   reading as a hole punched in it. */
+.fk-side-item:hover {
+  background: var(--fk-surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--fk-ring);
+  color: var(--fk-text);
+}
+
+/* Emoji come at wildly different optical widths; a fixed box is what keeps
+   every label in the rail on one left edge. They are also the loudest thing in
+   a column of grey text, so at rest they are held back a little and only come
+   up to full colour on the row you are pointing at or standing on. */
+.fk-side-ico {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  font-size: 15px;
+  line-height: 1;
+  opacity: 0.82;
+  filter: saturate(0.8);
+  transition: opacity var(--fk-side-quick), filter var(--fk-side-quick),
+    transform 0.2s var(--fk-side-ease);
+}
+.fk-side-item:hover .fk-side-ico,
+.fk-side-on .fk-side-ico,
+.fk-side-collapse:hover .fk-side-ico {
+  opacity: 1;
+  filter: none;
+}
+
+.fk-side-text {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* The page you are on. An amber wash, an amber edge and an amber bar down the
+   leading edge — the same trio the panels use for a live section, so "here"
+   reads the same way on this rail as it does everywhere else in the app. */
+.fk-side-on {
+  background: var(--fk-amber-surface);
+  box-shadow: inset 0 0 0 1px var(--fk-amber-edge);
+  color: var(--fk-ink);
+  font-weight: 700;
+}
+.fk-side-on:hover {
+  background: var(--fk-amber-surface);
+  box-shadow: inset 0 0 0 1px var(--fk-amber-edge);
+  color: var(--fk-ink);
+}
+.fk-side-on::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  height: 18px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--fk-amber);
+  transform: translateY(-50%);
+  /* These are four separate pages, so the bar is drawn fresh on every load.
+     Letting it grow out of the edge is the one place the rail says something
+     happened, and it costs a third of a second nobody waits on. */
+  animation: fk-side-bar-in 0.32s var(--fk-side-ease) both;
+}
+
+@keyframes fk-side-bar-in {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) scaleY(0.25);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) scaleY(1);
+  }
+}
+
+/* ── The agents disclosure ──────────────────────────────────────────────── */
+
+.fk-side-head {
+  justify-content: flex-start;
+}
+
+/* Folded away with the console you are on inside it: the row says so quietly
+   rather than pretending to be the active page itself. */
+.fk-side-holds {
+  color: var(--fk-text);
+}
+
+/* …and when it is actually shut, the amber it is hiding surfaces as a stub at
+   the edge. Open, the child row below carries its own marker and this one would
+   only be saying it twice — so `aria-expanded`, which the button already sets
+   for the screen reader, is what decides. */
+.fk-side-head[aria-expanded='false'].fk-side-holds::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  height: 12px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--fk-amber);
+  opacity: 0.55;
+  transform: translateY(-50%);
+}
+
+.fk-side-caret {
+  margin-left: auto;
+  flex: none;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--fk-text-faint);
+  transition: transform 0.24s var(--fk-side-ease), color var(--fk-side-quick);
+}
+.fk-side-caret[data-open='false'] {
+  transform: rotate(-90deg);
+}
+.fk-side-head:hover .fk-side-caret {
+  color: var(--fk-text-soft);
+}
+
+/* The 0fr → 1fr grid trick: a real height animation without hard-coding one.
+   Opacity rides along, so the rows fade as they fold rather than being sheared
+   off by the overflow. */
+.fk-side-sub {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 0.26s var(--fk-side-ease), opacity 0.2s ease;
+}
+.fk-side-sub[data-open='true'] {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+.fk-side-sub-inner {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+  padding-top: 2px;
+}
+
+/* One guide down the group, pinned under the parent row's icon — 12px of row
+   padding plus half of the 22px icon box is 23px, so the line falls through the
+   middle of the emoji above it and the three consoles hang off it. */
+.fk-side-sub-inner::before {
+  content: '';
+  position: absolute;
+  left: 23px;
+  top: 4px;
+  bottom: 6px;
+  width: 2px;
+  border-radius: 999px;
+  background: var(--fk-border);
+}
+
+.fk-side-item-sub {
+  margin-left: 32px;
+  padding-left: 10px;
+  padding-right: 12px;
+  width: auto;
+  font-size: 13px;
+  font-weight: 500;
+}
+.fk-side-item-sub .fk-side-ico {
+  width: 20px;
+  font-size: 14px;
+}
+.fk-side-item-sub.fk-side-on {
+  font-weight: 700;
+}
+/* A child row is already indented and ringed; a second bar at its own edge
+   would only repeat that. It gets the marker the rest of the app uses for a
+   live thing instead, sitting on the guide line — the same 6px disc and 3px
+   halo as `.fk-dot`. */
+.fk-side-item-sub.fk-side-on::before {
+  left: -11px;
+  height: 6px;
+  width: 6px;
+  border-radius: 999px;
+  box-shadow: 0 0 0 3px var(--fk-amber-surface);
+  animation: fk-side-dot 0.32s var(--fk-side-ease) both;
+}
+
+@keyframes fk-side-dot {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) scale(0.4);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+  }
+}
+
+/* Collapsed, the disclosure flattens to its children — see `Sidebar.tsx`. The
+   group then needs the same breathing room the disclosure had. */
+.fk-side-flat {
+  margin: 2px 0;
+}
+
+/* ── The action ─────────────────────────────────────────────────────────── */
+
+/* Not a link and not styled like one: this is the rail's one control that does
+   something to the page rather than leaving it. It gets the brand's own tint at
+   rest, which is what an SaaS rail puts on its primary action — and on hover
+   the amber glow the app's other CTAs carry, so the one row that acts is the
+   one thing in the column that lifts. */
+.fk-side-action {
+  color: var(--fk-amber-ink);
+  font-weight: 700;
+  background: var(--fk-amber-surface);
+  box-shadow: inset 0 0 0 1px var(--fk-amber-edge);
+  transition: background-color var(--fk-side-quick), color var(--fk-side-quick),
+    box-shadow 0.22s var(--fk-side-ease), transform 0.22s var(--fk-side-ease);
+}
+.fk-side-action:hover {
+  color: var(--fk-ink);
+  background: var(--fk-amber-surface);
+  box-shadow: inset 0 0 0 1px var(--fk-amber), var(--fk-shadow-brand);
+  transform: translateY(-1px);
+}
+.fk-side-action:active {
+  transform: translateY(0);
+}
+.fk-side-action .fk-side-ico {
+  opacity: 1;
+  filter: none;
+}
+
+/* Nothing to clear yet. Dimmed rather than removed — a row that comes and goes
+   makes the rail's length change under the pointer, and the tooltip on it says
+   what would have to happen first. */
+.fk-side-action[data-off='true'] {
+  color: var(--fk-text-faint);
+  background: var(--fk-surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--fk-border);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.fk-side-action[data-off='true']:hover {
+  color: var(--fk-text-faint);
+  background: var(--fk-surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--fk-border);
+  transform: none;
+}
+.fk-side-action[data-off='true'] .fk-side-ico {
+  opacity: 0.8;
+  filter: saturate(0);
+}
+
+/* ── The foot ───────────────────────────────────────────────────────────── */
+
+.fk-side-foot {
+  flex: none;
+  padding: 10px 12px 14px;
+  border-top: 1px solid var(--fk-border);
+}
+.fk-side[data-collapsed='true'] .fk-side-foot {
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+.fk-side-collapse {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  font-family: var(--fk-font-display);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  color: var(--fk-text-faint);
+  cursor: pointer;
+  transition: background-color var(--fk-side-quick), color var(--fk-side-quick),
+    box-shadow var(--fk-side-quick);
+}
+.fk-side-collapse:hover {
+  background: var(--fk-surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--fk-ring);
+  color: var(--fk-text);
+}
+.fk-side-collapse .fk-side-ico {
+  font-size: 14px;
+  font-weight: 700;
+  opacity: 1;
+  filter: none;
+}
+/* The chevrons are the only glyph in the rail that says which way its control
+   goes, so they lean that way under the pointer. */
+.fk-side-collapse:hover .fk-side-ico {
+  transform: translateX(-2px);
+}
+.fk-side[data-collapsed='true'] .fk-side-collapse:hover .fk-side-ico {
+  transform: translateX(2px);
+}
+
+/* ── Keyboard ───────────────────────────────────────────────────────────── */
+
+/* Every control in the rail is reachable by tab, and amber is what this app
+   focuses with. The ring is kept inside the nav's own 10px gutter so the rail's
+   overflow never clips it. */
+.fk-side-item:focus-visible,
+.fk-side-collapse:focus-visible,
+.fk-side-close:focus-visible,
+.fk-side-trigger:focus-visible {
+  outline: 2px solid var(--fk-amber);
+  outline-offset: 2px;
+  color: var(--fk-ink);
+}
+.fk-side-item:focus-visible .fk-side-ico {
+  opacity: 1;
+  filter: none;
+}
+
+/* ── Collapsed ──────────────────────────────────────────────────────────── */
+
+/* 76px of rail, 10px of gutter each side, 56px of button, one 22px icon in the
+   middle of it. The labels go; nothing else moves. */
+.fk-side[data-collapsed='true'] .fk-side-item,
+.fk-side[data-collapsed='true'] .fk-side-collapse {
+  justify-content: center;
+  gap: 0;
+  padding-left: 0;
+  padding-right: 0;
+  margin-left: 0;
+  width: 100%;
+  min-height: 42px;
+  border-radius: 13px;
+}
+.fk-side[data-collapsed='true'] .fk-side-text,
+.fk-side[data-collapsed='true'] .fk-side-caret {
+  display: none;
+}
+.fk-side[data-collapsed='true'] .fk-side-item-sub .fk-side-ico {
+  width: 22px;
+  font-size: 15px;
+}
+/* Nothing hangs off a guide line at this width, and a 3px bar in a 10px gutter
+   is a smudge. In a column of grey icons the amber tile is the whole message,
+   so the tile is all that is left. */
+.fk-side[data-collapsed='true'] .fk-side-on::before,
+.fk-side[data-collapsed='true'] .fk-side-head::before,
+.fk-side[data-collapsed='true'] .fk-side-sub-inner::before {
+  display: none;
+}
+.fk-side[data-collapsed='true'] .fk-side-action {
+  box-shadow: inset 0 0 0 1px var(--fk-amber-edge);
+}
+
+/* ── The drawer, and the button that opens it ───────────────────────────── */
+
+.fk-side-scrim {
+  display: none;
+}
+
+/* Lives in every header and is real at one width only. */
+.fk-side-trigger {
+  display: none;
+  flex: none;
+  height: 40px;
+  width: 40px;
+  margin-right: 2px;
+  border: 0;
+  border-radius: 13px;
+  background: var(--fk-surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--fk-ring);
+  color: var(--fk-text);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color var(--fk-side-quick), box-shadow var(--fk-side-quick);
+}
+.fk-side-trigger:hover {
+  background: var(--fk-field);
+  box-shadow: inset 0 0 0 1px var(--fk-border);
+}
+
+@media (max-width: 1023px) {
+  /* Out of the flow entirely: the page gets the full width and the rail comes
+     over the top of it when it is asked for. */
+  .fk-side {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: var(--fk-side-w);
+    max-width: 84vw;
+    /* A panel floating over the page rather than a column beside it, so it is
+       cornered and lifted like every other overlay on this floor. */
+    border-right: 0;
+    border-radius: 0 20px 20px 0;
+    box-shadow: var(--fk-shadow-lg);
+    transform: translateX(-100%);
+    transition: transform 0.28s var(--fk-side-ease);
+  }
+  /* Collapsed is a desktop state. A 76px drawer would be a rail nobody asked
+     for over a page they were reading. */
+  .fk-side[data-collapsed='true'] {
+    width: var(--fk-side-w);
+  }
+  /* Named explicitly rather than `revert`, which would drop these back to the
+     user agent's `inline` and take the brand block's column with it. */
+  .fk-side[data-collapsed='true'] .fk-side-text,
+  .fk-side[data-collapsed='true'] .fk-side-caret {
+    display: block;
+  }
+  .fk-side[data-collapsed='true'] .fk-side-brand-text {
+    display: flex;
+  }
+  .fk-side[data-collapsed='true'] .fk-side-item,
+  .fk-side[data-collapsed='true'] .fk-side-collapse {
+    justify-content: flex-start;
+    gap: 11px;
+    padding-left: 12px;
+    padding-right: 12px;
+    min-height: 0;
+    border-radius: 12px;
+  }
+  .fk-side[data-collapsed='true'] .fk-side-item-sub {
+    margin-left: 32px;
+    padding-left: 10px;
+    padding-right: 12px;
+    width: auto;
+  }
+  .fk-side[data-collapsed='true'] .fk-side-item-sub .fk-side-ico {
+    width: 20px;
+    font-size: 14px;
+  }
+  .fk-side[data-collapsed='true'] .fk-side-on::before,
+  .fk-side[data-collapsed='true'] .fk-side-head::before,
+  .fk-side[data-collapsed='true'] .fk-side-sub-inner::before {
+    display: block;
+  }
+  .fk-side[data-collapsed='true'] .fk-side-brand {
+    justify-content: flex-start;
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .fk-side[data-collapsed='true'] .fk-side-label {
+    display: block;
+  }
+  .fk-side[data-collapsed='true'] .fk-side-nav,
+  .fk-side[data-collapsed='true'] .fk-side-foot {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .fk-side[data-open='true'] {
+    transform: translateX(0);
+  }
+
+  .fk-side-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 25;
+    background: rgba(13, 13, 15, 0.45);
+    /* The page behind the drawer steps back rather than merely darkening. Two
+       pixels is enough to read as out of focus and cheap enough not to cost a
+       frame of the slide. */
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.28s ease;
+  }
+  .fk-side-scrim[data-open='true'] {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .fk-side-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Collapsing is meaningless here, and the foot is where a thumb rests. */
+  .fk-side-foot {
+    display: none;
+  }
+
+  .fk-side-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+/* A phone in the hand: the rows grow to a thumb's target, and the drawer takes
+   the width it needs while still reading as a panel over the page. */
+@media (max-width: 560px) {
+  .fk-side {
+    max-width: 88vw;
+  }
+  .fk-side-item {
+    padding-top: 11px;
+    padding-bottom: 11px;
+    font-size: 14px;
+  }
+  .fk-side-item-sub {
+    font-size: 13.5px;
+  }
+  .fk-side-nav {
+    padding-bottom: 24px;
+  }
+}
+
+@media (max-width: 430px) {
+  .fk-side-trigger {
+    height: 36px;
+    width: 36px;
+    border-radius: 11px;
+    font-size: 15px;
+  }
+}
+
+/* A laptop opened on a train, or a browser carrying three toolbars: the rail is
+   taller than the window before the nav has even scrolled. It gives up the
+   brand's second line and some of its padding rather than putting a scrollbar
+   next to four rows. */
+@media (max-height: 620px) {
+  .fk-side-brand {
+    min-height: 66px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+  .fk-side-brand-sub {
+    display: none;
+  }
+  .fk-side-nav {
+    padding-top: 12px;
+  }
+  .fk-side-item {
+    padding-top: 8px;
+    padding-bottom: 8px;
+    margin-bottom: 2px;
+  }
+  .fk-side-section + .fk-side-section {
+    margin-top: 14px;
+    padding-top: 12px;
+  }
+}
+
+/* The rail's motion is functional — width, height, a slide — so under a reduced
+   motion setting it simply arrives in the new state. */
+@media (prefers-reduced-motion: reduce) {
+  .fk-side,
+  .fk-side-sub,
+  .fk-side-caret,
+  .fk-side-scrim,
+  .fk-side-item,
+  .fk-side-ico,
+  .fk-side-close,
+  .fk-side-trigger,
+  .fk-side-collapse {
+    transition: none;
+  }
+  .fk-side-on::before,
+  .fk-side-item-sub.fk-side-on::before {
+    animation: none;
+  }
+  .fk-side-action:hover,
+  .fk-side-collapse:hover .fk-side-ico,
+  .fk-side[data-collapsed='true'] .fk-side-collapse:hover .fk-side-ico {
+    transform: none;
+  }
+}
