@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>LLM Configuration · Friends Kitchen</title>
+    <meta
+      name="description"
+      content="Choose the provider and model every Friends Kitchen agent runs on — the ordering agent, both A2A agents and the delivery dispatcher, from one screen."
+    />
+    <!-- Both schemes are real here, so the browser is told before it paints:
+         form controls, scrollbars and the address bar all read this. -->
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#F4F4F7" />
+    <!-- A fifth entry point beside index.html, not a route inside it — the
+         same arrangement the four consoles already use. This one is not a
+         console: it is where the provider and model every agent runs on are
+         chosen, which is why it is a page of its own rather than a panel inside
+         one of them. -->
+    <link rel="icon" type="image/png" sizes="64x64" href="/favicon-64.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <!-- The mark is the first thing the boot state paints, so it is asked for
+         at the same time as the bundle rather than after it. -->
+    <link rel="preload" as="image" href="/logo.png" />
+    <script>
+      // The saved scheme, applied before the first paint — shared with the
+      // errand console under the same key, so switching pages keeps the theme.
+      (function () {
+        try {
+          var saved = localStorage.getItem('fk-agent-scheme');
+          var dark =
+            saved === 'dark' ||
+            (saved === null && matchMedia('(prefers-color-scheme: dark)').matches);
+          var root = document.documentElement;
+          root.setAttribute('data-theme', dark ? 'dark' : 'light');
+          root.style.setProperty('--fk-bg', dark ? '#0B0B0E' : '#F4F4F7');
+          root.style.setProperty('--fk-text', dark ? '#EDEDF0' : '#1C1C1F');
+          root.style.setProperty('--fk-surface', dark ? '#161619' : '#FFFFFF');
+          root.style.setProperty('--fk-border', dark ? '#26262B' : '#E9E9EE');
+          // The phone's address bar, painted the same colour as the page it
+          // sits above — otherwise the dark scheme ends in a light strip.
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.setAttribute('content', dark ? '#0B0B0E' : '#F4F4F7');
+        } catch (e) {
+          /* private mode, no storage — the default light palette is fine */
+        }
+      })();
+    </script>
+    <style>
+      /* The boot state: what stands in for the page between the first paint and
+         the moment React has something to show. Not a spinner — a spinner on a
+         blank page says "wait" without saying what for. This is the shape of
+         the screen that is coming, in the scheme the script above just chose,
+         so the load reads as the page arriving rather than as a white flash.
+
+         It is written here rather than in a stylesheet because a stylesheet
+         imported by the bundle cannot help with the time before the bundle. */
+      html,
+      body {
+        margin: 0;
+        background: var(--fk-bg, #f4f4f7);
+      }
+
+      #llm-boot {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+        background: var(--fk-bg, #f4f4f7);
+        font-family: 'Plus Jakarta Sans', Inter, system-ui, sans-serif;
+        opacity: 1;
+        transition: opacity 0.28s ease;
+      }
+
+      #llm-boot img {
+        height: 52px;
+        width: 52px;
+        border-radius: 18px;
+        padding: 3px;
+        background: #ffffff;
+        box-shadow: 0 4px 14px rgba(12, 28, 47, 0.16);
+      }
+
+      #llm-boot p {
+        margin: 0;
+        font-size: 12.5px;
+        font-weight: 700;
+        letter-spacing: 0.09em;
+        text-transform: uppercase;
+        color: #76767e;
+      }
+
+      #llm-boot span {
+        display: block;
+        height: 3px;
+        width: 132px;
+        border-radius: 999px;
+        overflow: hidden;
+        background: var(--fk-border, #e9e9ee);
+        position: relative;
+      }
+
+      #llm-boot span::after {
+        content: '';
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 44px;
+        border-radius: 999px;
+        background: #ffc72c;
+        animation: llm-boot-slide 1.1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+      }
+
+      @keyframes llm-boot-slide {
+        0% {
+          transform: translateX(-44px);
+        }
+        100% {
+          transform: translateX(132px);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        #llm-boot span::after {
+          animation: none;
+          width: 100%;
+        }
+      }
+
+      /* The moment React has rendered anything into #root, the boot state is
+         over. `:has()` does the whole job on its own in every browser this app
+         targets; the observer at the foot of the body is the belt to its
+         braces, and removes the node outright. */
+      #root:has(*) ~ #llm-boot {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      #llm-noscript {
+        max-width: 34rem;
+        margin: 18vh auto 0;
+        padding: 0 24px;
+        font-family: Inter, system-ui, sans-serif;
+        line-height: 1.6;
+        color: var(--fk-text, #1c1c1f);
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <div id="llm-boot" role="status" aria-live="polite">
+      <img src="/logo.png" alt="" width="52" height="52" />
+      <p>Loading LLM configuration</p>
+      <span aria-hidden="true"></span>
+    </div>
+
+    <noscript>
+      <div id="llm-noscript">
+        <h1>JavaScript is switched off</h1>
+        <p>
+          This screen chooses the provider and model every Friends Kitchen agent runs on, and
+          it reads that from the agent service as the page loads. Turn JavaScript on for this
+          site and reload.
+        </p>
+      </div>
+    </noscript>
+
+    <script type="module" src="/src/llm/main.tsx"></script>
+    <script>
+      // The boot state's other way out, for anything without `:has()` support:
+      // as soon as React puts a node inside #root, take the overlay down.
+      (function () {
+        var root = document.getElementById('root');
+        var boot = document.getElementById('llm-boot');
+        if (!root || !boot || typeof MutationObserver !== 'function') return;
+        var done = function () {
+          if (!root.firstElementChild) return false;
+          boot.style.opacity = '0';
+          setTimeout(function () {
+            if (boot.parentNode) boot.parentNode.removeChild(boot);
+          }, 300);
+          return true;
+        };
+        if (done()) return;
+        var watch = new MutationObserver(function () {
+          if (done()) watch.disconnect();
+        });
+        watch.observe(root, { childList: true });
+      })();
+    </script>
+  </body>
+</html>

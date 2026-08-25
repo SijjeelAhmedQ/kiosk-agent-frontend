@@ -8,12 +8,13 @@ export default defineConfig({
     alias: { '@': path.resolve(__dirname, './src') },
   },
   build: {
-    // Four entries, four apps. The errand console on /, the A2A console on
-    // /a2a.html, the delivery agent's board on /foodpanda.html, and the
-    // operations dashboard on /dashboard.html — separate pages rather than
-    // routes, because they talk to different services and none should be able to
-    // break the others. The dashboard is the only one that reads all four, which
-    // makes keeping it a separate entry more important rather than less. The dev
+    // Five entries, five apps. The errand console on /, the A2A console on
+    // /a2a.html, the delivery agent's board on /foodpanda.html, the operations
+    // dashboard on /dashboard.html, and the LLM configuration screen on
+    // /llm.html — separate pages rather than routes, because they talk to
+    // different services and none should be able to break the others. The
+    // dashboard is the only one that reads all four services, which makes
+    // keeping it a separate entry more important rather than less. The dev
     // server finds them on its own; only the build needs telling.
     rollupOptions: {
       input: {
@@ -21,6 +22,7 @@ export default defineConfig({
         a2a: path.resolve(__dirname, 'a2a.html'),
         foodpanda: path.resolve(__dirname, 'foodpanda.html'),
         dashboard: path.resolve(__dirname, 'dashboard.html'),
+        llm: path.resolve(__dirname, 'llm.html'),
       },
     },
   },

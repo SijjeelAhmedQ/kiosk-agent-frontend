@@ -7,6 +7,7 @@ import {
   type NavKey,
   type SidebarAction,
 } from '@/nav';
+import { useActiveLlm } from '@/shared/activeLlm';
 
 /**
  * The left rail — one component, shared by all four consoles.
@@ -149,6 +150,44 @@ function Row({
           {item.icon}
         </span>
         <span className="fk-side-text">{item.label}</span>
+      </a>
+    </Hint>
+  );
+}
+
+/**
+ * Which model the floor is on, as one row at the foot of the rail.
+ *
+ * A link rather than a readout: the screen that changes it is one click away,
+ * which is the whole reason to show it here. Absent while unknown — a row that
+ * says "unknown" on every page is worse than no row, and each console already
+ * reports the state of its own service properly.
+ */
+function ActiveLlm({
+  collapsed,
+  onNavigate,
+}: {
+  collapsed: boolean;
+  onNavigate: () => void;
+}) {
+  const llm = useActiveLlm();
+  if (!llm) return null;
+
+  const label = `${llm.displayName} / ${llm.model}`;
+
+  return (
+    <Hint when={collapsed} label={label}>
+      <a
+        className="fk-side-llm"
+        href="/llm.html"
+        title={collapsed ? undefined : `${label} — open the LLM configuration`}
+        onClick={onNavigate}
+      >
+        <span className={`fk-dot ${llm.ready ? 'fk-dot-ok' : 'fk-dot-bad'}`} aria-hidden />
+        <span className="fk-side-llm-text">
+          <span className="fk-side-llm-provider">{llm.displayName}</span>
+          <span className="fk-side-llm-model">{llm.model}</span>
+        </span>
       </a>
     </Hint>
   );
@@ -361,6 +400,12 @@ export function Sidebar({
             thing a pointer lands on. Hidden in drawer mode, where the rail has
             only two states and the scrim is the way out of one of them. */}
         <div className="fk-side-foot">
+          {/* Above it, the one non-navigation thing in the rail: which brain
+              every agent on this floor is running on. It is here rather than in
+              each console's header because it is true of all of them, and the
+              rail is the only surface all of them share. */}
+          <ActiveLlm collapsed={collapsed} onNavigate={close} />
+
           <Hint when={collapsed} label="Expand sidebar">
             <button
               type="button"

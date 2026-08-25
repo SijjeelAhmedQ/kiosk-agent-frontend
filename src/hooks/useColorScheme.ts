@@ -26,6 +26,14 @@ export function useColorScheme() {
     for (const [name, value] of Object.entries(cssVariables(scheme))) {
       root.style.setProperty(name, value);
     }
+    // The phone's address bar, kept in step with the page under it. Every entry
+    // sets this before the first paint from the same saved key; without this
+    // line a scheme *switched* in the page leaves the strip on the old colour
+    // until the next reload. Absent on the entries that carry no such meta, so
+    // the lookup is allowed to find nothing.
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute('content', scheme === 'dark' ? '#0B0B0E' : '#F4F4F7');
     localStorage.setItem(KEY, scheme);
   }, [scheme]);
 

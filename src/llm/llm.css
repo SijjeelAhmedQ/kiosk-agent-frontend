@@ -1,0 +1,1327 @@
+/**
+ * The LLM configuration screen's own stylesheet.
+ *
+ * Everything structural that this floor already shares — the rail, the panel
+ * surface, the pills, the dots, the palette itself — still comes from
+ * `src/styles.css` and `src/sidebar.css`. Nothing in here reaches outside this
+ * page: every rule is scoped under `.llm-page` (or under the one class the
+ * model popup carries, which antd renders in a portal at the body). The other
+ * four consoles read the same two shared sheets and are untouched by this file.
+ *
+ * What the page is, in layout terms: a masthead, one wide readout of what the
+ * floor is running on, a two-column workspace, and an action dock pinned to the
+ * bottom of the scroll. The dock is the reason the workspace can be as tall as
+ * it likes — Apply is never below the fold, so the page is free to scroll.
+ *
+ * Colour is spent on exactly four things: the accent (amber, the product's),
+ * green for a check that passed, red for one that did not, and amber again for
+ * "changed but not applied". Everything else is one of the four neutral
+ * surfaces. Both schemes are the same rules; only the custom properties move.
+ */
+
+.llm-page {
+  /* Page-local tokens, all derived — a scheme change moves these for free. */
+  --llm-gap: 18px;
+  --llm-radius: 26px;
+  --llm-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ── Masthead ───────────────────────────────────────────────────────────── */
+
+.llm-page .llm-topbar {
+  /* Glass here rather than solid paper: the workspace scrolls under it, and a
+     hard edge with content sliding beneath reads as a seam. Restrained — 92%
+     opaque, 14px of blur, the same single hairline the shared header draws. */
+  background: color-mix(in srgb, var(--fk-surface) 92%, transparent);
+  backdrop-filter: saturate(1.6) blur(14px);
+  -webkit-backdrop-filter: saturate(1.6) blur(14px);
+}
+@supports not (backdrop-filter: blur(1px)) {
+  .llm-page .llm-topbar {
+    background: var(--fk-surface);
+  }
+}
+
+.llm-page .fk-header-inner {
+  min-height: 72px;
+  padding: 12px 28px;
+  flex-wrap: nowrap;
+  gap: 12px;
+}
+
+.llm-title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.llm-eyebrow {
+  font-family: var(--fk-font-display);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--fk-text-faint);
+  /* One line or none: an eyebrow that wraps turns the masthead into two rows
+     and pushes the title it is meant to introduce down under itself. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.llm-page .fk-brand-name {
+  font-size: 19px;
+  line-height: 1.15;
+}
+
+.llm-topbar-actions {
+  gap: 8px;
+  min-width: 0;
+}
+
+/* What the floor is on, said in the masthead as well as in the readout below —
+   it is the one fact this page exists to change, so it stays on screen while
+   the workspace scrolls away from it. */
+.llm-live-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  max-width: 320px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: var(--fk-surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--fk-ring);
+  min-width: 0;
+}
+.llm-live-chip-text {
+  font-family: var(--fk-font-mono);
+  font-size: 11.5px;
+  color: var(--fk-text-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.llm-live-chip-text b {
+  font-family: var(--fk-font-display);
+  font-weight: 700;
+  color: var(--fk-ink);
+}
+
+/* Icon-only controls in the masthead. Square, 40px, quiet until touched. */
+.llm-icon-btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  width: 40px;
+  flex: none;
+  border: 0;
+  border-radius: 14px;
+  background: var(--fk-surface-sunken);
+  color: var(--fk-text-soft);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background-color 0.18s ease,
+    color 0.18s ease,
+    transform 0.18s var(--llm-ease);
+}
+.llm-icon-btn:hover {
+  background: var(--fk-field-hover);
+  color: var(--fk-ink);
+}
+.llm-icon-btn:active {
+  transform: scale(0.93);
+}
+
+/* ── The scroll ─────────────────────────────────────────────────────────── */
+
+/* Scoped under `.llm-page` rather than written as a bare class: these rules
+   override `.fk-content`, which is a single class in a stylesheet that loads
+   after this one in dev and before it in the build. Two classes beat one in
+   either order, so the page does not depend on which. */
+
+/* This page is a form, not a live trace: its panels take the height they need
+   and the page scrolls, rather than each panel holding its own scroll. */
+.llm-page .llm-content {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 20px 28px 0;
+  gap: var(--llm-gap);
+  scroll-padding-bottom: 120px;
+}
+
+/* ── The readout: what every agent is running on ────────────────────────── */
+
+.llm-hero {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 18px 22px;
+  border-radius: var(--llm-radius);
+  background: var(--fk-surface);
+  box-shadow: var(--fk-shadow-sm), 0 0 0 1px var(--fk-ring);
+  /* A hairline of accent down the left edge, the width of a rule rather than a
+     band: the eye needs one cue that this strip is the live state and not
+     another card, and a full amber panel would shout it. */
+  border-left: 3px solid var(--fk-amber);
+  overflow: hidden;
+  transition: box-shadow 0.3s var(--llm-ease), background-color 0.35s ease;
+}
+.llm-hero[data-dirty='true'] {
+  background: linear-gradient(90deg, var(--fk-amber-surface) 0%, transparent 22%),
+    var(--fk-surface);
+}
+.llm-hero[data-ready='false'] {
+  border-left-color: var(--fk-flame);
+}
+
+.llm-hero-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 52px;
+  width: 52px;
+  flex: none;
+  border-radius: 18px;
+  background: var(--fk-surface-sunken);
+  font-size: 24px;
+  line-height: 1;
+}
+
+.llm-hero-body {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.llm-hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--fk-font-display);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--fk-text-faint);
+}
+.llm-hero-model {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.llm-hero-provider {
+  font-family: var(--fk-font-display);
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--fk-ink);
+}
+.llm-hero-id {
+  font-family: var(--fk-font-mono);
+  font-size: 13px;
+  color: var(--fk-text-soft);
+  overflow-wrap: anywhere;
+}
+.llm-hero-meta {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  margin-top: 3px;
+}
+
+.llm-hero-side {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+}
+
+/* ── Badges ─────────────────────────────────────────────────────────────── */
+
+.llm-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--fk-surface-sunken);
+  font-family: var(--fk-font-display);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--fk-text-soft);
+  white-space: nowrap;
+}
+.llm-badge-local {
+  background: var(--fk-leaf-surface);
+  color: var(--fk-leaf-ink);
+}
+.llm-badge-cloud {
+  background: var(--fk-amber-surface);
+  color: var(--fk-amber-ink);
+}
+.llm-badge-draft {
+  background: var(--fk-amber-surface);
+  color: var(--fk-amber-ink);
+}
+.llm-badge-bad {
+  background: var(--fk-flame-surface);
+  color: var(--fk-flame-ink);
+}
+.llm-badge-ok {
+  background: var(--fk-leaf-surface);
+  color: var(--fk-leaf-ink);
+}
+.llm-badge-mono {
+  font-family: var(--fk-font-mono);
+  font-weight: 500;
+}
+
+/* ── Notice ─────────────────────────────────────────────────────────────── */
+
+/* A page-level warning, sized like the readout above it rather than like a
+   dialog. Left-aligned because it carries a sentence from the backend, and a
+   centred sentence of unknown length is a paragraph nobody finishes. */
+.llm-notice {
+  flex: none;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 18px;
+  border-radius: 20px;
+  background: var(--fk-amber-surface);
+}
+.llm-notice-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 26px;
+  width: 26px;
+  flex: none;
+  border-radius: 9px;
+  background: var(--fk-amber);
+  color: #0d0d0f;
+  font-size: 13px;
+  line-height: 1;
+}
+.llm-notice-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.llm-notice-title {
+  font-family: var(--fk-font-display);
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--fk-amber-ink);
+}
+.llm-notice-text {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--fk-text-soft);
+  overflow-wrap: anywhere;
+}
+
+/* ── The workspace ──────────────────────────────────────────────────────── */
+
+/* Two columns of near-equal weight rather than the consoles' 5/7 split: the
+   left is a set of choices and the right is what they add up to, and neither is
+   the subordinate of the other. Deliberately not `.fk-columns` — that grid is
+   capped to the viewport height, and this page scrolls instead. */
+.llm-grid {
+  flex: none;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
+  gap: var(--llm-gap);
+}
+.llm-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--llm-gap);
+  min-width: 0;
+}
+
+@media (max-width: 1100px) {
+  .llm-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ── Provider choice ────────────────────────────────────────────────────── */
+
+.llm-providers {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 10px;
+}
+
+.llm-provider {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  appearance: none;
+  font: inherit;
+  text-align: left;
+  width: 100%;
+  padding: 14px 44px 14px 14px;
+  border: 0;
+  border-radius: 20px;
+  background: var(--fk-surface-sunken);
+  color: var(--fk-text);
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    box-shadow 0.28s var(--llm-ease),
+    transform 0.28s var(--llm-ease);
+}
+/* Only where a pointer can actually leave again — on a touch screen `:hover`
+   latches on tap and the lift never comes back down. */
+@media (hover: hover) {
+  .llm-provider:hover {
+    background: var(--fk-field-hover);
+    transform: translateY(-2px);
+    box-shadow: var(--fk-shadow-sm);
+  }
+}
+.llm-provider:active {
+  transform: scale(0.985);
+}
+.llm-provider[aria-checked='true'] {
+  background: var(--fk-amber-surface);
+  box-shadow: inset 0 0 0 2px var(--fk-amber);
+}
+
+.llm-provider-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  width: 36px;
+  flex: none;
+  border-radius: 13px;
+  background: var(--fk-surface);
+  font-size: 17px;
+  line-height: 1;
+  box-shadow: 0 0 0 1px var(--fk-ring);
+}
+
+.llm-provider-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.llm-provider-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.llm-provider-name {
+  font-family: var(--fk-font-display);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--fk-ink);
+}
+.llm-provider-blurb {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--fk-text-faint);
+}
+.llm-provider-warn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 3px;
+  font-family: var(--fk-font-mono);
+  font-size: 11px;
+  color: var(--fk-flame-ink);
+}
+
+/* The tick. An empty hairline ring until chosen, so the row keeps one fixed
+   shape rather than growing a control the moment it is selected. */
+.llm-radio {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 20px;
+  width: 20px;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1.5px var(--fk-border-strong);
+  color: transparent;
+  font-size: 11px;
+  font-weight: 800;
+  transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+.llm-provider[aria-checked='true'] .llm-radio {
+  background: var(--fk-amber);
+  box-shadow: var(--fk-shadow-brand);
+  color: #0d0d0f;
+}
+
+/* The providers that predate this screen, folded away under a disclosure. */
+.llm-more {
+  margin-top: 14px;
+  border-top: 1px solid var(--fk-border);
+  padding-top: 12px;
+}
+.llm-more > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-family: var(--fk-font-display);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--fk-text-faint);
+  list-style: none;
+  padding: 4px 0;
+  transition: color 0.18s ease;
+}
+.llm-more > summary::-webkit-details-marker {
+  display: none;
+}
+.llm-more > summary::before {
+  content: '\203A';
+  display: inline-block;
+  font-size: 16px;
+  line-height: 1;
+  transition: transform 0.2s var(--llm-ease);
+}
+.llm-more[open] > summary::before {
+  transform: rotate(90deg);
+}
+.llm-more > summary:hover {
+  color: var(--fk-ink);
+}
+.llm-more-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 12px;
+}
+
+.llm-mini {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  appearance: none;
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--fk-surface-sunken);
+  font-family: var(--fk-font-display);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--fk-text-soft);
+  cursor: pointer;
+  transition: background-color 0.18s ease, color 0.18s ease, box-shadow 0.2s ease;
+}
+.llm-mini:hover {
+  background: var(--fk-field-hover);
+  color: var(--fk-ink);
+}
+/* The selected state the shared chip never drew for a radio: one of these is
+   always the answer, and until now none of them looked like it. */
+.llm-mini[aria-checked='true'] {
+  background: var(--fk-amber-surface);
+  color: var(--fk-amber-ink);
+  box-shadow: inset 0 0 0 1.5px var(--fk-amber);
+}
+
+/* ── Model ──────────────────────────────────────────────────────────────── */
+
+.llm-field-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.llm-field-label {
+  font-family: var(--fk-font-display);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--fk-text-faint);
+}
+.llm-field-hint {
+  font-size: 11.5px;
+  color: var(--fk-text-faint);
+}
+
+/* The Select keeps every prop it had — search, filtering, the custom rows.
+   What changes is its size and its type: this is the most important control on
+   the page, so it is 52px tall and its value is set in the mono face, which is
+   the face a model id is actually written in. */
+.llm-page .llm-select .ant-select-selector {
+  height: 52px;
+  padding-inline: 16px;
+  border-radius: 18px;
+}
+.llm-page .llm-select .ant-select-selection-item,
+.llm-page .llm-select .ant-select-selection-search-input,
+.llm-page .llm-select .ant-select-selection-placeholder {
+  font-family: var(--fk-font-mono);
+  font-size: 13px;
+  line-height: 50px;
+}
+
+/* Whatever the chosen model says about itself. Absent when it says nothing,
+   rather than a row of empty slots. */
+.llm-model-meta {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+/* The popup is portalled to the body, so it cannot be scoped to the page. */
+.llm-model-popup .ant-select-item {
+  border-radius: 12px;
+  padding: 9px 12px;
+}
+.llm-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.llm-option-id {
+  font-family: var(--fk-font-mono);
+  font-size: 12.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.llm-option-notes {
+  margin-left: auto;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.llm-option-note {
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--fk-surface-sunken);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--fk-text-faint);
+  white-space: nowrap;
+}
+.llm-option-note-free {
+  background: var(--fk-leaf-surface);
+  color: var(--fk-leaf-ink);
+}
+
+/* ── Empty, loading and error states ────────────────────────────────────── */
+
+/* One block for all three, so a panel never changes shape as it moves between
+   them — only what is written inside it changes. */
+.llm-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+  padding: 26px 18px;
+  border-radius: 20px;
+  background: var(--fk-surface-sunken);
+}
+.llm-state-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  width: 44px;
+  border-radius: 16px;
+  background: var(--fk-surface);
+  font-size: 20px;
+  line-height: 1;
+  box-shadow: 0 0 0 1px var(--fk-ring);
+}
+.llm-state-title {
+  font-family: var(--fk-font-display);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--fk-ink);
+}
+.llm-state-text {
+  max-width: 46ch;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--fk-text-faint);
+  overflow-wrap: anywhere;
+}
+.llm-state-text code {
+  font-family: var(--fk-font-mono);
+  font-size: 11.5px;
+  padding: 1px 5px;
+  border-radius: 6px;
+  background: var(--fk-field);
+}
+.llm-state-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 4px;
+}
+.llm-state-bad .llm-state-icon {
+  background: var(--fk-flame-surface);
+  color: var(--fk-flame-ink);
+  box-shadow: none;
+}
+.llm-state-warn .llm-state-icon {
+  background: var(--fk-amber-surface);
+  color: var(--fk-amber-ink);
+  box-shadow: none;
+}
+
+/* The shimmer every loading surface on this page uses. One animation applied to
+   boxes of different sizes, rather than four different spinners. */
+.llm-skel {
+  border-radius: 14px;
+  background: linear-gradient(
+      90deg,
+      var(--fk-surface-sunken) 0%,
+      var(--fk-field-hover) 42%,
+      var(--fk-surface-sunken) 84%
+    )
+    0 0 / 220% 100%;
+  animation: llm-shimmer 1.5s ease-in-out infinite;
+}
+.llm-skel-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+@keyframes llm-shimmer {
+  from {
+    background-position: 130% 0;
+  }
+  to {
+    background-position: -130% 0;
+  }
+}
+
+/* ── Checks ─────────────────────────────────────────────────────────────── */
+
+.llm-checks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.llm-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: var(--fk-surface-sunken);
+}
+.llm-check-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 20px;
+  width: 20px;
+  flex: none;
+  margin-top: 1px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+}
+.llm-check-ok .llm-check-mark {
+  background: var(--fk-leaf-surface);
+  color: var(--fk-leaf-ink);
+}
+.llm-check-bad .llm-check-mark {
+  background: var(--fk-flame-surface);
+  color: var(--fk-flame-ink);
+}
+.llm-check-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.llm-check-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fk-text);
+}
+.llm-check-detail {
+  font-family: var(--fk-font-mono);
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--fk-text-faint);
+  overflow-wrap: anywhere;
+}
+
+/* ── The verification bench ─────────────────────────────────────────────── */
+
+/* What a test *is*, drawn as what it is: a question put to the model and the
+   answer that came back. Nothing here is written by the page — the probe line
+   names the call the backend makes, and the body is whatever the model said. */
+.llm-bench {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.llm-orb {
+  position: relative;
+  height: 56px;
+  width: 56px;
+  border-radius: 999px;
+  background: radial-gradient(
+    circle at 32% 30%,
+    var(--fk-amber),
+    var(--fk-amber-hover) 62%,
+    transparent 74%
+  );
+  box-shadow: var(--fk-shadow-brand);
+}
+.llm-orb::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 999px;
+  border: 1.5px solid var(--fk-amber-edge);
+  animation: llm-halo 2.8s var(--llm-ease) infinite;
+}
+@keyframes llm-halo {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.55;
+  }
+  100% {
+    transform: scale(1.35);
+    opacity: 0;
+  }
+}
+
+/* The generation indicator: three dots on the same beat. Deliberately not a
+   spinner — a spinner says "busy", and this has to say "a model is composing an
+   answer", which takes as long as it takes. */
+.llm-thinking {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: var(--fk-surface-sunken);
+}
+.llm-dots {
+  display: inline-flex;
+  gap: 5px;
+  flex: none;
+}
+.llm-dots i {
+  height: 7px;
+  width: 7px;
+  border-radius: 999px;
+  background: var(--fk-amber);
+  animation: llm-bounce 1.25s ease-in-out infinite;
+}
+.llm-dots i:nth-child(2) {
+  animation-delay: 0.16s;
+}
+.llm-dots i:nth-child(3) {
+  animation-delay: 0.32s;
+}
+@keyframes llm-bounce {
+  0%,
+  70%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.45;
+  }
+  35% {
+    transform: translateY(-5px);
+    opacity: 1;
+  }
+}
+.llm-thinking-text {
+  font-size: 12.5px;
+  color: var(--fk-text-soft);
+  min-width: 0;
+}
+
+.llm-probe {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 14px;
+  border-radius: 16px;
+  background: var(--fk-field);
+  font-family: var(--fk-font-mono);
+  font-size: 11.5px;
+  color: var(--fk-text-soft);
+  overflow-wrap: anywhere;
+}
+.llm-probe-tag {
+  flex: none;
+  font-family: var(--fk-font-display);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fk-text-faint);
+}
+
+.llm-reply {
+  border-radius: 20px;
+  background: var(--fk-surface-sunken);
+  overflow: hidden;
+  animation: llm-reply-in 0.4s var(--llm-ease) both;
+}
+@keyframes llm-reply-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.llm-reply-bad {
+  background: var(--fk-flame-surface);
+}
+.llm-reply-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 12px 10px 14px;
+  border-bottom: 1px solid var(--fk-border);
+}
+.llm-reply-bad .llm-reply-head {
+  border-bottom-color: transparent;
+}
+.llm-reply-who {
+  font-family: var(--fk-font-display);
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--fk-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.llm-reply-when {
+  flex: none;
+  margin-left: auto;
+  font-family: var(--fk-font-mono);
+  font-size: 10.5px;
+  color: var(--fk-text-faint);
+}
+.llm-reply-body {
+  padding: 14px;
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: var(--fk-text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 260px;
+  overflow-y: auto;
+}
+.llm-reply-bad .llm-reply-body {
+  font-family: var(--fk-font-mono);
+  font-size: 12px;
+  color: var(--fk-flame-ink);
+}
+
+/* Copy. Small enough to stay out of the way, labelled so it is not a guess. */
+.llm-copy {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  height: 28px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--fk-surface);
+  color: var(--fk-text-faint);
+  font-family: var(--fk-font-display);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.18s ease, color 0.18s ease, transform 0.18s var(--llm-ease);
+}
+.llm-copy:hover {
+  color: var(--fk-ink);
+  background: var(--fk-field-hover);
+}
+.llm-copy:active {
+  transform: scale(0.94);
+}
+
+/* ── What a change reaches ──────────────────────────────────────────────── */
+
+.llm-reach {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.llm-reach-row {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: var(--fk-surface-sunken);
+}
+.llm-reach-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  width: 32px;
+  border-radius: 11px;
+  background: var(--fk-surface);
+  font-size: 15px;
+  line-height: 1;
+  box-shadow: 0 0 0 1px var(--fk-ring);
+}
+.llm-reach-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.llm-reach-name {
+  font-family: var(--fk-font-display);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--fk-ink);
+}
+.llm-reach-what {
+  font-size: 11.5px;
+  color: var(--fk-text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.llm-reach-target {
+  font-family: var(--fk-font-mono);
+  font-size: 10.5px;
+  color: var(--fk-text-faint);
+  text-align: right;
+  overflow-wrap: anywhere;
+  max-width: 190px;
+}
+.llm-reach-pending .llm-reach-target {
+  color: var(--fk-amber-ink);
+}
+.llm-reach-note {
+  display: block;
+  margin-top: 12px;
+  font-size: 11.5px;
+  color: var(--fk-text-faint);
+}
+
+/* ── The action dock ────────────────────────────────────────────────────── */
+
+/* Apply lives here rather than inside a panel, which is what lets the workspace
+   above it be as tall as it needs to be: the one irreversible control on the
+   page is pinned to the bottom of the scroll and is never below the fold. */
+.llm-dock {
+  position: sticky;
+  bottom: 0;
+  z-index: 12;
+  flex: none;
+  margin-top: auto;
+  padding: 14px 0 18px;
+  /* The fade is what stops the content appearing to end abruptly at the dock's
+     top edge as it scrolls underneath. */
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    color-mix(in srgb, var(--fk-bg) 78%, transparent) 42%,
+    var(--fk-bg) 100%
+  );
+}
+
+.llm-dock-inner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px 12px 20px;
+  border-radius: var(--llm-radius);
+  background: var(--fk-surface);
+  box-shadow: var(--fk-shadow-lg), 0 0 0 1px var(--fk-ring);
+  transition: box-shadow 0.3s var(--llm-ease);
+}
+.llm-dock[data-dirty='true'] .llm-dock-inner {
+  box-shadow: var(--fk-shadow-lg), 0 0 0 1.5px var(--fk-amber-edge);
+}
+
+.llm-dock-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.llm-dock-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--fk-font-display);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--fk-text-faint);
+}
+.llm-dock-value {
+  font-family: var(--fk-font-mono);
+  font-size: 12.5px;
+  color: var(--fk-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.llm-dock-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* The shortcut, said on the button rather than in a help panel. */
+.llm-kbd {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: rgba(13, 13, 15, 0.16);
+  font-family: var(--fk-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+/* ── The page-level fault ───────────────────────────────────────────────── */
+
+.llm-fault {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 0;
+}
+.llm-fault-card {
+  width: 100%;
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+  padding: 40px 32px;
+  border-radius: 32px;
+  background: var(--fk-surface);
+  box-shadow: var(--fk-shadow-md), 0 0 0 1px var(--fk-ring);
+}
+.llm-fault-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 60px;
+  width: 60px;
+  border-radius: 22px;
+  font-size: 26px;
+  line-height: 1;
+  background: var(--fk-flame-surface);
+  color: var(--fk-flame-ink);
+}
+.llm-fault-warn .llm-fault-icon {
+  background: var(--fk-amber-surface);
+  color: var(--fk-amber-ink);
+}
+.llm-fault-title {
+  font-family: var(--fk-font-display);
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--fk-ink);
+  margin: 0;
+}
+.llm-fault-text {
+  max-width: 48ch;
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--fk-text-soft);
+}
+.llm-cmd {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 12px 12px 16px;
+  border-radius: 18px;
+  background: var(--fk-field);
+  text-align: left;
+}
+.llm-cmd code {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: var(--fk-font-mono);
+  font-size: 11.5px;
+  color: var(--fk-text);
+  overflow-x: auto;
+  white-space: pre;
+}
+
+/* Nothing on this page moves on its own for decoration, and everything that
+   does moves because a state changed. Honour the setting that asks it not to. */
+@media (prefers-reduced-motion: reduce) {
+  .llm-skel,
+  .llm-dots i,
+  .llm-reply,
+  .llm-orb::after {
+    animation: none;
+  }
+  .llm-orb::after {
+    opacity: 0.35;
+  }
+  .llm-dots i {
+    opacity: 1;
+  }
+}
+
+/* ── Narrow ─────────────────────────────────────────────────────────────── */
+
+@media (max-width: 900px) {
+  .llm-page .fk-header-inner {
+    padding: 10px 18px;
+  }
+  .llm-page .llm-content {
+    padding: 16px 18px 0;
+  }
+  /* Said in full in the readout two inches below — a truncated copy of it in
+     the masthead is noise on a screen this narrow. */
+  .llm-live-chip {
+    display: none;
+  }
+  .llm-hero {
+    align-items: flex-start;
+  }
+  .llm-hero-side {
+    align-self: flex-start;
+  }
+}
+
+@media (max-width: 700px) {
+  .llm-hero {
+    flex-wrap: wrap;
+    gap: 14px;
+    padding: 16px;
+  }
+  .llm-hero-icon {
+    height: 44px;
+    width: 44px;
+    font-size: 20px;
+  }
+  .llm-hero-provider {
+    font-size: 17px;
+  }
+  .llm-hero-side {
+    width: 100%;
+  }
+  .llm-page .fk-brand-name {
+    font-size: 16px;
+  }
+  .llm-page .fk-mark {
+    height: 36px;
+    width: 36px;
+    border-radius: 13px;
+  }
+  .llm-reach-row {
+    grid-template-columns: 32px minmax(0, 1fr);
+  }
+  .llm-reach-what {
+    white-space: normal;
+  }
+  .llm-reach-target {
+    grid-column: 2;
+    text-align: left;
+    max-width: none;
+  }
+  /* Stacked, and full-width buttons: at this size the dock is the page's
+     footer, and a thumb should not have to aim. */
+  .llm-dock-inner {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 14px;
+  }
+  .llm-dock-actions {
+    justify-content: stretch;
+  }
+  .llm-dock-actions > * {
+    flex: 1 1 auto;
+  }
+  .llm-kbd {
+    display: none;
+  }
+}
+
+@media (max-width: 560px) {
+  /* Below this there is not room for both, and the title is the half that
+     says which of the five screens this is. The rail carries the brand. */
+  .llm-eyebrow {
+    display: none;
+  }
+}
+
+@media (max-width: 460px) {
+  .llm-page .fk-header-inner {
+    padding: 10px 14px;
+  }
+  .llm-page .llm-content {
+    padding: 14px 14px 0;
+  }
+  .llm-providers {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .llm-fault-card {
+    padding: 28px 20px;
+    border-radius: 26px;
+  }
+}

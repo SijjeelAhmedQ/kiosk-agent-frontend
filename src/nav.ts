@@ -1,11 +1,15 @@
 /**
  * The one place that knows where the consoles live.
  *
- * These four screens are separate Vite entries rather than routes in one app —
+ * These screens are separate Vite entries rather than routes in one app —
  * see `vite.config.ts` — so "navigation" here has always meant a plain anchor
  * to a second page, and it still does. Nothing in this file invents a
  * destination: every `href` below is one of the four entries that already
  * existed, taken from the header links this model replaced.
+ *
+ * `llm` is the newest and the odd one out: it is not an agent's console but the
+ * one screen that decides which model *every* agent runs on, so it sits in its
+ * own section under the three consoles rather than inside the agents group.
  *
  * Two labels are aliases. `operations` points at the same board as `dashboard`,
  * and `errands` at the same console as `ordering`, because the operator asked
@@ -15,7 +19,14 @@
  */
 
 /** Which console a page is. Every page declares one; the rail lights that row. */
-export type NavKey = 'dashboard' | 'ordering' | 'a2a' | 'delivery' | 'operations' | 'errands';
+export type NavKey =
+  | 'dashboard'
+  | 'ordering'
+  | 'a2a'
+  | 'delivery'
+  | 'llm'
+  | 'operations'
+  | 'errands';
 
 export interface NavItem {
   key: NavKey;
@@ -76,7 +87,15 @@ const DELIVERY: NavItem = {
   title: 'Open the delivery agent’s board',
 };
 
-const OPERATIONS: NavItem = {
+const LLM: NavItem = {
+  key: 'llm',
+  label: 'LLM Configuration',
+  icon: '🧠',
+  href: '/llm.html',
+  title: 'Choose the provider and model every agent runs on',
+};
+
+export const OPERATIONS: NavItem = {
   key: 'operations',
   label: 'Operations',
   icon: '⚙️',
@@ -85,7 +104,7 @@ const OPERATIONS: NavItem = {
   aliasOf: 'dashboard',
 };
 
-const ERRANDS: NavItem = {
+export const ERRANDS: NavItem = {
   key: 'errands',
   label: 'Errands',
   icon: '🧾',
@@ -106,9 +125,18 @@ export const NAV_SECTIONS: NavSection[] = [
         icon: '🤖',
         items: [ORDERING, A2A, DELIVERY],
       },
+      // Parked, not deleted — the operator asked for both names and may ask
+      // again. They are exported so that a definition with no live row is not
+      // an unused local, which is what `tsc --noEmit` was failing the build on.
       // { kind: 'item', item: OPERATIONS },
       // { kind: 'item', item: ERRANDS },
     ],
+  },
+  {
+    // Its own section rather than a row inside "AI Agents": what it configures
+    // is not one of them, it is the brain all three of them share.
+    label: 'Configuration',
+    entries: [{ kind: 'item', item: LLM }],
   },
 ];
 

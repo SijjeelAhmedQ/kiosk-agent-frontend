@@ -833,3 +833,62 @@
     transform: none;
   }
 }
+
+/* --- the active-LLM indicator in the rail --------------------------------- */
+/* The one thing in the rail that is not navigation: which brain every agent on
+   this floor is currently running on. It lives here rather than with the LLM
+   screen's own stylesheet because it is drawn on all five pages, and only this
+   file is loaded by all five. Clicking it opens the screen that changes it. */
+.fk-side-llm {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 12px;
+  margin-bottom: 6px;
+  border-radius: 14px;
+  border: none;
+  background: var(--fk-surface-sunken);
+  color: var(--fk-text);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  min-width: 0;
+  transition: background-color 0.15s ease;
+}
+.fk-side-llm:hover {
+  background: var(--fk-field);
+}
+.fk-side-llm .fk-dot {
+  flex: none;
+}
+.fk-side-llm-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.3;
+}
+.fk-side-llm-model {
+  font-family: var(--fk-font-mono);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fk-side-llm-provider {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--fk-text-faint);
+}
+
+/* Collapsed, the rail is 76px of icons — a model id cannot fit and must not
+   try. The dot alone is the indicator, and the tooltip says the rest. */
+.fk-side[data-collapsed='true'] .fk-side-llm {
+  justify-content: center;
+  padding: 9px 0;
+}
+.fk-side[data-collapsed='true'] .fk-side-llm-text {
+  display: none;
+}
