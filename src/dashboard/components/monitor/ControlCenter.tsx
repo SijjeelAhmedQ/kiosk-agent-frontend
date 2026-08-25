@@ -434,7 +434,9 @@ export function ControlCenter({ monitor, agents, onOpenTask }: Props) {
               its own. The <a href="/">ordering agent</a> and the{' '}
               <a href="/a2a.html">A2A desk</a> stream only to whoever started a run — so their
               conversations reach this screen while one of those consoles is open in another tab,
-              and this panel stays empty rather than showing you an invented one.
+              and this panel stays empty rather than showing you an invented one. The console
+              panel below has no such gap: it reads each process directly and fills whether or not
+              anybody is driving one from here.
             </p>
           </div>
         </div>

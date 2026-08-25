@@ -7,6 +7,7 @@ import { AssignmentTable } from './components/AssignmentTable';
 import { KpiRow } from './components/KpiRow';
 import { LiveFeed } from './components/LiveFeed';
 import { Pipeline } from './components/Pipeline';
+import { ConsoleLog } from './components/monitor/ConsoleLog';
 import { ControlCenter } from './components/monitor/ControlCenter';
 import { TaskDrawer } from './components/monitor/TaskDrawer';
 import { UsageChip } from './components/monitor/UsageChip';
@@ -26,6 +27,7 @@ import {
 import { brainsFrom } from './usage';
 import { useFleet } from './useFleet';
 import { useLiveFeed } from './useLiveFeed';
+import { useConsole } from './useConsole';
 import { useMonitor } from './useMonitor';
 import { useUsage } from './useUsage';
 
@@ -232,6 +234,30 @@ export default function App() {
   );
   const usage = useUsage(monitor.events, brains, monitor.now);
   const [usageOpen, setUsageOpen] = useState(false);
+
+  /**
+   * The four services' own consoles, followed for as long as this page is open.
+   *
+   * Deliberately *not* folded into the monitor. Everything the control centre
+   * shows is derived from the shared bus, and the bus only carries the ordering
+   * agent and the A2A desk while one of their consoles is open in another tab —
+   * which is the hole this reads around. These are the processes' own streams,
+   * subscribed to directly, and they carry what each agent is doing whether or
+   * not anybody started it from here. Keeping the two separate is what stops a
+   * reader assuming an empty control centre means an idle floor.
+   */
+  const consoleView = useConsole();
+
+  // Read once here rather than inside the panel: the header of a collapsed panel
+  // is the only thing on screen when it is folded away, so how many services are
+  // connected and whether any of them has failed has to be readable from it.
+  const consoleLive = Object.values(consoleView.links).filter(
+    (link) => link.state === 'live',
+  ).length;
+  const consoleErrors = useMemo(
+    () => consoleView.lines.filter((line) => line.level === 'error').length,
+    [consoleView.lines],
+  );
 
   const everythingDown = fleet.agents.every((agent) => agent.state === 'offline');
 
@@ -443,6 +469,29 @@ export default function App() {
               </Panel>
             </div>
 
+            {/* Directly under the control centre, and not a tab inside it. The
+                panel above is the conversation — derived, cross-referenced, one
+                run at a time. This is the raw output of four processes, and a
+                reader who cannot tell those two apart cannot tell "the agents
+                said nothing" from "nothing was mirrored to this tab". */}
+            <div className="fkd-block fkd-block-console fk-rise fk-rise-1">
+              <Panel
+                icon={<span aria-hidden>▮</span>}
+                title="Console — every agent, live"
+                note={
+                  consoleView.allDown
+                    ? 'No service is answering — this fills the moment one comes back'
+                    : `What each process is actually doing, straight off its own stream · ${consoleLive} of 4 connected`
+                }
+                live={consoleLive > 0 && !consoleView.paused}
+                tone={consoleErrors > 0 ? 'flame' : undefined}
+                collapsible
+                persistKey="fkd.console"
+              >
+                <ConsoleLog view={consoleView} onOpenTask={setTaskId} />
+              </Panel>
+            </div>
+
             <div className="fkd-block fk-rise fk-rise-1">
               <Panel
                 icon={<span aria-hidden>🗺️</span>}
@@ -626,11 +675,26 @@ export default function App() {
                     rather than as idle time.
                   </dd>
 
+                  <dt>The console</dt>
+                  <dd>
+                    Each service's own output, straight off{' '}
+                    <span className="fk-pill-mono">GET :8100/api/agent/console/events</span> and the
+                    same route on 8101, 8102 and 8103. One stream per process rather than one per run,
+                    which is why it fills without a console being open in another tab — unlike the
+                    control centre above it, which reads a bus those two ordering services only reach
+                    while somebody is driving them. Two things feed each stream: the events the service
+                    already publishes, and its Python logging, so an HTTP call that was refused shows up
+                    beside the tool call that made it. Every service keeps its last 800 lines; this page
+                    keeps 1,200 across all four and forgets the oldest.
+                  </dd>
+
                   <dt>What is missing, and why</dt>
                   <dd>
                     The ordering agent and the A2A desk keep their runs in memory and publish no list of
                     them, so this page can say whether one is running but not how many have run. Those
-                    two report “no queue published” instead of a number.
+                    two report “no queue published” instead of a number. The console says what they are
+                    doing; it is still not a history, and a service restarted an hour ago has forgotten
+                    everything before that.
                   </dd>
                 </dl>
               </Panel>

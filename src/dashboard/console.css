@@ -1,0 +1,374 @@
+/* ---------------------------------------------------------------------------
+   The console layer: four processes' output, on one screen.
+
+   Loaded after `monitor.css`, whose chips, search field and empty state this
+   panel reuses wholesale — `.fkm-chip`, `.fkm-search`, `.fkm-empty` — rather
+   than growing a second implementation of each that drifts from the first.
+   Everything here only ever adds; no `.fkm-*` rule is overridden.
+
+   Why it looks like a terminal and the event log next door does not. They answer
+   different questions. The event log is a record of a *conversation*: one row per
+   thing that happened, both ends named, read at a desk after the fact. This is
+   *output* — the processes talking as they work, scrolling, in the order they
+   said it. A monospace grid with a fixed time column is what makes that scannable
+   at speed: the eye tracks one column down the left and the ragged right edge is
+   the information. Setting it in the page's proportional type would be dressing
+   up a log as a document.
+
+   The colour rule is the same one the rest of the app follows: level is carried
+   by a left-edge rule and by the level word, never by hue alone, and every colour
+   comes from the shared `--viz-*` and `--fk-*` variables so both schemes are one
+   stylesheet.
+--------------------------------------------------------------------------- */
+
+.fkc {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--fkm-ground, var(--fk-surface-sunken));
+  box-shadow: inset 0 0 0 1px var(--fk-border);
+}
+
+/* -- the bar ------------------------------------------------------------- */
+.fkc-bar {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--fk-border);
+  background: var(--fk-surface-sunken);
+}
+
+.fkc-sources,
+.fkc-levels,
+.fkc-switches {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.fkc-tools {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.fkc-search {
+  flex: 1 1 200px;
+}
+
+/* The connection light. Three states, and the one that matters is that "quiet"
+   is not one of them — a stream with nothing to say is still lit, because the
+   ping keeps it lit. Only a stream that will not hold goes dark. */
+.fkc-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--viz-idle);
+}
+.fkc-dot-live {
+  background: var(--viz-good);
+  box-shadow: 0 0 0 3px var(--viz-good-wash);
+}
+.fkc-dot-down {
+  background: var(--viz-bad);
+}
+.fkc-dot-connecting {
+  background: var(--viz-work);
+  animation: fkc-blink 1.4s ease-in-out infinite;
+}
+
+@keyframes fkc-blink {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+/* The level floors read as one control rather than four, so it is visibly a
+   dial with a low end and a high end and not a set of independent switches —
+   see `FLOORS` in the component for why that distinction matters. */
+.fkc-levels {
+  gap: 4px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--fk-surface);
+  box-shadow: inset 0 0 0 1px var(--fk-border);
+}
+.fkc-level {
+  padding: 4px 10px;
+  font-size: 11px;
+}
+.fkc-level-warn.fkm-chip-on {
+  border-color: var(--viz-work);
+  background: var(--viz-work-wash);
+  color: var(--fk-amber-ink);
+}
+.fkc-level-error.fkm-chip-on {
+  border-color: var(--viz-bad);
+  background: var(--viz-bad-wash);
+  color: var(--viz-bad);
+}
+
+.fkc-switch {
+  appearance: none;
+  cursor: pointer;
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--fk-border);
+  background: var(--fk-surface);
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--fk-text-soft);
+  transition: border-color 0.16s ease, color 0.16s ease, background 0.16s ease;
+}
+.fkc-switch:hover:not(:disabled) {
+  color: var(--fk-ink);
+  border-color: var(--fk-border-strong);
+}
+.fkc-switch:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.fkc-switch-on {
+  border-color: var(--fk-amber);
+  background: var(--fk-amber-surface);
+  color: var(--fk-amber-ink);
+}
+.fkc-switch-hot {
+  border-color: var(--viz-work);
+  background: var(--viz-work-wash);
+  color: var(--fk-amber-ink);
+}
+
+/* -- the output ---------------------------------------------------------- */
+.fkc-scroll {
+  flex: 1 1 auto;
+  min-height: 300px;
+  max-height: 520px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 6px 0 10px;
+  /* A ground a shade under the panel's, so the lit rows read as lit. */
+  background: var(--fkm-ground, var(--fk-surface-sunken));
+}
+
+.fkc-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* The grid. Four fixed columns and one that takes the rest — the fixed left
+   edge is what makes a long log scannable, and the ragged right edge is where
+   the information is. `minmax(0, 1fr)` rather than `1fr`, so a line with no
+   spaces in it wraps instead of widening the whole panel. */
+.fkc-row {
+  display: grid;
+  grid-template-columns: auto auto auto minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 10px;
+  padding: 3px 12px 3px 10px;
+  border-left: 2px solid transparent;
+  font-family: var(--fk-font-mono);
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--fk-text-soft);
+  animation: fkm-land 0.2s ease-out;
+}
+.fkc-row:hover {
+  background: var(--fk-surface);
+}
+
+.fkc-row-debug {
+  opacity: 0.62;
+}
+.fkc-row-warn {
+  border-left-color: var(--viz-work);
+  background: var(--viz-work-wash);
+}
+.fkc-row-error {
+  border-left-color: var(--viz-bad);
+  background: var(--viz-bad-wash);
+  color: var(--fk-ink);
+}
+
+.fkc-time {
+  color: var(--fk-text-faint);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.fkc-who {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  color: var(--fk-ink);
+  font-weight: 600;
+}
+.fkc-who-name {
+  /* Wide enough for the longest of them, so the text column starts in the same
+     place on every row whoever is speaking. */
+  display: inline-block;
+  min-width: 62px;
+}
+
+.fkc-glyph {
+  font-size: 10.5px;
+  opacity: 0.8;
+}
+
+.fkc-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+/* The level word, for the two levels that have one. Set as a tag rather than a
+   column so it sits in the flow of the sentence it qualifies — see the note in
+   the component on why info and debug get no label at all. */
+.fkc-tag {
+  display: inline-block;
+  margin-right: 7px;
+  padding: 0 6px;
+  border-radius: 5px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  vertical-align: 1px;
+}
+.fkc-tag-warn {
+  background: var(--viz-work-wash);
+  color: var(--fk-amber-ink);
+}
+.fkc-tag-error {
+  background: var(--viz-bad-wash);
+  color: var(--viz-bad);
+}
+
+/* Two inline labels rather than columns of their own: most lines have neither,
+   and a column that is empty four rows out of five is a column that has taken
+   width from the one thing anybody is reading. */
+.fkc-tool,
+.fkc-logger {
+  display: inline-block;
+  margin-right: 7px;
+  padding: 0 6px;
+  border-radius: 5px;
+  font-size: 10px;
+  font-weight: 600;
+  vertical-align: 1px;
+}
+.fkc-tool {
+  background: var(--fk-amber-surface);
+  color: var(--fk-amber-ink);
+}
+.fkc-logger {
+  background: var(--fk-surface);
+  color: var(--fk-text-faint);
+  box-shadow: inset 0 0 0 1px var(--fk-border);
+}
+
+.fkc-ref {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  font-family: var(--fk-font-mono);
+  font-size: 10px;
+  color: var(--fk-text-faint);
+  white-space: nowrap;
+  transition: color 0.16s ease;
+}
+.fkc-ref:hover {
+  color: var(--fk-amber-ink);
+  text-decoration: underline;
+}
+.fkc-ref-none {
+  cursor: default;
+  opacity: 0.35;
+}
+
+/* -- the footer ---------------------------------------------------------- */
+.fkc-foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 12px;
+  border-top: 1px solid var(--fk-border);
+  background: var(--fk-surface-sunken);
+}
+
+.fkc-count {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--fk-text-faint);
+}
+.fkc-foot-held {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--viz-work-wash);
+  color: var(--fk-amber-ink);
+  font-weight: 600;
+}
+
+.fkc-jump {
+  appearance: none;
+  cursor: pointer;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--fk-amber);
+  background: var(--fk-amber-surface);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--fk-amber-ink);
+}
+.fkc-jump:hover {
+  filter: brightness(1.04);
+}
+
+/* On a phone the who-column's fixed width and the reference both cost more than
+   they give: the text is the point, and it should get the width. */
+@media (max-width: 640px) {
+  .fkc-row {
+    grid-template-columns: auto auto minmax(0, 1fr);
+    gap: 8px;
+    padding-right: 10px;
+  }
+  .fkc-who-name,
+  .fkc-glyph,
+  .fkc-ref {
+    display: none;
+  }
+  .fkc-scroll {
+    max-height: 400px;
+  }
+}
+
+/* An animation that runs only when a row arrives is the only kind this floor
+   allows — see the note at the top of `monitor.css`. */
+@media (prefers-reduced-motion: reduce) {
+  .fkc-row {
+    animation: none;
+  }
+  .fkc-dot-connecting {
+    animation: none;
+  }
+}

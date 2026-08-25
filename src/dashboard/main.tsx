@@ -9,6 +9,7 @@ import './dashboard.css';
 import './monitor.css';
 import './ops.css';
 import './usage.css';
+import './console.css';
 
 /**
  * The operations dashboard's own root.
@@ -23,8 +24,10 @@ import './usage.css';
  * The stylesheets are imported in the order they layer: the shared design
  * system first, this page's rules on top of it, the control centre's on top of
  * those, then the operations layer — handovers, lifecycle, technical log, task
- * drawer — and the usage layer last, which extends the task drawer's shell for
- * the billing drawer. Each one only ever adds; nothing below is overridden.
+ * drawer — the usage layer, which extends the task drawer's shell for the
+ * billing drawer, and the console layer last, which reuses the control centre's
+ * chips and search field for the four services' own output. Each one only ever
+ * adds; nothing below is overridden.
  */
 function Root() {
   const { scheme } = useColorScheme();
