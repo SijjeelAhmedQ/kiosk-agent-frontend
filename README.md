@@ -49,6 +49,14 @@ the first click:
 dashboard* below. It needs nothing extra running; whatever is up appears on it,
 and whatever is not says so by name and port.
 
+If the floor is set to a **local model** — llama.cpp, LM Studio, Jan.ai, GPT4All,
+vLLM or Ollama — that runtime is one more thing to have running, and it is the
+only one none of these commands starts. `/llm.html` says which one is selected,
+whether it is answering, and on what port; for llama.cpp the agent backend ships
+`scripts\llama-server.ps1`, which starts it on the settings in that project's
+`.env`. Nothing else changes: the consoles, the dashboard and the agents behave
+the same whichever provider is behind them.
+
 The two couriers are an either/or: `DELIVERY_PROVIDER` in the agent's `.env` names
 one of them, and the other cannot answer its jobs. `mock_foodpanda` means 8103 —
 the board at `/foodpanda.html` — so that is the one to start if you want to watch

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { App as AntApp, Button, Select, Tooltip } from 'antd';
+import { App as AntApp, Button, Input, InputNumber, Select, Tooltip } from 'antd';
 import { AppShell, SidebarTrigger } from '@/components/AppShell';
 import { Panel } from '@/components/Panel';
 import type { ColorScheme } from '@/theme';
@@ -16,6 +16,7 @@ import type {
   ModelInfo,
   ProviderHealth,
   ProviderInfo,
+  ProviderSetting,
   TestResult,
 } from './types';
 import './llm.css';
@@ -50,6 +51,11 @@ interface Props {
 
 /** Emoji, the way every other nav and panel surface in this app draws icons. */
 const ICON: Record<string, string> = {
+  llamacpp: '🦙',
+  lmstudio: '🧪',
+  janai: '🕊',
+  gpt4all: '💽',
+  vllm: '🚀',
   ollama: '🖥',
   openrouter: '☁',
   anthropic: '◆',
@@ -81,6 +87,7 @@ function notesFor(item: ModelInfo): { text: string; free: boolean }[] {
     item.parameterSize ? { text: item.parameterSize, free: false } : null,
     gigabytes(item.sizeBytes) ? { text: gigabytes(item.sizeBytes) as string, free: false } : null,
     context(item.contextLength) ? { text: context(item.contextLength) as string, free: false } : null,
+    item.quantization ? { text: item.quantization, free: false } : null,
     item.family ? { text: item.family, free: false } : null,
     item.free ? { text: 'free', free: true } : null,
   ].filter((note): note is { text: string; free: boolean } => note !== null);
@@ -138,6 +145,64 @@ function Skeleton({ rows = 3, height = 44 }: { rows?: number; height?: number })
       {Array.from({ length: rows }, (_, index) => (
         <div key={index} className="llm-skel" style={{ height }} />
       ))}
+    </div>
+  );
+}
+
+/**
+ * One settings field, drawn from what the backend said about it.
+ *
+ * Three kinds and no provider names: a URL and a text field are the same input
+ * with a different placeholder, and a number is a stepper carrying the range the
+ * backend declared. A provider that adds a knob next month gets a field here
+ * without this file changing.
+ */
+function SettingField({
+  setting,
+  value,
+  onChange,
+}: {
+  setting: ProviderSetting;
+  value: string | number | undefined;
+  onChange: (value: string | number | null) => void;
+}) {
+  const id = `llm-setting-${setting.key}`;
+  return (
+    <div className="llm-setting">
+      <div className="llm-field-head">
+        <label className="llm-field-label" htmlFor={id}>
+          {setting.label}
+        </label>
+      </div>
+
+      {setting.kind === 'number' ? (
+        <InputNumber
+          id={id}
+          className="llm-setting-input"
+          /* Null, not 0, for an emptied field: an empty box is how a setting
+             is put back to what .env says, and `Number('')` is a zero somebody
+             would then have to notice and undo. */
+          value={value === '' || value === undefined ? null : Number(value)}
+          min={setting.min ?? undefined}
+          max={setting.max ?? undefined}
+          step={setting.step ?? undefined}
+          precision={setting.number === 'int' ? 0 : undefined}
+          style={{ width: '100%' }}
+          onChange={(next) => onChange(next as number | null)}
+        />
+      ) : (
+        <Input
+          id={id}
+          className="llm-setting-input"
+          value={String(value ?? '')}
+          placeholder={String(setting.default)}
+          spellCheck={false}
+          autoComplete="off"
+          onChange={(event) => onChange(event.target.value)}
+        />
+      )}
+
+      {setting.help && <span className="llm-setting-help">{setting.help}</span>}
     </div>
   );
 }
@@ -289,6 +354,21 @@ export default function App({ scheme, onToggleScheme }: Props) {
    */
   const [modelsNonce, setModelsNonce] = useState(0);
 
+  // -- the selected provider's own settings -------------------------------- #
+  /**
+   * The settings being edited, or null while they match what is saved.
+   *
+   * A draft here for the same reason the provider and model are drafts: typing
+   * a port should not repoint four running agents halfway through the number.
+   * Null rather than a copy of the saved values, so "has this been touched" is
+   * a fact rather than a deep comparison — and so a save elsewhere that changes
+   * the values is picked up instead of being painted over by a stale copy.
+   */
+  const [settingsDraft, setSettingsDraft] = useState<Record<string, string | number> | null>(
+    null,
+  );
+  const [savingSettings, setSavingSettings] = useState(false);
+
   // -- the checks ---------------------------------------------------------- #
   const [health, setHealth] = useState<ProviderHealth | null>(null);
   const [checking, setChecking] = useState(false);
@@ -404,6 +484,13 @@ export default function App({ scheme, onToggleScheme }: Props) {
     setTestMs(null);
   }, [provider, model]);
 
+  // Half-typed settings belong to the provider they were typed for. Clicking
+  // another card abandons them rather than carrying a port from one runtime
+  // onto the next.
+  useEffect(() => {
+    setSettingsDraft(null);
+  }, [provider]);
+
   const selected = useMemo(
     () => providers?.find((item) => item.name === provider) ?? null,
     [providers, provider],
@@ -436,6 +523,62 @@ export default function App({ scheme, onToggleScheme }: Props) {
     () => models.find((item) => item.id === model) ?? null,
     [models, model],
   );
+
+  /** The settings as they should be drawn: the draft if there is one, else live. */
+  const settingValues = settingsDraft ?? selected?.settingValues ?? {};
+
+  /** Whether the settings differ from what the four services are reading. */
+  const settingsDirty = useMemo(() => {
+    if (!settingsDraft || !selected) return false;
+    return Object.entries(settingsDraft).some(
+      ([key, value]) => String(value) !== String(selected.settingValues[key] ?? ''),
+    );
+  }, [settingsDraft, selected]);
+
+  const editSetting = (key: string, value: string | number | null) => {
+    setSettingsDraft((current) => ({
+      ...(current ?? selected?.settingValues ?? {}),
+      // An emptied field is not a value — it becomes the placeholder, and the
+      // backend reads a missing key as "leave it as it is".
+      [key]: value === null ? '' : value,
+    }));
+  };
+
+  /**
+   * Save this provider's settings, then re-read everything they decide.
+   *
+   * A changed server URL moves three things at once — which models exist, what
+   * the connection check says, and what a generation would reach — so all three
+   * are asked again rather than left showing answers from the previous address.
+   */
+  const saveSettings = async () => {
+    if (!provider || !settingsDraft) return;
+    setSavingSettings(true);
+    try {
+      // Only what was actually touched. A field left alone is not sent, so a
+      // value this build does not know about cannot be flattened by it.
+      const changed: Record<string, string | number | null> = {};
+      for (const [key, value] of Object.entries(settingsDraft)) {
+        if (String(value) === String(selected?.settingValues[key] ?? '')) continue;
+        changed[key] = value === '' ? null : value;
+      }
+
+      await llmApi.saveSettings(provider, changed);
+      setSettingsDraft(null);
+      message.success(`${selected?.displayName ?? 'The provider'} settings saved.`);
+
+      await load();
+      setModelsNonce((nonce) => nonce + 1);
+      setTest(null);
+      setTestMs(null);
+    } catch (error) {
+      message.error(
+        error instanceof Error ? error.message : 'The settings could not be saved.',
+      );
+    } finally {
+      setSavingSettings(false);
+    }
+  };
 
   const runTest = async () => {
     if (!provider || !model) return;
@@ -545,8 +688,17 @@ export default function App({ scheme, onToggleScheme }: Props) {
         >
           {selected?.kind === 'local' ? (
             <>
-              No models are installed. Pull one with <code>ollama pull llama3.1</code>, then
-              check again.
+              {selected.name === 'ollama' ? (
+                <>
+                  No models are installed. Pull one with <code>ollama pull llama3.1</code>,
+                  then check again.
+                </>
+              ) : (
+                <>
+                  {selected.displayName} is running but has no model loaded.{' '}
+                  {selected.startHint}
+                </>
+              )}
             </>
           ) : (
             'This provider offers no models to choose from.'
@@ -866,6 +1018,85 @@ export default function App({ scheme, onToggleScheme }: Props) {
                   </>
                 )}
               </Panel>
+
+              {selected && selected.settings.length > 0 && (
+                <Panel
+                  icon="🔧"
+                  title={`${selected.displayName} settings`}
+                  note={`Where ${selected.displayName} is reached on this machine, and how it is asked.`}
+                  collapsible
+                  defaultOpen
+                  persistKey="llm-provider-settings"
+                  extra={
+                    settingsDirty ? (
+                      <span className="llm-badge llm-badge-draft">
+                        <span className="fk-dot fk-dot-busy" aria-hidden />
+                        Unsaved
+                      </span>
+                    ) : undefined
+                  }
+                  footer={
+                    <div className="llm-setting-actions">
+                      <Button
+                        onClick={() => setSettingsDraft(null)}
+                        disabled={!settingsDirty || savingSettings}
+                      >
+                        Discard
+                      </Button>
+                      <Button
+                        type="primary"
+                        onClick={() => void saveSettings()}
+                        loading={savingSettings}
+                        disabled={!settingsDirty}
+                      >
+                        Save settings
+                      </Button>
+                    </div>
+                  }
+                >
+                  <div className="llm-settings">
+                    {selected.settings
+                      .filter((setting) => !setting.advanced)
+                      .map((setting) => (
+                        <SettingField
+                          key={setting.key}
+                          setting={setting}
+                          value={settingValues[setting.key]}
+                          onChange={(value) => editSetting(setting.key, value)}
+                        />
+                      ))}
+                  </div>
+
+                  {/* The knobs whose defaults are right almost always. Folded,
+                      so the section stays the one field somebody came for. */}
+                  {selected.settings.some((setting) => setting.advanced) && (
+                    <details className="llm-more">
+                      <summary>
+                        Advanced ({selected.settings.filter((s) => s.advanced).length})
+                      </summary>
+                      <div className="llm-settings">
+                        {selected.settings
+                          .filter((setting) => setting.advanced)
+                          .map((setting) => (
+                            <SettingField
+                              key={setting.key}
+                              setting={setting}
+                              value={settingValues[setting.key]}
+                              onChange={(value) => editSetting(setting.key, value)}
+                            />
+                          ))}
+                      </div>
+                    </details>
+                  )}
+
+                  {/* Saved settings are live at once; the provider itself still
+                      needs Apply. Said here rather than left to be discovered. */}
+                  <span className="llm-setting-note">
+                    Saved settings take effect on the next model built, in all four
+                    services. Choosing {selected.displayName} itself still needs Apply.
+                  </span>
+                </Panel>
+              )}
 
               <Panel
                 icon="🎛"

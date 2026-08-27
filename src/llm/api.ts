@@ -20,6 +20,7 @@ import type {
   ModelList,
   ProviderHealth,
   ProviderInfo,
+  ProviderSettings,
   TestResult,
 } from './types';
 
@@ -134,6 +135,40 @@ export const llmApi = {
    */
   models: (provider: string) =>
     read<ModelList>(`/api/llm/models?provider=${encodeURIComponent(provider)}`),
+
+  /**
+   * One provider's own configuration — where it listens, and how it is asked.
+   *
+   * A read rather than a throw: a provider with nothing to configure answers
+   * with an empty `fields`, and a service that is down is already said once by
+   * the call above it.
+   */
+  settings: (provider: string) =>
+    read<ProviderSettings>(`/api/llm/settings?provider=${encodeURIComponent(provider)}`),
+
+  /**
+   * Change them. Throws on refusal, like every other write on this screen.
+   *
+   * A merge on the backend: only the fields sent are touched, and a field sent
+   * as null goes back to what .env says. Takes effect on the next model built,
+   * in all four services.
+   */
+  saveSettings: async (
+    provider: string,
+    values: Record<string, string | number | null>,
+  ): Promise<ProviderSettings> => {
+    let response: Response;
+    try {
+      response = await fetch(`${LLM_BASE}/api/llm/settings`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider, values }),
+      });
+    } catch {
+      throw new ServiceError('offline', LLM_OFFLINE);
+    }
+    return unwrap<ProviderSettings>(response);
+  },
 
   health: (provider: string, model: string) =>
     read<ProviderHealth>(

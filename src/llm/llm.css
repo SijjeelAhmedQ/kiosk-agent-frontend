@@ -544,6 +544,85 @@
   box-shadow: inset 0 0 0 1.5px var(--fk-amber);
 }
 
+/* ── A provider's own settings ────────────────────────────────────── */
+
+/* Two columns where there is room and one where there is not. A server URL is
+   the field somebody opens this section for, so it takes the full width and the
+   numbers pair off underneath it. */
+.llm-page .llm-settings {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 14px 16px;
+}
+.llm-page .llm-settings .llm-setting:has(.ant-input) {
+  grid-column: 1 / -1;
+}
+
+.llm-page .llm-setting {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.llm-page .llm-setting .llm-field-head {
+  margin-bottom: 6px;
+}
+
+/* The same rounded, sunken field the model Select sits in, so the section reads
+   as one family of controls rather than antd's defaults dropped into this page.
+   A URL and a port are read character by character, so the value is set in the
+   mono face for the reason a model id is. */
+.llm-page .llm-setting-input,
+.llm-page .llm-setting .ant-input-number,
+.llm-page .llm-setting .ant-input-number-input,
+.llm-page .llm-setting .ant-input {
+  border-radius: 14px;
+  font-family: var(--fk-font-mono);
+  font-size: 12.5px;
+}
+.llm-page .llm-setting .ant-input-number-input,
+.llm-page .llm-setting .ant-input {
+  height: 40px;
+}
+
+.llm-page .llm-setting-help {
+  margin-top: 6px;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--fk-text-faint);
+}
+
+/* Discard sits beside Save rather than under it: they are the same decision
+   taken two ways, and the pair belongs at the end of the row the way the dock's
+   own actions do. */
+.llm-page .llm-setting-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Which half of this screen is live and which still waits for Apply. Quiet, and
+   worth a line only because the answer is genuinely not obvious: everything
+   else on this page waits for the dock. */
+.llm-page .llm-setting-note {
+  display: block;
+  margin-top: 14px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--fk-text-faint);
+}
+
+/* The Advanced disclosure is the provider list's, with the rule above it
+   removed — inside a panel body it would read as a second panel edge. */
+.llm-page .llm-settings + .llm-more {
+  border-top: 0;
+  margin-top: 10px;
+  padding-top: 0;
+}
+.llm-page .llm-more > .llm-settings {
+  padding-top: 12px;
+}
+
 /* ── Model ──────────────────────────────────────────────────────────────── */
 
 .llm-field-head {
