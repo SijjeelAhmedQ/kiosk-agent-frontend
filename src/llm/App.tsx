@@ -983,10 +983,11 @@ export default function App({ scheme, onToggleScheme }: Props) {
                       ))}
                     </div>
 
-                    {/* The providers this project supported before the two above
-                        were given cards. Kept selectable — removing them would
-                        have broken an existing .env — but folded away, because
-                        they are not what this screen is for. */}
+                    {/* Everything else: the other four local servers, Ollama, and
+                        the cloud providers this project supported before the two
+                        above were given cards. Equally selectable and equally
+                        supported — folded away because a floor runs on one of the
+                        two, and a list of twelve reads as a decision to make. */}
                     {others.length > 0 && (
                       <details className="llm-more">
                         <summary>Other providers ({others.length})</summary>
