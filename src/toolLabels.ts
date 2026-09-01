@@ -30,6 +30,15 @@ const LABELS: Record<string, ToolLabel> = {
   authorize_payment: { icon: '💳', label: 'Paid', spends: true },
   get_order: { icon: '✅', label: 'Confirmed the order' },
 
+  // Skills — the packaged procedures the agent reaches for rather than
+  // improvising. Named for what the agent did with one, not for the mechanism:
+  // "Ran a skill script" is the step, and which script it was belongs in the
+  // step's own sentence. See friends-kitchen-agent-backend/agent/skills/.
+  list_skills: { icon: '🧰', label: 'Checked its skills' },
+  open_skill: { icon: '📖', label: 'Opened a skill' },
+  read_skill_file: { icon: '📄', label: 'Read a skill file' },
+  run_skill_script: { icon: '⚙️', label: 'Ran a skill script' },
+
   // Browser mode
   open_friends_kitchen: { icon: '🖥️', label: 'Walked up to Friends Kitchen' },
   read_screen: { icon: '👀', label: 'Read the screen' },

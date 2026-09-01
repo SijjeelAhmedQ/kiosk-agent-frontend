@@ -241,6 +241,82 @@ function Step({ call }: { call: AgentToolCall }) {
   );
 }
 
+/** The tools that mean the agent reached for a packaged procedure. */
+const SKILL_TOOLS = new Set(['list_skills', 'open_skill', 'read_skill_file', 'run_skill_script']);
+
+interface SkillUse {
+  name: string;
+  /** How many steps of this run touched it. */
+  steps: number;
+  /** The scripts it actually executed, without their `scripts/` prefix. */
+  ran: string[];
+}
+
+/**
+ * Which skills this run used, from the steps themselves.
+ *
+ * Derived rather than reported: nothing on the wire says "this run used
+ * order-math", and nothing should — the steps are the evidence, and a summary
+ * computed from them cannot disagree with the trace above it.
+ *
+ * `list_skills` is deliberately not counted. Reading the catalogue is the agent
+ * checking what it has, not using any of it, and a run that looked and then
+ * decided none applied should show no skills rather than all of them.
+ */
+function skillsUsed(calls: AgentToolCall[]): SkillUse[] {
+  const used = new Map<string, SkillUse>();
+
+  for (const call of calls) {
+    if (!SKILL_TOOLS.has(call.name) || call.ok !== true) continue;
+
+    const detail = call.detail ?? {};
+    const name = typeof detail.skill === 'string' ? detail.skill : null;
+    if (!name) continue;
+
+    const entry = used.get(name) ?? { name, steps: 0, ran: [] };
+    entry.steps += 1;
+
+    const script = typeof detail.script === 'string' ? detail.script : null;
+    if (call.name === 'run_skill_script' && script) {
+      const short = script.replace(/^scripts\//, '');
+      if (!entry.ran.includes(short)) entry.ran.push(short);
+    }
+    used.set(name, entry);
+  }
+
+  return [...used.values()];
+}
+
+/**
+ * The skills this run reached for, at the foot of the trace.
+ *
+ * Outside the scroll box on purpose. A skill is used somewhere in the middle of
+ * a fifteen-step errand, which is exactly where it scrolls out of sight — and
+ * "did it follow the procedure or make one up" is a question asked about the
+ * run as a whole, not about step nine.
+ */
+function SkillsUsed({ used }: { used: SkillUse[] }) {
+  return (
+    <div className="fk-skills">
+      <div className="fk-eyebrow">Skills used</div>
+      <ul className="fk-skill-list">
+        {used.map((skill) => (
+          <li className="fk-skill" key={skill.name}>
+            <span className="fk-skill-name">{skill.name}</span>
+            <span className="fk-skill-note">
+              {skill.ran.length > 0
+                ? `ran ${skill.ran.join(', ')}`
+                : `read, ${plural(skill.steps, 'step', 'steps')}`}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+
 /**
  * What the agent did, step by step.
  *
@@ -253,6 +329,7 @@ export function RunTrace({ toolCalls, busy, status, browserOpen }: Props) {
   const done = toolCalls.filter((call) => call.ok !== null).length;
   const scrollBox = useFollowNewest(toolCalls.length);
   const cut = useCutOff(scrollBox, toolCalls.length);
+  const used = skillsUsed(toolCalls);
 
   // The count carries a track beside it. The steps themselves are the honest
   // measure of progress — but they scroll, and this line does not, so it is the
@@ -313,18 +390,22 @@ export function RunTrace({ toolCalls, busy, status, browserOpen }: Props) {
           </p>
         </div>
       ) : (
-        <div
-          className={`fk-trace-scroll${cut.above ? ' fk-cut-above' : ''}${
-            cut.below ? ' fk-cut-below' : ''
-          }`}
-          ref={scrollBox}
-        >
-          <ol className="fk-trace">
-            {toolCalls.map((call) => (
-              <Step call={call} key={call.toolUseId} />
-            ))}
-          </ol>
-        </div>
+        <>
+          <div
+            className={`fk-trace-scroll${cut.above ? ' fk-cut-above' : ''}${
+              cut.below ? ' fk-cut-below' : ''
+            }`}
+            ref={scrollBox}
+          >
+            <ol className="fk-trace">
+              {toolCalls.map((call) => (
+                <Step call={call} key={call.toolUseId} />
+              ))}
+            </ol>
+          </div>
+
+          {used.length > 0 && <SkillsUsed used={used} />}
+        </>
       )}
     </Panel>
   );

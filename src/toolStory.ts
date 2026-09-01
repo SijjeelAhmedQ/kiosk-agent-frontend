@@ -159,6 +159,20 @@ const screenName = (detail: Bag): string | null => {
   return screen ? (screen === 'splash' ? 'the welcome screen' : `the ${screen} screen`) : null;
 };
 
+/** A list of plain strings — the file paths a skill bundles. */
+const paths = (value: unknown): string[] =>
+  Array.isArray(value) ? value.map(text).filter((item): item is string => item !== null) : [];
+
+/**
+ * `scripts/order_math.py` → `order_math.py`.
+ *
+ * The directory is the spec's, not news: every script a skill runs lives in
+ * `scripts/`, so printing it on every step spends a third of the line saying
+ * the same thing.
+ */
+const bare = (path: string | null): string | null =>
+  path === null ? null : path.replace(/^(scripts|references|assets)\//, '');
+
 // ---------------------------------------------------------------------------
 // One writer per tool
 // ---------------------------------------------------------------------------
@@ -415,6 +429,96 @@ const WRITERS: Record<string, (detail: Bag) => Partial<ToolStory>> = {
           ? null
           : { label: 'ETA', value: `~${count(detail.etaMinutes)} min`, tone: 'amber' },
       ]),
+    };
+  },
+
+  // ---- Skills ------------------------------------------------------------
+  // A skill is a packaged procedure the agent follows instead of improvising
+  // one. Four tools, and the trace's job for all of them is the same: name the
+  // skill. "Ran a skill script" without saying which skill is a step nobody can
+  // check. See friends-kitchen-agent-backend/agent/skills/.
+  list_skills: (detail) => {
+    const found = rows(detail.skills);
+    if (found.length === 0) {
+      return { headline: 'No skills are installed for this errand' };
+    }
+    return {
+      headline: `${plural(found.length, 'skill', 'skills')} available for this errand`,
+      things: found.map((skill) => {
+        const scripts = paths(skill.scripts).length;
+        return {
+          name: text(skill.name) ?? 'A skill',
+          note: scripts ? plural(scripts, 'script', 'scripts') : undefined,
+        };
+      }),
+    };
+  },
+
+  open_skill: (detail) => {
+    const skill = text(detail.skill) ?? 'a skill';
+    const bundled = [
+      ...paths(detail.scripts),
+      ...paths(detail.references),
+      ...paths(detail.assets),
+    ];
+    return {
+      headline: `Read the ${skill} skill's instructions`,
+      facts: factsOf([
+        paths(detail.scripts).length
+          ? { label: 'To run', value: plural(paths(detail.scripts).length, 'script', 'scripts') }
+          : null,
+      ]),
+      things: bundled.map((file) => ({ name: file })),
+    };
+  },
+
+  read_skill_file: (detail) => ({
+    headline: `Read ${bare(text(detail.file)) ?? 'a file'} from the ${
+      text(detail.skill) ?? 'skill'
+    } skill`,
+  }),
+
+  run_skill_script: (detail) => {
+    const skill = text(detail.skill) ?? 'a skill';
+    const script = bare(text(detail.script)) ?? 'a script';
+    const result = bag(detail.result);
+
+    // A script that prints JSON has handed over a structured answer, and its
+    // fields are the point of running it — so they become chips, the way any
+    // other tool's figures do. A script that printed prose has its output read
+    // as prose instead; `errand-report` returns the finished report that way.
+    const report = result ? text(result.report) : null;
+
+    // Verdicts first. A script's booleans are the decision it was run to make —
+    // `withinCashLimit: false` is the whole reason to ask before paying — and in
+    // field order they arrive last, where a cap would cut them off.
+    const verdicts: Fact[] = [];
+    const figures: Fact[] = [];
+    if (result && !report) {
+      for (const [key, value] of Object.entries(result)) {
+        if (Array.isArray(value) || bag(value)) continue;
+        if (typeof value === 'boolean') {
+          // Deliberately uncoloured. Which way is good news is the script's
+          // business, not this file's: `fullyCovered: no` is routine and
+          // `overLimit: yes` is not, and a rule that paints every `true` green
+          // gets one of those backwards.
+          verdicts.push({ label: label(key), value: value ? 'yes' : 'no' });
+          continue;
+        }
+        const chip = fact(label(key), value);
+        if (chip) figures.push(chip);
+      }
+    }
+
+    return {
+      headline: `Ran ${script} from the ${skill} skill`,
+      note: report ?? (result ? undefined : text(detail.output) ?? undefined),
+      // Wider than `generic()`'s six. That cap guards against an unknown tool
+      // dumping its whole return value; a skill script prints a small result
+      // that was designed to be read, and cutting it is cutting the answer the
+      // script was run for.
+      facts: [...verdicts, ...figures].slice(0, 10),
+      things: result ? rows(result.lines).map(line) : [],
     };
   },
 

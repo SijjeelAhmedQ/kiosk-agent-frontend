@@ -1638,6 +1638,64 @@ html[data-theme='dark'] .fk-chip[aria-pressed='true']:hover:not(:disabled) {
   font-size: 10.5px;
 }
 
+/* ── Skills used ────────────────────────────────────────────────────────── */
+
+/* Pinned at the foot of the trace, outside the list's scroll — the same place,
+   and for the same reason, the report keeps its bill: a skill is used somewhere
+   in the middle of a long errand, which is exactly where it scrolls out of
+   sight, and "did it follow the procedure" is asked of the whole run.
+
+   `flex: none` so a run that used four skills takes its height from the list
+   above rather than squeezing the steps. */
+.fk-skills {
+  flex: none;
+  padding-top: 16px;
+}
+.fk-skills .fk-eyebrow {
+  margin: 0 0 9px;
+}
+
+.fk-skill-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* One chip per skill, in the same sunken-with-a-ring vocabulary as a fact — it
+   is the same kind of thing: a small labelled fact about the run. */
+.fk-skill {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  padding: 5px 12px 6px;
+  border-radius: 12px;
+  background: var(--fk-surface-sunken);
+  box-shadow: 0 0 0 1px var(--fk-ring);
+}
+
+/* The name is the answer to "which skill", so it carries the weight; the note
+   is what was done with it and stays quiet. Mono, because a skill name is an
+   identifier — it is typed into a validator, not read aloud. */
+.fk-skill-name {
+  font-family: var(--fk-font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fk-text);
+  white-space: nowrap;
+}
+.fk-skill-note {
+  min-width: 0;
+  font-size: 11px;
+  color: var(--fk-text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Friends Kitchen's status pill: display face, sentence case, soft tone, no edge. */
 .fk-badge {
   display: inline-flex;
